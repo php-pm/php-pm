@@ -1,0 +1,11 @@
+{
+    "require": {
+        "symfony/console": "~2.4",
+        "react/react": "0.3.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "PHPPM\\": ""
+        }
+    }
+}

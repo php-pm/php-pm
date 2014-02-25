@@ -1,0 +1,15 @@
+#!/usr/bin/env php
+<?php
+
+set_time_limit(0);
+
+$loader = require_once __DIR__ . '/../vendor/autoload.php';
+
+use Symfony\Component\Console\Application;
+use PHPPM\Commands\StartCommand;
+use PHPPM\Commands\StatusCommand;
+
+$app = new Application('PHP-PM');
+$app->add(new StartCommand);
+$app->add(new StatusCommand);
+$app->run();
