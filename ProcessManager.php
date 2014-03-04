@@ -52,6 +52,11 @@ class ProcessManager
     protected $bridge;
 
     /**
+     * @var string
+     */
+    protected $appenv;
+
+    /**
      * @var int
      */
     protected $port = 8080;
@@ -88,6 +93,22 @@ class ProcessManager
     public function getBridge()
     {
         return $this->bridge;
+    }
+
+    /**
+     * @param string $appenv
+     */
+    public function setAppEnv($appenv = null)
+    {
+        $this->appenv = $appenv;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAppEnv()
+    {
+        return $this->appenv;
     }
 
     public function run()
@@ -260,7 +281,7 @@ class ProcessManager
         $pid = pcntl_fork();
         if (!$pid) {
             //we're in the slave now
-            new ProcessSlave($this->getBridge());
+            new ProcessSlave($this->getBridge(), $this->appenv);
             exit;
         }
     }
