@@ -101,8 +101,6 @@ class ProcessManager
         $this->web->on('connection', array($this, 'onWeb'));
         $this->web->listen($this->port);
 
-        echo "Waiting for slaves ... ";
-
         for ($i = 0; $i < $this->slaveCount; $i++) {
             $this->newInstance();
         }
