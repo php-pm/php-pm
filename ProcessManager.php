@@ -133,7 +133,6 @@ class ProcessManager
     public function onWeb(\React\Socket\Connection $incoming)
     {
         $slaveId = $this->getNextSlave();
-        echo sprintf("Slave #%d, fly and win!\n", $slaveId);
         $port = $this->slaves[$slaveId]['port'];
         $client = stream_socket_client('tcp://127.0.0.1:' . $port);
         $redirect = new \React\Stream\Stream($client, $this->loop);
