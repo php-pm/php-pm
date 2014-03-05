@@ -21,6 +21,9 @@ class StartCommand extends Command
             ->setName('start')
             ->addArgument('working-directory', null, 'working directory', './')
             ->addOption('bridge', null, InputOption::VALUE_REQUIRED)
+            ->addOption('port', null, InputOption::VALUE_OPTIONAL)
+            ->addOption('workers', null, InputOption::VALUE_OPTIONAL)
+            ->addOption('app-env', null, InputOption::VALUE_OPTIONAL)
             ->setDescription('Starts the server')
         ;
     }
@@ -31,10 +34,15 @@ class StartCommand extends Command
             chdir($workingDir);
         }
 
-        $bridge = $input->getOption('bridge');
+        $bridge  = $input->getOption('bridge');
 
-        $handler = new ProcessManager();
+        $port    = null !== $input->getOption('port') ? (int) $input->getOption('port') : 8080;
+        $workers = null !== $input->getOption('workers') ? (int) $input->getOption('workers') : 8;
+        $appenv  = null !== $input->getOption('app-env') ? $input->getOption('app-env') : 'prod';
+
+        $handler = new ProcessManager($port, $workers);
         $handler->setBridge($bridge);
+        $handler->setAppEnv($appenv);
         $handler->run();
     }
 

@@ -52,6 +52,11 @@ class ProcessManager
     protected $bridge;
 
     /**
+     * @var string
+     */
+    protected $appenv;
+
+    /**
      * @var int
      */
     protected $port = 8080;
@@ -90,6 +95,22 @@ class ProcessManager
         return $this->bridge;
     }
 
+    /**
+     * @param string $appenv
+     */
+    public function setAppEnv($appenv = null)
+    {
+        $this->appenv = $appenv;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAppEnv()
+    {
+        return $this->appenv;
+    }
+
     public function run()
     {
         $this->loop = \React\EventLoop\Factory::create();
@@ -100,8 +121,6 @@ class ProcessManager
         $this->web = new \React\Socket\Server($this->loop);
         $this->web->on('connection', array($this, 'onWeb'));
         $this->web->listen($this->port);
-
-        echo "Waiting for slaves ... ";
 
         for ($i = 0; $i < $this->slaveCount; $i++) {
             $this->newInstance();
@@ -262,7 +281,7 @@ class ProcessManager
         $pid = pcntl_fork();
         if (!$pid) {
             //we're in the slave now
-            new ProcessSlave($this->getBridge());
+            new ProcessSlave($this->getBridge(), $this->appenv);
             exit;
         }
     }
