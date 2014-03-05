@@ -19,9 +19,9 @@ class StartCommand extends Command
 
         $this
             ->setName('start')
-            ->addArgument('working-directory', null, 'working directory', './')
-            ->addOption('bridge', null, InputOption::VALUE_REQUIRED)
-            ->addOption('port', null, InputOption::VALUE_OPTIONAL)
+            ->addArgument('working-directory', null, 'The working directory. ', './')
+            ->addOption('bridge', null, InputOption::VALUE_REQUIRED, 'The bridge we use to convert a ReactPHP-Request to your target framework.')
+            ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080')
             ->addOption('workers', null, InputOption::VALUE_OPTIONAL)
             ->addOption('app-env', null, InputOption::VALUE_OPTIONAL)
             ->setDescription('Starts the server')
