@@ -19,7 +19,7 @@ Arguments:
 Options:
  --bridge              The bridge we use to convert a ReactPHP-Request to your target framework.
  --port                Load-Balancer port. Default is 8080
- --workers
+ --workers             Worker count. Default is 8. Should be minimum equal to the number of CPU cores.
  --app-env
  --help (-h)           Display this help message.
  --quiet (-q)          Do not output any message.

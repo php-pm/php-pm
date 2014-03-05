@@ -22,7 +22,7 @@ class StartCommand extends Command
             ->addArgument('working-directory', null, 'The working directory. ', './')
             ->addOption('bridge', null, InputOption::VALUE_REQUIRED, 'The bridge we use to convert a ReactPHP-Request to your target framework.')
             ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080')
-            ->addOption('workers', null, InputOption::VALUE_OPTIONAL)
+            ->addOption('workers', null, InputOption::VALUE_OPTIONAL, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.')
             ->addOption('app-env', null, InputOption::VALUE_OPTIONAL)
             ->setDescription('Starts the server')
         ;
