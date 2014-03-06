@@ -6,6 +6,7 @@ use PHPPM\ProcessManager;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class StartCommand extends Command
@@ -19,7 +20,7 @@ class StartCommand extends Command
 
         $this
             ->setName('start')
-            ->addArgument('working-directory', InputOption::VALUE_OPTIONAL, 'The root of your appplication.', ['./'])
+            ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your appplication.', './')
             ->addOption('bridge', null, InputOption::VALUE_OPTIONAL, 'The bridge we use to convert a ReactPHP-Request to your target framework.', 'symfony')
             ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080', 8080)
             ->addOption('workers', null, InputOption::VALUE_OPTIONAL, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', 8)
