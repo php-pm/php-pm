@@ -51,7 +51,12 @@ class ProcessSlave
     protected function getBridge()
     {
         if (null === $this->bridge && $this->bridgeName) {
-            $bridgeClass = sprintf('PHPPM\Bridges\\%s', ucfirst($this->bridgeName));
+            if (true === class_exists($this->bridgeName)) {
+                $bridgeClass = $this->bridgeName;
+            } else {
+                $bridgeClass = sprintf('PHPPM\Bridges\\%s', ucfirst($this->bridgeName));
+            }
+
             $this->bridge = new $bridgeClass;
         }
 
