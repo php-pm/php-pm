@@ -11,7 +11,7 @@ More information can be found in the article: [Bring High Performance Into Your 
 ```bash
 ./bin/ppm start --help
 Usage:
- start [--bridge="..."] [--port[="..."]] [--workers[="..."]] [--app-env[="..."]] [working-directory]
+ start [--bridge="..."] [--port[="..."]] [--workers[="..."]] [--bootstrap[="..."]] [working-directory]
 
 Arguments:
  working-directory     The working directory.  (default: "./")
@@ -20,7 +20,8 @@ Options:
  --bridge              The bridge we use to convert a ReactPHP-Request to your target framework.
  --port                Load-Balancer port. Default is 8080
  --workers             Worker count. Default is 8. Should be minimum equal to the number of CPU cores.
- --app-env
+ --app-env             The that your application will use to bootstrap.
+ --bootstrap           The class that will be used to bootstrap your application.
  --help (-h)           Display this help message.
  --quiet (-q)          Do not output any message.
  --verbose (-v|vv|vvv) Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
