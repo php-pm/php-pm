@@ -54,6 +54,11 @@ class ProcessManager
     /**
      * @var string
      */
+    protected $appBootstrap;
+
+    /**
+     * @var string|null
+     */
     protected $appenv;
 
     /**
@@ -96,9 +101,25 @@ class ProcessManager
     }
 
     /**
-     * @param string $appenv
+     * @param string $appBootstrap
      */
-    public function setAppEnv($appenv = null)
+    public function setAppBootstrap($appBootstrap)
+    {
+        $this->appBootstrap = $appBootstrap;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAppBootstrap()
+    {
+        return $this->appBootstrap;
+    }
+
+    /**
+     * @param string|null $appenv
+     */
+    public function setAppEnv($appenv)
     {
         $this->appenv = $appenv;
     }
@@ -280,7 +301,7 @@ class ProcessManager
         $pid = pcntl_fork();
         if (!$pid) {
             //we're in the slave now
-            new ProcessSlave($this->getBridge(), $this->appenv);
+            new ProcessSlave($this->getBridge(), $this->appBootstrap, $this->appenv);
             exit;
         }
     }
