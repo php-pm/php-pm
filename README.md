@@ -11,7 +11,7 @@ More information can be found in the article: [Bring High Performance Into Your 
 ```bash
 ./bin/ppm start --help
 Usage:
- start [--bridge="..."] [--port[="..."]] [--workers[="..."]] [--bootstrap[="..."]] [working-directory]
+ start [--bridge="..."] [--port[="..."]] [--workers[="..."]] [--bootstrap[="..."]] [--app-env[="..."]] [working-directory]
 
 Arguments:
  working-directory     The working directory.  (default: "./")
@@ -34,7 +34,7 @@ Options:
 ### Example
 
 ```bash
-$ ./bin/ppm start ~/my/path/to/symfony/ --bridge=symfony
+$ ./bin/ppm start ~/my/path/to/symfony/ --bridge=httpkernel
 ```
 
 All worker start a own HTTP Server which listens on port 5501, 5502, 5503 etc. Range is `5501 -> 5500+<workersCount>`.
