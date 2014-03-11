@@ -1,6 +1,6 @@
 <?php
 
-namespace PHPPM\Bootstraps\Laravel;
+namespace PHPPM\Bootstraps;
 
 use PHPPM\Bootstraps\BootstrapInterface;
 use Stack\Builder;
