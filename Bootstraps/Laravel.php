@@ -51,8 +51,8 @@ class Laravel implements BootstrapInterface
         $sessionReject = $this->app->bound('session.reject') ? $this->app['session.reject'] : null;
 
         $stack
-		    ->push('Illuminate\Cookie\Guard', $this->app['encrypter'])
-			->push('Illuminate\Cookie\Queue', $this->app['cookie'])
+            ->push('Illuminate\Cookie\Guard', $this->app['encrypter'])
+            ->push('Illuminate\Cookie\Queue', $this->app['cookie'])
             ->push('Illuminate\Session\Middleware', $this->app['session'], $sessionReject);
 
         return $stack;
