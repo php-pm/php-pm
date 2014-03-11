@@ -45,7 +45,7 @@ All worker start a own HTTP Server which listens on port 5501, 5502, 5503 etc. R
 
 Example config for NGiNX:
 
-```
+```nginx
 upstream backend  {
     server 127.0.0.1:5501;
     server 127.0.0.1:5502;
@@ -57,7 +57,7 @@ upstream backend  {
 
 server {
     root /path/to/symfony/web/;
-    server_name servername.com
+    server_name servername.com;
     location / {
         if (!-f $request_filename) {
             proxy_pass http://backend;
