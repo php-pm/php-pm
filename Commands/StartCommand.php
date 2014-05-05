@@ -44,7 +44,7 @@ class StartCommand extends Command
         $bridge        = $this->optionOrConfig($input, $config, 'bridge');
         $port          = (int) $this->optionOrConfig($input, $config, 'port');
         $workers       = (int) $this->optionOrConfig($input, $config, 'workers');
-        $appenv        = $this->optionOrConfig($input, $config, 'appenv');
+        $appenv        = $this->optionOrConfig($input, $config, 'app-env');
         $appBootstrap  = $this->optionOrConfig($input, $config, 'bootstrap');
 
         $handler = new ProcessManager($port, $workers);
