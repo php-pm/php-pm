@@ -41,11 +41,11 @@ class StartCommand extends Command
             $config = json_decode(file_get_contents('./ppm.json'), true);
         }
 
-        $bridge        = isset($config['bridge'])  ? $config['bridge']  : $input->getOption('bridge');
-        $port          = isset($config['port'])    ? $config['port']    : (int) $input->getOption('port');
-        $workers       = isset($config['workers']) ? $config['workers'] : (int) $input->getOption('workers');
-        $appenv        = isset($config['appenv']) ? $config['appenv'] : $input->getOption('app-env');
-        $appBootstrap  = isset($config['bootstrap']) ? $config['bootstrap'] : $input->getOption('bootstrap');
+        $bridge        = $this->optionOrConfig($input, $config, 'bridge');
+        $port          = (int) $this->optionOrConfig($input, $config, 'port');
+        $workers       = (int) $this->optionOrConfig($input, $config, 'workers');
+        $appenv        = $this->optionOrConfig($input, $config, 'appenv');
+        $appBootstrap  = $this->optionOrConfig($input, $config, 'bootstrap');
 
         $handler = new ProcessManager($port, $workers);
 
@@ -55,5 +55,14 @@ class StartCommand extends Command
 
         $handler->run();
     }
-
+    
+    private function optionOrConfig(InputInterface $input, $config, $name) {
+        $val = $input->getOption($name);
+        
+        if (!$val && isset($config[$name])) {
+            $val = $config[$name];
+        }
+        
+        return $val;
+    }
 }
