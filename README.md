@@ -34,7 +34,7 @@ Options:
 ### Example
 
 ```bash
-$ ./bin/ppm start ~/my/path/to/symfony/ --bridge=httpkernel
+$ ./bin/ppm start ~/my/path/to/symfony/ --bridge=httpKernel
 ```
 
 All worker start a own HTTP Server which listens on port 5501, 5502, 5503 etc. Range is `5501 -> 5500+<workersCount>`.
