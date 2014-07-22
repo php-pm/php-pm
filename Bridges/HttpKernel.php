@@ -30,7 +30,7 @@ class HttpKernel implements BridgeInterface
      * be able to be autoloaded.
      *
      * @param string $appBootstrap The name of the class used to bootstrap the application
-     * @param string|null $appBootstrap The environment you rpaplication will use to bootstrap (if any)
+     * @param string|null $appBootstrap The environment your application will use to bootstrap (if any)
      * @see http://stackphp.com
      */
     public function bootstrap($appBootstrap, $appenv)
