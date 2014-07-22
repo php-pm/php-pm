@@ -15,7 +15,7 @@ class HttpKernel implements BridgeInterface
     /**
      * An application implementing the HttpKernelInterface
      *
-     * @var Symfony\Component\HttpFoundation\HttpKernelInterface
+     * @var \Symfony\Component\HttpFoundation\HttpKernelInterface
      */
     protected $application;
 
@@ -58,8 +58,8 @@ class HttpKernel implements BridgeInterface
     /**
      * Handle a request using a HttpKernelInterface implementing application.
      *
-     * @param React\Http\Request $request
-     * @param React\Http\Response $response
+     * @param \React\Http\Request $request
+     * @param \React\Http\Response $response
      */
     public function onRequest(ReactRequest $request, ReactResponse $response)
     {
