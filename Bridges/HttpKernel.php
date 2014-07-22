@@ -78,7 +78,7 @@ class HttpKernel implements BridgeInterface
                 $response->writeHead($syResponse->getStatusCode(), $headers);
                 $response->end($syResponse->getContent());
             } catch (\Exception $e) {
-                //
+                error_log($e->getMessage());
             }
         }
     }
