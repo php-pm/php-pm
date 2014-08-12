@@ -59,10 +59,10 @@ server {
     root /path/to/symfony/web/;
     server_name servername.com;
     location / {
-        if (!-f $request_filename) {
-            proxy_pass http://backend;
-            break;
-        }
+        try_files $uri @backend;
+    }
+    location @backend {
+        proxy_pass http://backend;
     }
 }
 ```
