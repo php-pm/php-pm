@@ -60,8 +60,10 @@ class HttpKernel implements BridgeInterface
      *
      * @param \React\Http\Request $request
      * @param \React\Http\Response $response
+     * @param array $postData
+     * @return void
      */
-    public function onRequest(ReactRequest $request, ReactResponse $response)
+    public function onRequest(ReactRequest $request, ReactResponse $response, array $postData)
     {
         if (null !== $this->application) {
             try {

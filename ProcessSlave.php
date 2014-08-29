@@ -108,10 +108,30 @@ class ProcessSlave
         $this->connection->write(json_encode(array('cmd' => 'register', 'pid' => getmypid(), 'port' => $port)));
     }
 
+    /**
+     * @param \React\Http\Request $request
+     * @param \React\Http\Response $response
+     */
     public function onRequest(\React\Http\Request $request, \React\Http\Response $response)
     {
+        $slave = $this;
+        $request->on('data', function($data) use ($slave, $request, $response) {
+            $slave->onData($request, $response, $data);
+        });
+    }
+
+    /**
+     * POST data from React response
+     *
+     * @param \React\Http\Request $request
+     * @param \React\Http\Response $response
+     * @param string $data
+     */
+    public function onData(\React\Http\Request $request, \React\Http\Response $response, $data)
+    {
         if ($bridge = $this->getBridge()) {
-            return $bridge->onRequest($request, $response);
+            parse_str($data, $data);
+            return $bridge->onRequest($request, $response, (array)$data);
         } else {
             $response->writeHead('404');
             $response->end('No Bridge Defined.');
