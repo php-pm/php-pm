@@ -67,7 +67,7 @@ class HttpKernel implements BridgeInterface
     {
         if (null !== $this->application) {
             try {
-                $syRequest = new SymfonyRequest();
+                $syRequest = new SymfonyRequest([], $postData);
                 $syRequest->headers->replace($request->getHeaders());
                 $syRequest->setMethod($request->getMethod());
                 $syRequest->server->set('REQUEST_URI', $request->getPath());
