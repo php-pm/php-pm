@@ -48,6 +48,7 @@ class Zf2 implements BridgeInterface
         $sm = $app->getServiceManager();
 
         $zfRequest = new ZendRequest();
+        $zfRequest->setPost(new Parameters($postData));
         $zfResponse = new ZendResponse();
 
         self::mapRequest($request, $zfRequest);
