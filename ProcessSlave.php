@@ -2,6 +2,8 @@
 
 namespace PHPPM;
 
+use PHPPM\Parser\PostDataParser;
+
 class ProcessSlave
 {
 
@@ -130,7 +132,9 @@ class ProcessSlave
     public function onData(\React\Http\Request $request, \React\Http\Response $response, $data)
     {
         if ($bridge = $this->getBridge()) {
-            parse_str($data, $data);
+            $parser = new PostDataParser();
+            $data = $parser->parse($request, $data);
+
             return $bridge->onRequest($request, $response, (array)$data);
         } else {
             $response->writeHead('404');
