@@ -111,6 +111,7 @@ class ProcessSlave
     public function onRequest(\React\Http\Request $request, \React\Http\Response $response)
     {
         if ($bridge = $this->getBridge()) {
+            $request->on('data', array($bridge, 'onData'));
             return $bridge->onRequest($request, $response);
         } else {
             $response->writeHead('404');
