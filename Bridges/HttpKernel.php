@@ -64,22 +64,33 @@ class HttpKernel implements BridgeInterface
     public function onRequest(ReactRequest $request, ReactResponse $response)
     {
         if (null !== $this->application) {
-            try {
-                $syRequest = new SymfonyRequest();
-                $syRequest->headers->replace($request->getHeaders());
-                $syRequest->setMethod($request->getMethod());
-                $syRequest->server->set('REQUEST_URI', $request->getPath());
-                $syRequest->server->set('SERVER_NAME', explode(':', $request->getHeaders()['Host'])[0]);
-
-                $syResponse = $this->application->handle($syRequest);
-                $this->application->terminate($syRequest, $syResponse);
-
-                $headers = array_map('current', $syResponse->headers->all());
-                $response->writeHead($syResponse->getStatusCode(), $headers);
-                $response->end($syResponse->getContent());
-            } catch (\Exception $e) {
-                //
-            }
+            $this->request = $request;
+            $this->response = $response;
         }
+    }
+
+    public function onData($buffer)
+    {
+        $syRequest = new SymfonyRequest(
+            $this->request->getQuery(),
+            [],
+            [],
+            [],
+            [],
+            [],
+            $buffer
+        );
+        $syRequest->headers->replace($this->request->getHeaders());
+        $syRequest->setMethod($this->request->getMethod());
+        $syRequest->server->set('REQUEST_URI', $this->request->getPath());
+        $syRequest->server->set('SERVER_NAME', explode(':', $this->request->getHeaders()['Host'])[0]);
+
+        $syResponse = $this->application->handle($syRequest);
+        $this->application->terminate($syRequest, $syResponse);
+
+        $headers = array_map('current', $syResponse->headers->all());
+
+        $this->response->writeHead($syResponse->getStatusCode(), $headers);
+        $this->response->end($syResponse->getContent());
     }
 }
