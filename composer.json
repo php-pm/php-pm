@@ -4,7 +4,7 @@
         "symfony/console": "~2.5",
         "react/react": "0.4.*",
         "stack/builder": "1.0.*@dev",
-        "symfony/http-foundation": "2.5.*@dev",
+        "symfony/http-foundation": "2.6.*",
         "symfony/http-kernel": "2.6.*",
         "zendframework/zend-http": "2.3.*@dev",
         "zendframework/zend-mvc": "2.3.*@dev"
