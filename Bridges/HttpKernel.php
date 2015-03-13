@@ -79,7 +79,7 @@ class HttpKernel implements BridgeInterface
 					// handle request after receive
 					if (strlen($content) >= $contentLength) {
 						// convert React\Http\Request to Symfony\Component\HttpFoundation\Request
-						$syRequest = new Symfony\Component\HttpFoundation\Request(
+						$syRequest = new SymfonyRequest(
 							// $query, $request, $attributes, $cookies, $files, $server, $content
 							$request->getQuery(), array(), array(), array(), array(), array(), $content
 						);
@@ -90,7 +90,7 @@ class HttpKernel implements BridgeInterface
 						$syRequest->headers->replace($headers = $request->getHeaders());
 
 						// handle request by middleware
-						$syResponse = $router->handle($syRequest);
+						$syResponse = $this->application->handle($syRequest);
 
 						// convert React\Http\Response to Symfony\Component\HttpFoundation\Response
 						$content = $syResponse->getContent();
