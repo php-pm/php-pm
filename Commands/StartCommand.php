@@ -37,8 +37,8 @@ class StartCommand extends Command
         }
 
         $config = [];
-        if (file_exists('./ppm.json')) {
-            $config = json_decode(file_get_contents('./ppm.json'), true);
+        if (file_exists($file = './ppm.json') || file_exists($file = dirname(__FILE__) . PHP_EOL . 'ppm.json')) {
+            $config = json_decode(file_get_contents($file), true);
         }
 
         $bridge        = $this->optionOrConfig($input, $config, 'bridge');
@@ -55,14 +55,14 @@ class StartCommand extends Command
 
         $handler->run();
     }
-    
+
     private function optionOrConfig(InputInterface $input, $config, $name) {
         $val = $input->getOption($name);
-        
+
         if (!$val && isset($config[$name])) {
             $val = $config[$name];
         }
-        
+
         return $val;
     }
 }
