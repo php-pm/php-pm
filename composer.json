@@ -1,11 +1,11 @@
 {
     "name": "marcj/php-pm",
     "require": {
-        "symfony/console": "~2.4",
-        "react/react": "0.3.3",
+        "symfony/console": "~2.6",
+        "react/react": "0.4.*",
         "stack/builder": "1.0.*@dev",
-        "symfony/http-foundation": "2.4.*@dev",
-        "symfony/http-kernel": "2.4.*@dev",
+        "symfony/http-foundation": "2.6.*",
+        "symfony/http-kernel": "2.6.*",
         "zendframework/zend-http": "2.3.*@dev",
         "zendframework/zend-mvc": "2.3.*@dev"
     },
