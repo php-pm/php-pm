@@ -71,7 +71,7 @@ class HttpKernel implements BridgeInterface
 				$acceptEncoding = isset($headers['Accept-Encoding']) ? $headers['Accept-Encoding'] : null;
 
 				$request->on('data', function($data)
-					use ($request, $response, $router, &$content, $contentLength, $acceptEncoding)
+					use ($request, $response, &$content, $contentLength, $acceptEncoding)
 				{
 					// read data (may be empty for GET request)
 					$content .= $data;
