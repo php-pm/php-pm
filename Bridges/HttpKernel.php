@@ -60,12 +60,14 @@ class HttpKernel implements BridgeInterface
      *
      * @param \React\Http\Request $request
      * @param \React\Http\Response $response
+     * @param array $postData
+     * @return void
      */
-    public function onRequest(ReactRequest $request, ReactResponse $response)
+    public function onRequest(ReactRequest $request, ReactResponse $response, array $postData)
     {
         if (null !== $this->application) {
             try {
-                $syRequest = new SymfonyRequest();
+                $syRequest = new SymfonyRequest([], $postData);
                 $syRequest->headers->replace($request->getHeaders());
                 $syRequest->setMethod($request->getMethod());
                 $syRequest->server->set('REQUEST_URI', $request->getPath());

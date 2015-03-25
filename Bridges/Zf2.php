@@ -35,8 +35,10 @@ class Zf2 implements BridgeInterface
      *
      * @param ReactRequest $request
      * @param ReactResponse $response
+     * @param array $postData
+     * @return void
      */
-    public function onRequest(ReactRequest $request, ReactResponse $response)
+    public function onRequest(ReactRequest $request, ReactResponse $response, array $postData)
     {
         if (null === ($app = $this->application)) {
             return;
@@ -46,6 +48,7 @@ class Zf2 implements BridgeInterface
         $sm = $app->getServiceManager();
 
         $zfRequest = new ZendRequest();
+        $zfRequest->setPost(new Parameters($postData));
         $zfResponse = new ZendResponse();
 
         self::mapRequest($request, $zfRequest);
