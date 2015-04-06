@@ -61,8 +61,9 @@ class Zf2 implements BridgeInterface
 
         try {
             $app->run($zfRequest, $zfResponse);
-
         } catch (\Exception $exception) {
+            $response->writeHead(500); // internal server error
+            $response->end();
             return;
         }
 
