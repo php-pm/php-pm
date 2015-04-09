@@ -109,7 +109,7 @@ class HttpKernel implements BridgeInterface
         $post = array();
 
         // parse body?
-        if (isset($headers['Content-Type']) && (0 === strpos($headers['Content-Type'], 'application/x-www-form-urlencoded')
+        if (isset($headers['Content-Type']) && (0 === strpos($headers['Content-Type'], 'application/x-www-form-urlencoded'))
             && in_array(strtoupper($method), array('PUT', 'DELETE', 'PATCH'))
         ) {
             parse_str($content, $post);
