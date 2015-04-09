@@ -24,6 +24,7 @@ class StartCommand extends Command
         }
 
         $bridge        = $this->defaultOrConfig($config, 'bridge', 'HttpKernel');
+        $host          = $this->defaultOrConfig($config, 'host', '127.0.0.1');
         $port          = (int) $this->defaultOrConfig($config, 'port', 8080);
         $workers       = (int) $this->defaultOrConfig($config, 'workers', 8);
         $appenv        = $this->defaultOrConfig($config, 'app-env', 'dev');
@@ -33,6 +34,7 @@ class StartCommand extends Command
             ->setName('start')
             ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your appplication.', './')
             ->addOption('bridge', null, InputOption::VALUE_OPTIONAL, 'The bridge we use to convert a ReactPHP-Request to your target framework.', $bridge)
+            ->addOption('host', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer host. Default is 127.0.0.1', $host)
             ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080', $port)
             ->addOption('workers', null, InputOption::VALUE_OPTIONAL, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', $workers)
             ->addOption('app-env', null, InputOption::VALUE_OPTIONAL, 'The environment that your application will use to bootstrap (if any)', $appenv)
@@ -48,12 +50,13 @@ class StartCommand extends Command
         }
 
         $bridge        = $input->getOption('bridge');
+        $host          = $input->getOption('host');
         $port          = (int) $input->getOption('port');
         $workers       = (int) $input->getOption('workers');
         $appenv        = $input->getOption('app-env');
         $appBootstrap  = $input->getOption('bootstrap');
 
-        $handler = new ProcessManager($port, $workers);
+        $handler = new ProcessManager($port, $host, $workers);
 
         $handler->setBridge($bridge);
         $handler->setAppEnv($appenv);
