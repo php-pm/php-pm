@@ -62,13 +62,19 @@ class ProcessManager
     protected $appenv;
 
     /**
+     * @var string
+     */
+    protected $host = '127.0.0.1';
+
+    /**
      * @var int
      */
     protected $port = 8080;
 
-    function __construct($port = 8080, $slaveCount = 8)
+    function __construct($port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
         $this->slaveCount = $slaveCount;
+        $this->host = $host;
         $this->port = $port;
     }
 
@@ -141,7 +147,7 @@ class ProcessManager
 
         $this->web = new \React\Socket\Server($this->loop);
         $this->web->on('connection', array($this, 'onWeb'));
-        $this->web->listen($this->port);
+        $this->web->listen($this->port, $this->host);
 
         for ($i = 0; $i < $this->slaveCount; $i++) {
             $this->newInstance();
