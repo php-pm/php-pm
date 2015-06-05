@@ -148,6 +148,8 @@ class ProcessManager
         $this->web = new \React\Socket\Server($this->loop);
         $this->web->on('connection', array($this, 'onWeb'));
         $this->web->listen($this->port, $this->host);
+        
+        echo sprintf("Listing to requests at port %d on %s.\n", $this->port, $this->host);
 
         for ($i = 0; $i < $this->slaveCount; $i++) {
             $this->newInstance();
