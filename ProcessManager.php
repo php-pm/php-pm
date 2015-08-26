@@ -221,6 +221,7 @@ class ProcessManager
                         if ($slave['connection'] === $conn) {
                             unset($this->slaves[$idx]);
                             $this->checkSlaves();
+                            pcntl_waitpid($slave['pid'], $pidStatus);
                         }
                     }
                 },
