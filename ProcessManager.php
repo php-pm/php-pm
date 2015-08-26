@@ -254,17 +254,23 @@ class ProcessManager
     {
         $pid = (int)$data['pid'];
         $port = (int)$data['port'];
-        $this->slaves[] = array(
+        $this->slaves[$pid] = array(
             'pid' => $pid,
             'port' => $port,
             'connection' => $conn
         );
-        if ($this->waitForSlaves && $this->slaveCount === count($this->slaves)) {
+
+        $ready = array_filter($this->slaves, function ($slave) {
+            return is_numeric($slave['pid']);
+        });
+        if ($this->waitForSlaves && $this->slaveCount === count($ready)) {
             $slaves = array();
-            foreach ($this->slaves as $slave) {
+            foreach ($ready as $slave) {
                 $slaves[] = $slave['port'];
             }
-            echo sprintf("%d slaves (%s) up and ready.\n", $this->slaveCount, implode(', ', $slaves));
+            echo sprintf(
+                "%d slaves (%s) up and ready.\n", $this->slaveCount, implode(', ', $slaves)
+            );
         }
     }
 
@@ -288,7 +294,7 @@ class ProcessManager
         }
 
         $i = count($this->slaves);
-        if ($this->slaveCount !== $i) {
+        if ($i < $this->slaveCount) {
             echo sprintf('Boot %d new slaves ... ', $this->slaveCount - $i);
             $this->waitForSlaves = true;
             for (; $i < $this->slaveCount; $i++) {
@@ -310,5 +316,12 @@ class ProcessManager
             new ProcessSlave($this->getBridge(), $this->appBootstrap, $this->appenv);
             exit;
         }
+
+        // master process
+        $this->slaves[$pid] = array(
+            'pid' => '...',
+            'port' => '...',
+            'connection' => '...'
+        );
     }
 }
