@@ -19,6 +19,14 @@ $ composer install
 $ ./bin/ppm
 ```
 
+### Adapter
+
+**HttpKernel for Symfony/Laravel** - https://github.com/php-pm/php-pm-httpkernel
+
+**Drupal** - https://github.com/php-pm/php-pm-drupal
+
+**Zend** - https://github.com/php-pm/php-pm-zend
+
 ### Command
 
 ![ppm-help](https://dl.dropboxusercontent.com/u/54069263/ppm-github/help-screenshot.png)
