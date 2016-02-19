@@ -1,35 +1,27 @@
-PHP ProcessManager for Request-Response Applications
+PHP Process Manager
 ====================================================
+
+<p align="center">
+<img src="https://avatars3.githubusercontent.com/u/11821812?v=3&s=200" />
+</p>
 
 PHP-PM is a process manager for Request-Response Frameworks running in a ReactPHP environment.
 The approach of this is to kill the expensive bootstrap of PHP (declaring symbols) and bootstrap of feature-rich frameworks.
 
 More information can be found in the article: [Bring High Performance Into Your PHP App (with ReactPHP)](http://marcjschmidt.de/blog/2014/02/08/php-high-performance.html)
 
-### Command
+### Installation
 
 ```bash
-./bin/ppm start --help
-Usage:
- start [--bridge="..."] [--port[="..."]] [--workers[="..."]] [--bootstrap[="..."]] [--app-env[="..."]] [working-directory]
-
-Arguments:
- working-directory     The working directory.  (default: "./")
-
-Options:
- --bridge              The bridge we use to convert a ReactPHP-Request to your target framework.
- --port                Load-Balancer port. Default is 8080
- --workers             Worker count. Default is 8. Should be minimum equal to the number of CPU cores.
- --app-env             The that your application will use to bootstrap.
- --bootstrap           The class that will be used to bootstrap your application.
- --help (-h)           Display this help message.
- --quiet (-q)          Do not output any message.
- --verbose (-v|vv|vvv) Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
- --version (-V)        Display this application version.
- --ansi                Force ANSI output.
- --no-ansi             Disable ANSI output.
- --no-interaction (-n) Do not ask any interactive question.
+$ git clone git@github.com:php-pm/php-pm.git
+$ cd php-pm
+$ composer install
+$ ./bin/ppm
 ```
+
+### Command
+
+![ppm-help](https://dl.dropboxusercontent.com/u/54069263/ppm-github/help-screenshot.png)
 
 ### Example
 
