@@ -1,4 +1,4 @@
-PHP Process Manager
+PPM - PHP Process Manager
 ====================================================
 
 <p align="center">
