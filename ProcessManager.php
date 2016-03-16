@@ -191,13 +191,18 @@ class ProcessManager
      */
     protected function getNextSlave()
     {
-        $count = count($this->slaves);
+        do {
+            // wait for slaves to connect if we don't have any
+            while (0 === ($count = count($this->slaves))) {
+                $this->loop->tick();
+            }
 
-        $this->index++;
-        if ($count === $this->index) {
-            //end
-            $this->index = 0;
-        }
+            $this->index++;
+            if ($this->index >= $count) {
+                // end of slave list
+                $this->index = 0;
+            }
+        } while (!isset($this->slaves[$this->index]));
 
         return $this->index;
     }
