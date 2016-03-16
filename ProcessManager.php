@@ -78,18 +78,6 @@ class ProcessManager
         $this->port = $port;
     }
 
-    public function fork()
-    {
-        if ($this->run) {
-            throw new \LogicException('Can not fork when already run.');
-        }
-
-        if (!pcntl_fork()) {
-            $this->run();
-        } else {
-        }
-    }
-
     /**
      * @param string $bridge
      */
@@ -154,7 +142,7 @@ class ProcessManager
         }
 
         $this->run = true;
-        $this->loop();
+        $this->loop->run();
     }
 
     public function onWeb(\React\Socket\Connection $incoming)
@@ -213,7 +201,7 @@ class ProcessManager
             'data',
             \Closure::bind(
                 function ($data) use ($conn) {
-                    $this->onData($data, $conn);
+                    $this->processMessage($data, $conn);
                 },
                 $this
             )
@@ -233,11 +221,6 @@ class ProcessManager
                 $this
             )
         );
-    }
-
-    public function onData($data, $conn)
-    {
-        $this->processMessage($data, $conn);
     }
 
     public function processMessage($data, $conn)
@@ -266,11 +249,12 @@ class ProcessManager
             'connection' => $conn
         );
         if ($this->waitForSlaves && $this->slaveCount === count($this->slaves)) {
-            $slaves = array();
+            $this->waitForSlaves = false; // all slaves started
+            $slavePorts = array();
             foreach ($this->slaves as $slave) {
-                $slaves[] = $slave['port'];
+                $slavePorts[] = $slave['port'];
             }
-            echo sprintf("%d slaves (%s) up and ready.\n", $this->slaveCount, implode(', ', $slaves));
+            echo sprintf("%d slaves (%s) up and ready.\n", $this->slaveCount, implode(', ', $slavePorts));
         }
     }
 
@@ -281,7 +265,7 @@ class ProcessManager
         foreach ($this->slaves as $idx => $slave) {
             if ($slave['pid'] === $pid) {
                 unset($this->slaves[$idx]);
-                $this->checkSlaves();
+                break;
             }
         }
         $this->checkSlaves();
@@ -303,17 +287,13 @@ class ProcessManager
         }
     }
 
-    function loop()
-    {
-        $this->loop->run();
-    }
-
     function newInstance()
     {
         $pid = pcntl_fork();
         if (!$pid) {
-            //we're in the slave now
+            // we're in the slave now
             new ProcessSlave($this->getBridge(), $this->appBootstrap, $this->appenv);
+            // this point is only reached after client loop->run() finishes
             exit;
         }
     }
