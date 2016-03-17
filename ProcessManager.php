@@ -453,8 +453,9 @@ class ProcessManager
             $this->waitForSlaves = false; // all slaves started
 
             echo sprintf(
-                "%d slaves (starting at 5501) up and ready. Application is ready at http://localhost:%s/\n",
+                "%d slaves (starting at 5501) up and ready. Application is ready at http://%s:%s/\n",
                 $this->slaveCount,
+                $this->host,
                 $this->port
             );
         }
