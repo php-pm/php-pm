@@ -7,6 +7,6 @@ namespace PHPPM\Bootstraps;
  */
 interface BootstrapInterface
 {
-    public function __construct($appenv);
+    public function __construct($appenv, $debug);
     public function getApplication();
 }

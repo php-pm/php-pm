@@ -21,8 +21,10 @@ if ((!$loader = includeIfExists(__DIR__.'/../vendor/autoload.php')) && (!$loader
 use Symfony\Component\Console\Application;
 use PHPPM\Commands\StartCommand;
 use PHPPM\Commands\StatusCommand;
+use PHPPM\Commands\ConfigCommand;
 
 $app = new Application('PHP-PM');
 $app->add(new StartCommand);
 $app->add(new StatusCommand);
+$app->add(new ConfigCommand());
 $app->run();

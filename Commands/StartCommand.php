@@ -5,12 +5,13 @@ namespace PHPPM\Commands;
 use PHPPM\ProcessManager;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class StartCommand extends Command
 {
+    use ConfigTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -18,29 +19,13 @@ class StartCommand extends Command
     {
         parent::configure();
 
-        $config = [];
-        if (file_exists($file = './ppm.json') || file_exists($file = dirname(realpath($GLOBALS['argv'][0])) . DIRECTORY_SEPARATOR . 'ppm.json')) {
-             $config = json_decode(file_get_contents($file), true);
-        }
-
-        $bridge        = $this->defaultOrConfig($config, 'bridge', 'HttpKernel');
-        $host          = $this->defaultOrConfig($config, 'host', '127.0.0.1');
-        $port          = (int) $this->defaultOrConfig($config, 'port', 8080);
-        $workers       = (int) $this->defaultOrConfig($config, 'workers', 8);
-        $appenv        = $this->defaultOrConfig($config, 'app-env', 'dev');
-        $appBootstrap  = $this->defaultOrConfig($config, 'bootstrap', 'PHPPM\Bootstraps\Symfony');
-
         $this
             ->setName('start')
             ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your appplication.', './')
-            ->addOption('bridge', null, InputOption::VALUE_OPTIONAL, 'The bridge we use to convert a ReactPHP-Request to your target framework.', $bridge)
-            ->addOption('host', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer host. Default is 127.0.0.1', $host)
-            ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080', $port)
-            ->addOption('workers', null, InputOption::VALUE_OPTIONAL, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', $workers)
-            ->addOption('app-env', null, InputOption::VALUE_OPTIONAL, 'The environment that your application will use to bootstrap (if any)', $appenv)
-            ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', $appBootstrap)
             ->setDescription('Starts the server')
         ;
+        
+        $this->configurePPMOptions($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -48,30 +33,28 @@ class StartCommand extends Command
         if ($workingDir = $input->getArgument('working-directory')) {
             chdir($workingDir);
         }
+        $config = $this->loadConfig($input);
 
-        $bridge        = $input->getOption('bridge');
-        $host          = $input->getOption('host');
-        $port          = (int) $input->getOption('port');
-        $workers       = (int) $input->getOption('workers');
-        $appenv        = $input->getOption('app-env');
-        $appBootstrap  = $input->getOption('bootstrap');
+        if (file_exists($this->file)) {
+            $modified = '';
+            $fileConfig = json_decode(file_get_contents($this->file), true);
+            if (json_encode($fileConfig) !== json_encode($config)) {
+                $modified = ', modified by command arguments.';
+            }
+            $output->writeln(sprintf('<info>Read configuration %s%s.</info>', realpath($this->file), $modified));
+        }
+        $output->writeln(sprintf('<info>%s</info>', getcwd()));
 
-        $handler = new ProcessManager($port, $host, $workers);
+        $this->renderConfig($output, $config);
 
-        $handler->setBridge($bridge);
-        $handler->setAppEnv($appenv);
-        $handler->setAppBootstrap($appBootstrap);
+        $handler = new ProcessManager($config['port'], $config['host'], $config['workers']);
+
+        $handler->setBridge($config['bridge']);
+        $handler->setAppEnv($config['app-env']);
+        $handler->setDebug((boolean)$config['debug']);
+        $handler->setLogging((boolean)$config['logging']);
+        $handler->setAppBootstrap($config['bootstrap']);
 
         $handler->run();
-    }
-
-    private function defaultOrConfig($config, $name, $default) {
-        $val = $default;
-
-        if (isset($config[$name])) {
-            $val = $config[$name];
-        }
-
-        return $val;
     }
 }
