@@ -7,7 +7,9 @@
         "react/stream": "^0.4",
         "react/http": "dev-master",
         "react/socket-client": " 0.4.x-dev@dev",
-        "mkraemer/react-pcntl": "2.0.*",
+        "mkraemer/react-pcntl": "2.0.*"
+    },
+    "require-dev": {
         "php-pm/httpkernel-adapter": "dev-master"
     },
     "autoload": {
@@ -17,7 +19,10 @@
     },
     "suggest": {
         "php-pm/httpkernel-adapter": "HttpKernel adapter for Symfony and Laravel frameworks",
-        "php-pm/zend-adapter": "Zend application framework adapter"
+        "php-pm/zend-adapter": "Zend application framework adapter",
+        "ext-libevent": "Allows for use of a more performant event-loop implementation.",
+        "ext-libev": "Allows for use of a more performant event-loop implementation.",
+        "ext-event": "Allows for use of a more performant event-loop implementation."
     },
     "bin": ["bin/ppm"]
 }
