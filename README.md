@@ -8,8 +8,9 @@ PPM - PHP Process Manager
 PHP-PM is a process manager, supercharger and load balancer for PHP applications.
 
 It's based on ReactPHP and works best with applications that use request-response frameworks like Symfony's HTTPKernel.
-The approach of this is to kill the expensive bootstrap of PHP (declaring symbols) and the bootstrap of feature-rich frameworks. See Performance section for quick hint.
-PHP-PM basically spawns several PHP instances as worker, bootstraping your application (eg. the whole Symfony Kernel) and hold it in the memory for every incoming request: This it why PHP-PM makes your application so fast.
+The approach of this is to kill the expensive bootstrap of PHP (declaring symbols, loading/parsing files) and the bootstrap of feature-rich frameworks. See Performance section for a quick hint.
+PHP-PM basically spawns several PHP instances as worker bootstraping your application (eg. the whole Symfony Kernel) and hold it in the memory to be prepared for every
+incoming request: This is why PHP-PM makes your application so fast.
  
 
 More information can be found in the article: [Bring High Performance Into Your PHP App (with ReactPHP)](http://marcjschmidt.de/blog/2014/02/08/php-high-performance.html)
