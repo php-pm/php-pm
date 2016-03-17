@@ -3,7 +3,9 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\PhpProcess;
+use Symfony\Component\Process\ProcessUtils;
 
 class ProcessManager
 {
@@ -557,7 +559,7 @@ class ProcessManager
         $static = var_export(true, true);
         $dir = var_export(__DIR__, true);
 
-        $code = <<<EOF
+        $script = <<<EOF
 <?php
 
 include $dir . '/vendor/autoload.php';
@@ -571,7 +573,30 @@ new \PHPPM\ProcessSlave('{$this->getBridge()}', '{$this->getAppBootstrap()}', [
 ]);
 
 EOF;
-        $process = new PhpProcess($code);
-        $process->start();
+
+        $executableFinder = new PhpExecutableFinder();
+        $commandline = $executableFinder->find();
+
+        $file = tempnam(sys_get_temp_dir(), 'dbg');
+        file_put_contents($file, $script);
+        register_shutdown_function('unlink', $file);
+        $commandline .= ' ' . ProcessUtils::escapeArgument($file);
+
+        $descriptorspec = [
+            ['pipe', 'r'], //stdin
+            STDOUT, //stdout
+            STDERR, //stderr
+        ];
+
+        proc_open($commandline, $descriptorspec, $pipes);
+
+
+//        $process = new PhpProcess($code);
+//        $process->start();
+
+//        \Closure::bind(function () {
+//            $this->stdout = STDOUT;
+//            $this->stderr = STDERR;
+//        }, $process, 'Symfony\Component\Process\PhpProcess');
     }
 }

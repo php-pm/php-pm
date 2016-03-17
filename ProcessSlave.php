@@ -56,6 +56,11 @@ class ProcessSlave
         $this->bridgeName = $bridgeName;
         $this->bootstrap($appBootstrap, $config['app-env'], $this->isDebug());
         $this->connectToMaster();
+
+        if ($this->isDebug()) {
+            $this->sendCurrentFiles();
+        }
+
         $this->loop->run();
     }
 
@@ -119,6 +124,14 @@ class ProcessSlave
         if ($bridge = $this->getBridge()) {
             $bridge->bootstrap($appBootstrap, $appenv, $debug);
         }
+    }
+
+    /**
+     * Sends to the master a snapshot of current known php files, so it can track those files and restart
+     * slaves if necessary.
+     */
+    protected function sendCurrentFiles(){
+        $this->connection->write(json_encode(array('cmd' => 'files', 'files' => get_included_files())) . PHP_EOL);
     }
 
     /**
@@ -209,7 +222,7 @@ class ProcessSlave
             $bridge->onRequest($request, $response);
 
             if ($this->isDebug()) {
-                $this->connection->write(json_encode(array('cmd' => 'files', 'files' => get_included_files())) . PHP_EOL);
+                $this->sendCurrentFiles();
             }
         } else {
             $response->writeHead('404');
