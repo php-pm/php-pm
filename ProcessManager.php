@@ -526,7 +526,7 @@ class ProcessManager
      */
     protected function reload()
     {
-        $this->inReload = true; //deactivate auto calling of checkSlaves when a connection to slave closes.
+        $this->inReload = true;
 
         foreach ($this->slaves as $pid => $info) {
             $info['ready'] = false; //does not accept new connections
@@ -543,25 +543,6 @@ class ProcessManager
         $this->slaves = [];
 
         $this->inReload = false;
-        $this->checkSlaves();
-    }
-
-    /**
-     * Checks if we have $this->slaveCount alive. If not, it starts new slaves.
-     */
-    protected function checkSlaves()
-    {
-        if (!$this->isRunning || $this->waitForSlaves || $this->inReload) {
-            return;
-        }
-
-        $i = count($this->slaves);
-        if ($this->slaveCount !== $i) {
-//            echo sprintf("Boot %d new slaves ... \n", $this->slaveCount - $i);
-            for (; $i < $this->slaveCount; $i++) {
-                $this->newInstance(5501 + $i);
-            }
-        }
     }
 
     /**

@@ -89,7 +89,7 @@ You can integrate those workers directly in a load balancer like NGINX or use ht
 #### PHP 7, StreamSelectLoop
 
 ```
-/usr/local/bin/php7 ./bin/ppm start ~/bude/aetros.com --bridge=httpKernel --app-env=prod --no-logging --workers=8
+/usr/local/bin/php7 ./bin/ppm start ~/www/symfony--bridge=httpKernel --app-env=prod --logging=0 --debug=0 --workers=8
 
 Static file: 2371.93 requests/s
 Dynamic CMS application: 1685.80 request/s (http://jarves.io)
@@ -98,7 +98,7 @@ Dynamic CMS application: 1685.80 request/s (http://jarves.io)
 #### PHP 5.6.18, StreamSelectLoop
 
 ```
-/usr/local/bin/php5 ./bin/ppm start ~/bude/aetros.com --bridge=httpKernel --app-env=prod --no-logging --workers=8
+/usr/local/bin/php5 ./bin/ppm start ~/www/symfony --bridge=httpKernel --app-env=prod --logging=0 --debug=0 --workers=8
 
 Static file: 1818.52 requests/s
 Dynamic CMS application: 1270.30 request/s (http://jarves.io)
