@@ -1,8 +1,8 @@
 {
     "name": "php-pm/php-pm",
     "require": {
-        "symfony/console": "^2.6",
-        "symfony/process": "^2.6",
+        "symfony/console": "^2.6|^3.0",
+        "symfony/process": "^2.6|^3.0",
         "react/event-loop": "^0.4",
         "react/stream": "^0.4",
         "react/http": "dev-master",
