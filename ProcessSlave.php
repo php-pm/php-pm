@@ -3,6 +3,9 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use PHPPM\React\HttpResponse;
+use PHPPM\React\HttpServer;
+
 class ProcessSlave
 {
     /**
@@ -166,7 +169,7 @@ class ProcessSlave
             var_dump($data);
         });
 
-        $http = new ReactServerWrapper($this->server);
+        $http = new HttpServer($this->server);
         $http->on('request', array($this, 'onRequest'));
         $http->on('error', function ($data) {
             var_dump($data);
@@ -189,11 +192,11 @@ class ProcessSlave
      * Handles incoming requests and transforms a $request into a $response by reference.
      *
      * @param \React\Http\Request $request
-     * @param ReactResponseWrapper $response
+     * @param HttpResponse $response
      *
      * @throws \Exception
      */
-    public function onRequest(\React\Http\Request $request, ReactResponseWrapper $response)
+    public function onRequest(\React\Http\Request $request, HttpResponse $response)
     {
         $this->prepareEnvironment($request);
 
@@ -209,7 +212,7 @@ class ProcessSlave
         }
     }
 
-    protected function handleRequest(\React\Http\Request $request, ReactResponseWrapper $response)
+    protected function handleRequest(\React\Http\Request $request, HttpResponse $response)
     {
         if ($bridge = $this->getBridge()) {
 
@@ -235,28 +238,25 @@ class ProcessSlave
         $_SERVER['REQUEST_METHOD'] = $request->getMethod();
         $_SERVER['REQUEST_TIME'] = (int)microtime(true);
         $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
-        $_SERVER['QUERY_STRING'] = $request->getQuery();
+        $_SERVER['QUERY_STRING'] = http_build_query($request->getQuery());
 
-        $_SERVER['HTTP_HOST'] = @$request->getHeaders()['Host'];
-        $_SERVER['HTTP_CONNECTION'] = @$request->getHeaders()['Connection'];
-        $_SERVER['HTTP_ACCEPT_LANGUAGE'] = @$request->getHeaders()['Accept-Language'];
-        $_SERVER['HTTP_ACCEPT_ENCODING'] = @$request->getHeaders()['Accept-Encoding'];
-        $_SERVER['HTTP_ACCEPT_CHARSET'] = @$request->getHeaders()['Accept-Charset'];
-        $_SERVER['HTTP_ACCEPT'] = @$request->getHeaders()['Accept'];
-        $_SERVER['HTTP_REFERER'] = @$request->getHeaders()['REFERER'];
-        $_SERVER['HTTP_USER_AGENT'] = @$request->getHeaders()['User-Agent'];
+        foreach ($request->getHeaders() as $name => $value) {
+            $_SERVER['HTTP_' . strtoupper($name)] = $value;
+        }
+
         $_SERVER['REMOTE_ADDR'] = @$request->remoteAddress;
-        $_SERVER['REQUEST_URI'] = @$request->getPath();
+
+        $_SERVER['SERVER_NAME'] = @$_SERVER['HTTP_HOST'];
+        $_SERVER['REQUEST_URI'] = $request->getPath();
     }
 
     /**
      * @param \React\Http\Request $request
-     * @param ReactResponseWrapper $response
+     * @param HttpResponse $response
      * @return bool returns true if successfully served
      */
-    protected function serveStatic(\React\Http\Request $request, ReactResponseWrapper $response)
+    protected function serveStatic(\React\Http\Request $request, HttpResponse $response)
     {
-
         $filePath = $this->getBridge()->getStaticDirectory() . $request->getPath();
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
@@ -273,7 +273,7 @@ class ProcessSlave
         return false;
     }
 
-    protected function setupResponseLogging(\React\Http\Request $request, ReactResponseWrapper $response)
+    protected function setupResponseLogging(\React\Http\Request $request, HttpResponse $response)
     {
         $timeLocal = date('d/M/Y:H:i:s O');
 

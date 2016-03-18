@@ -2,6 +2,8 @@
 
 namespace PHPPM\Bridges;
 
+use PHPPM\React\HttpResponse;
+
 interface BridgeInterface
 {
 	/**
@@ -27,5 +29,5 @@ interface BridgeInterface
 	 * @param \React\Http\Request $request
 	 * @param \React\Http\Response $response
 	 */
-    public function onRequest(\React\Http\Request $request, \React\Http\Response $response);
+    public function onRequest(\React\Http\Request $request, HttpResponse $response);
 }

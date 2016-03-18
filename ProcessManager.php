@@ -589,14 +589,5 @@ EOF;
         ];
 
         proc_open($commandline, $descriptorspec, $pipes);
-
-
-//        $process = new PhpProcess($code);
-//        $process->start();
-
-//        \Closure::bind(function () {
-//            $this->stdout = STDOUT;
-//            $this->stderr = STDERR;
-//        }, $process, 'Symfony\Component\Process\PhpProcess');
     }
 }

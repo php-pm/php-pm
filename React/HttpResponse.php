@@ -1,8 +1,8 @@
 <?php
 
-namespace PHPPM;
+namespace PHPPM\React;
 
-class ReactResponseWrapper extends \React\Http\Response {
+class HttpResponse extends \React\Http\Response {
 
     protected $statusCode = 0;
     protected $headers = [];
