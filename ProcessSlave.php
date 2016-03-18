@@ -241,7 +241,7 @@ class ProcessSlave
         $_SERVER['QUERY_STRING'] = http_build_query($request->getQuery());
 
         foreach ($request->getHeaders() as $name => $value) {
-            $_SERVER['HTTP_' . strtoupper($name)] = $value;
+            $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
         }
 
         $_SERVER['REMOTE_ADDR'] = @$request->remoteAddress;
