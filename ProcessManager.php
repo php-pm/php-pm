@@ -562,7 +562,9 @@ class ProcessManager
         $script = <<<EOF
 <?php
 
-include $dir . '/vendor/autoload.php';
+require_once file_exists($dir . '/vendor/autoload.php')
+    ? $dir . '/vendor/autoload.php'
+    : $dir . '/../../autoload.php';
 
 new \PHPPM\ProcessSlave('{$this->getBridge()}', '{$this->getAppBootstrap()}', [
     'app-env' => '{$this->getAppEnv()}',
