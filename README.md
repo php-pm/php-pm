@@ -18,7 +18,7 @@ More information can be found in the article: [Bring High Performance Into Your 
 
 ### Features
 
-* Performance boost of over 15x (compared to PHP-FPM, Symfony applications).
+* Performance boost up to 15x (compared to PHP-FPM, Symfony applications).
 * Integrated load balancer.
 * Hot-Code reload (when PHP files changes).
 * Static file serving for easy development procedures.
@@ -30,7 +30,7 @@ More information can be found in the article: [Bring High Performance Into Your 
 * No painful slow virtual-box file sync.
 * Faster response times of your PHP app.
 * No fighting with vagrant / virtual machine settings. 
-* Checkout a new project, run `ppm start` - done. (if supported)
+* Checkout a new project, run `ppm start` - done. (if configured with `ppm config`)
 * No hassle with domain names (/etc/hosts), just use different ports for your app without root access.
 
 ### Installation
