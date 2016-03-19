@@ -63,6 +63,6 @@ trait ConfigTrait
             return $input->getOption($name);
         }
 
-        return $config[$name];
+        return isset($config[$name]) ? $config[$name] : $input->getOption($name);
     }
 }
