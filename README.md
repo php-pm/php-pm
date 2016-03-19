@@ -170,9 +170,10 @@ Dynamic CMS application: 1270.30 request/s (http://jarves.io)
 
 ### Issues
 
+* Memory leaks, memory leaks and memory leaks. You will find also leaks in your application. :)
 * Does not work with ExtEventLoop. (So don't install `php70-event`)
-* Drupal is very experimental. If you have issues try using https://github.com/php-pm/php-pm-drupal.
-* Both debugger/profiler, Symfonys and Laravels, aren't yet working perfectly since it's still needed to reset some stuff after each request.
+* Drupal is very experimental and not fully working. Try using https://github.com/php-pm/php-pm-drupal.
+* Symfony's and Laravel's profiler aren't working yet perfectly since it's still needed to reset some stuff after each request.
 * Streamed responses are not streamed yet
 * File upload is experimental
 * No windows support due to signal handling
