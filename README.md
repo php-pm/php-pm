@@ -79,7 +79,7 @@ To get the maximum performance you should usually use `--app-env=prod` with disa
 debug `--debug=0`. Also make sure xdebug is disabled. Try with different amount of workers.
 Usually a 10% over your cpu core count is good. Example: If you have 8 cores (incl. hyper-threading) use `--workers=9`.
 
-To get even more performance (for static file serving of for rather fast applications) try a different event loop:
+To get even more performance (for static file serving or for rather fast applications) try a different event loop:
 
 
 If you get strange issues in your application and you have no idea where they are coming from try
@@ -97,8 +97,16 @@ using only one worker `--workers=1`.
 
 ![ppm-help](https://dl.dropboxusercontent.com/u/54069263/ppm-github/help-screenshot.png)
 
+Start
+
 ```bash
-ppm start ~/my/path/to/symfony/ #default is symfony with httpKernel
+cd ~/my/path/to/symfony/
+ppm start
+
+ppm start ~/my/path/to/symfony/ --bootstrap=Symfony --bridge=HttpKernel
+
+cd ~/my/path/to/symfony/
+./vendor/bin/ppm start
 ```
 
 ![ppm-start](https://dl.dropboxusercontent.com/u/54069263/ppm-github/start-command.png)
