@@ -3,8 +3,8 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\PhpExecutableFinder;
-use Symfony\Component\Process\PhpProcess;
 use Symfony\Component\Process\ProcessUtils;
 
 class ProcessManager
@@ -98,14 +98,29 @@ class ProcessManager
      */
     protected $inReload = false;
 
+    /**
+     * @var OutputInterface
+     */
+    protected $output;
+
     protected $filesToTrack = [];
     protected $filesLastMTime = [];
 
-    function __construct($port = 8080, $host = '127.0.0.1', $slaveCount = 8)
+    /**
+     * ProcessManager constructor.
+     *
+     * @param OutputInterface $output
+     * @param int             $port
+     * @param string          $host
+     * @param int             $slaveCount
+     */
+    function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
+        $this->output = $output;
         $this->slaveCount = $slaveCount;
         $this->host = $host;
         $this->port = $port;
+        register_shutdown_function([$this, 'signal']);
     }
 
     /**
@@ -113,14 +128,29 @@ class ProcessManager
      */
     public function signal()
     {
-        echo "Termination received, exiting.\n";
-        $this->controller->shutdown();
-        $this->web->shutdown();
-        $this->loop->tick();
-        $this->loop->stop();
+        //this method is also called during startup when something crashed, so
+        //make sure we don't operate on nulls.
+        $this->output->writeln('<info>Termination received, exiting.</info>');
+        if ($this->controller) {
+            @$this->controller->shutdown();
+        }
+        if ($this->web) {
+            @$this->web->shutdown();
+        }
+        if ($this->loop) {
+            $this->loop->tick();
+            $this->loop->stop();
+        }
 
-        foreach ($this->slaves as $pid => $slave) {
-            posix_kill($slave['pid'], SIGKILL);
+        foreach ($this->slaves as $slave) {
+            if (is_resource($slave['process'])) {
+                proc_terminate($slave['process']);
+            }
+
+            if ($slave['pid']) {
+                //make sure its dead
+                posix_kill($slave['pid'], SIGKILL);
+            }
         }
         exit;
     }
@@ -232,7 +262,8 @@ class ProcessManager
 
         $this->isRunning = true;
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
-        echo "Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...\n";
+
+        $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
 
         for ($i = 0; $i < $this->slaveCount; $i++) {
             $this->newInstance(5501 + $i);
@@ -265,55 +296,54 @@ class ProcessManager
             }
         );
 
-        $this->getNextSlave(function ($slaveId) use ($incoming, &$buffer, &$redirect) {
+        $this->getNextSlave(
+            function ($id) use ($incoming, &$buffer, &$redirect) {
 
-            $slave =& $this->slaves[$slaveId];
-            $slave['busy'] = true;
-            $slave['connections']++;
+                $slave =& $this->slaves[$id];
+                $slave['busy'] = true;
+                $slave['connections']++;
 
-            $this->tcpConnector->create('127.0.0.1', $slave['port'])->then(
-                function (\React\Stream\Stream $stream) use (&$buffer, $redirect, $incoming, &$slave) {
-                    $stream->write($buffer);
+                $this->tcpConnector->create('127.0.0.1', $slave['port'])->then(
+                    function (\React\Stream\Stream $stream) use (&$buffer, $redirect, $incoming, &$slave) {
+                        $stream->write($buffer);
 
-                    $stream->on(
-                        'close',
-                        function () use ($incoming, &$slave) {
-                            $slave['busy'] = false;
-                            $slave['connections']--;
-                            $incoming->end();
-                            unset($slave['socket']);
+                        $stream->on(
+                            'close',
+                            function () use ($incoming, &$slave) {
+                                $slave['busy'] = false;
+                                $slave['connections']--;
+                                $incoming->end();
 
-                            if ($slave['closeWhenFree']) {
-                                $slave['ready'] = false;
-                                $slave['connection']->close();
-                                unset($this->slaves[$slave['pid']]);
+                                if ($slave['closeWhenFree']) {
+                                    $slave['connection']->close();
+                                }
                             }
-                        }
-                    );
+                        );
 
-                    $stream->on(
-                        'data',
-                        function ($data) use ($incoming) {
-                            $incoming->write($data);
-                        }
-                    );
+                        $stream->on(
+                            'data',
+                            function ($data) use ($incoming) {
+                                $incoming->write($data);
+                            }
+                        );
 
-                    $incoming->on(
-                        'data',
-                        function ($data) use ($stream) {
-                            $stream->write($data);
-                        }
-                    );
+                        $incoming->on(
+                            'data',
+                            function ($data) use ($stream) {
+                                $stream->write($data);
+                            }
+                        );
 
-                    $incoming->on(
-                        'close',
-                        function () use ($stream) {
-                            $stream->close();
-                        }
-                    );
-
-                });
-        });
+                        $incoming->on(
+                            'close',
+                            function () use ($stream) {
+                                $stream->close();
+                            }
+                        );
+                    }
+                );
+            }
+        );
     }
 
     /**
@@ -326,20 +356,23 @@ class ProcessManager
         $that = $this;
         $checkSlave = function () use ($cb, $that, &$checkSlave) {
             $minConnections = null;
-            $minPid = null;
+            $minPort = null;
 
-            foreach ($this->slaves as $pid => $slave) {
-                if (!$slave['ready']) continue;
+            foreach ($this->slaves as $slave) {
+                if (!$slave['ready']) {
+                    continue;
+                }
 
                 // we pick a slave that currently handles the fewest connections
                 if (null === $minConnections || $slave['connections'] < $minConnections) {
                     $minConnections = $slave['connections'];
-                    $minPid = $pid;
+                    $minPort = $slave['port'];
                 }
             }
 
-            if (null !== $minPid) {
-                $cb($minPid);
+            if (null !== $minPort) {
+                $cb($minPort);
+
                 return;
             }
             $this->loop->futureTick($checkSlave);
@@ -381,12 +414,24 @@ class ProcessManager
             'close',
             \Closure::bind(
                 function () use ($conn) {
-                    foreach ($this->slaves as $pid => $slave) {
+                    foreach ($this->slaves as $id => $slave) {
                         if ($slave['connection'] === $conn) {
-                            $this->slaves[$pid]['ready'] = false;
-                            posix_kill($slave['pid'], SIGKILL);
-                            unset($this->slaves[$pid]);
+
+                            if ($this->output->isVerbose()) {
+                                $this->output->writeln('Worker closed '.$slave['port']);
+                            }
+
+                            $slave['ready'] = false;
+                            $slave['stdout']->close();
+                            $slave['stderr']->close();
+
+                            if (is_resource($slave['process'])) {
+                                proc_terminate($slave['process'], SIGKILL);
+                            }
+
+                            posix_kill($slave['pid'], SIGKILL); //make sure its really dead
                             $this->newInstance($slave['port']);
+
                             return;
                         }
                     }
@@ -399,7 +444,7 @@ class ProcessManager
     /**
      * A slave sent a message. Redirects to the appropriate `command*` method.
      *
-     * @param array $data
+     * @param array                    $data
      * @param \React\Socket\Connection $conn
      *
      * @throws \Exception when invalid 'cmd' in $data.
@@ -420,19 +465,18 @@ class ProcessManager
     /**
      * A slave sent a `status` command.
      *
-     * @param array $data
+     * @param array                    $data
      * @param \React\Socket\Connection $conn
      */
     protected function commandStatus(array $data, \React\Socket\Connection $conn)
     {
-        $result['activeSlaves'] = count($this->slaves);
-        $conn->end(json_encode($result));
+        $conn->end(json_encode('todo'));
     }
 
     /**
      * A slave sent a `register` command.
      *
-     * @param array $data
+     * @param array                    $data
      * @param \React\Socket\Connection $conn
      */
     protected function commandRegister(array $data, \React\Socket\Connection $conn)
@@ -440,25 +484,29 @@ class ProcessManager
         $pid = (int)$data['pid'];
         $port = (int)$data['port'];
 
-        $this->slaves[$pid] = array(
-            'pid' => $pid,
-            'port' => $port,
-            'closeWhenFree' => false,
-            'socket' => null,
-            'busy' => false,
-            'ready' => true,
-            'connections' => 0,
-            'connection' => $conn
-        );
+        if (!isset($this->slaves[$port]) || !$this->slaves[$port]['waitForRegister']) {
+            throw new \LogicException('A slaves wanted to register on master which was not expected. Emergency close. port='.$port);
+        }
+
+        if ($this->output->isVerbose()) {
+            $this->output->writeln('Worker registered '.$port);
+        }
+
+        $this->slaves[$port]['pid'] = $pid;
+        $this->slaves[$port]['connection'] = $conn;
+        $this->slaves[$port]['ready'] = true;
+        $this->slaves[$port]['waitForRegister'] = false;
 
         if ($this->waitForSlaves && $this->slaveCount === count($this->slaves)) {
             $this->waitForSlaves = false; // all slaves started
 
-            echo sprintf(
-                "%d slaves (starting at 5501) up and ready. Application is ready at http://%s:%s/\n",
-                $this->slaveCount,
-                $this->host,
-                $this->port
+            $this->output->writeln(
+                sprintf(
+                    "%d slaves (starting at 5501) up and ready. Application is ready at http://%s:%s/",
+                    $this->slaveCount,
+                    $this->host,
+                    $this->port
+                )
             );
         }
     }
@@ -468,16 +516,16 @@ class ProcessManager
      *
      * @Todo, integrate Monolog.
      *
-     * @param array $data
+     * @param array                    $data
      * @param \React\Socket\Connection $conn
      */
     protected function commandLog(array $data, \React\Socket\Connection $conn)
     {
-        echo $data['message'] . PHP_EOL;
+        $this->output->writeln($data['message']);
     }
 
     /**
-     * @param array $data
+     * @param array                    $data
      * @param \React\Socket\Connection $conn
      */
     protected function commandFiles(array $data, \React\Socket\Connection $conn)
@@ -512,12 +560,14 @@ class ProcessManager
         }
 
         if ($reload) {
-            echo sprintf(
-                "[%s] File changed %s (detection %f, %d). Reload slaves.\n",
-                date('d/M/Y:H:i:s O'),
-                $filePath,
-                microtime(true) - $start,
-                count($this->filesToTrack)
+            $this->output->writeln(
+                sprintf(
+                    "<info>[%s] File changed %s (detection %f, %d). Reload workers.</info>",
+                    date('d/M/Y:H:i:s O'),
+                    $filePath,
+                    microtime(true) - $start,
+                    count($this->filesToTrack)
+                )
             );
 
             $this->reload();
@@ -541,23 +591,44 @@ class ProcessManager
             }
         };
 
-
-        $this->availableSlave = [];
-        $this->slaves = [];
-
         $this->inReload = false;
     }
 
     /**
      * Creates a new ProcessSlave instance and forks the process.
+     *
      * @param integer $port
      */
     function newInstance($port)
     {
-        $debug = var_export($this->isDebug(), true);
-        $isLogging = var_export($this->isLogging(), true);
-        $static = var_export(true, true);
         $dir = var_export(__DIR__, true);
+
+        $this->slaves[$port] = [
+            'ready' => false,
+            'pid' => null,
+            'port' => $port,
+            'closeWhenFree' => false,
+            'waitForRegister' => true,
+            'busy' => false,
+            'connections' => 0,
+            'connection' => null,
+        ];
+
+        if ($this->output->isVerbose()) {
+            $this->output->writeln('Start new worker '.$port);
+        }
+
+        $bridge = var_export($this->getBridge(), true);
+        $bootstrap = var_export($this->getAppBootstrap(), true);
+        $config = [
+            'port' => $port,
+            'app-env' => $this->getAppEnv(),
+            'debug' => $this->isDebug(),
+            'logging' => $this->isLogging(),
+            'static' => true
+        ];
+
+        $config = var_export($config, true);
 
         $script = <<<EOF
 <?php
@@ -566,29 +637,39 @@ require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
 
-new \PHPPM\ProcessSlave('{$this->getBridge()}', '{$this->getAppBootstrap()}', [
-    'app-env' => '{$this->getAppEnv()}',
-    'debug' => $debug,
-    'port' => $port,
-    'logging' => $isLogging,
-    'static' => $static
-]);
+new \PHPPM\ProcessSlave($bridge, $bootstrap, $config);
 EOF;
 
         $executableFinder = new PhpExecutableFinder();
-        $commandline = $executableFinder->find();
+        $commandline = $executableFinder->find() . '-cgi';
 
         $file = tempnam(sys_get_temp_dir(), 'dbg');
         file_put_contents($file, $script);
         register_shutdown_function('unlink', $file);
-        $commandline .= ' ' . ProcessUtils::escapeArgument($file);
+        $commandline .= ' -C -q ' . ProcessUtils::escapeArgument($file);
 
         $descriptorspec = [
             ['pipe', 'r'], //stdin
-            STDOUT, //stdout
-            STDERR, //stderr
+            ['pipe', 'w'], //stdout
+            ['pipe', 'w'], //stderr
         ];
 
-        proc_open($commandline, $descriptorspec, $pipes);
+        $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
+
+        $this->slaves[$port]['stdout'] = new \React\Stream\Stream($pipes[1], $this->loop);
+        $this->slaves[$port]['stderr'] = new \React\Stream\Stream($pipes[2], $this->loop);
+
+        $this->slaves[$port]['stdout']->on(
+            'data',
+            function ($data) {
+                $this->output->write($data);
+            }
+        );
+        $this->slaves[$port]['stderr']->on(
+            'data',
+            function ($data) {
+                $this->output->write("<error>$data</error>");
+            }
+        );
     }
 }

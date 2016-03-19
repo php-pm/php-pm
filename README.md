@@ -22,9 +22,28 @@ More information can be found in the article: [Bring High Performance Into Your 
 * Integrated load balancer.
 * Hot-Code reload (when PHP files changes).
 * Static file serving for easy development procedures.
-* Support for HttpKernel (Symfony/Laravel), Drupal, Zend.
+* Support for HttpKernel (Symfony/Laravel), Drupal (experimental), Zend (experimental).
+
+### Why using PPM as development server instead of vagrant, nginx or apache?
+
+* No hassle with file permissions (www-data vs local user ids).
+* No painful slow virtual-box file sync.
+* Faster response times of your PHP app.
+* No fighting with vagrant / virtual machine settings. 
+* Checkout a new project, run `ppm start` - done. (if supported)
+* No hassle with domain names (/etc/hosts), just use different ports for your app without root access.
 
 ### Installation
+
+To get PHP-PM you need beside the php binary also php-cgi, which comes often with php. If not availabe try to install it:
+
+**Debian/Ubuntu** (https://www.digitalocean.com/community/tutorials/how-to-upgrade-to-php-7-on-ubuntu-14-04)
+
+`apt-get install php7.0-cgi`
+
+**Mac OSX** (https://github.com/Homebrew/homebrew-php)
+
+`brew install php70`
 
 #### Global
 
@@ -54,6 +73,18 @@ composer install
 
 When `debug` is enabled, PHP-PM detects file changes and restarts its worker automatically.
 
+#### Performance & Debugging tips
+
+To get the maximum performance you should usually use `--app-env=prod` with disabled
+debug `--debug=0`. Also make sure xdebug is disabled. Try with different amount of workers.
+Usually a 10% over your cpu core count is good. Example: If you have 8 cores (incl. hyper-threading) use `--workers=9`.
+
+To get even more performance (for static file serving of for rather fast applications) try a different event loop:
+
+
+If you get strange issues in your application and you have no idea where they are coming from try
+using only one worker `--workers=1`. 
+
 ### Adapter
 
 **HttpKernel for Symfony/Laravel** - https://github.com/php-pm/php-pm-httpkernel
@@ -72,12 +103,36 @@ ppm start ~/my/path/to/symfony/ #default is symfony with httpKernel
 
 ![ppm-start](https://dl.dropboxusercontent.com/u/54069263/ppm-github/start-command.png)
 
-### Example for Symfony's HTTPKernel
+#### Symfony
 
 ```bash
-cd php-pm
+cd my-project
 composer require php-pm/httpkernel-adapter:dev-master
-$ ./bin/ppm start ~/my/path/to/symfony/ --bridge=httpKernel --bootstrap=PHPPM\Bootstraps\Symfony
+$ ./bin/ppm start --bootstrap=symfony
+```
+
+#### Laravel
+
+```bash
+cd my-project
+composer require php-pm/httpkernel-adapter:dev-master
+$ ./vendor/bin/ppm start --bootstrap=laravel
+```
+
+#### Drupal
+
+```bash
+cd my-project
+composer require php-pm/httpkernel-adapter:dev-master
+$ ./bin/ppm start --bootstrap=drupal
+```
+
+#### Zend
+
+```bash
+cd my-project
+composer require php-pm/zend-adapter:dev-master
+$ ./bin/ppm start --bridge=Zf2 --bootstrap=Zf2
 ```
 
 Each worker starts its own HTTP Server which listens on port 5501, 5502, 5503 etc. Range is `5501 -> 5500+<workersCount>`.
@@ -105,6 +160,16 @@ Static file: 1818.52 requests/s
 Dynamic CMS application: 1270.30 request/s (http://jarves.io)
 ```
 
+### Issues
+
+* Does not work with ExtEventLoop. (So don't install `php70-event`)
+* Drupal is very experimental. If you have issues try using https://github.com/php-pm/php-pm-drupal.
+* Both debugger/profiler, Symfonys and Laravels, aren't yet working perfectly since it's still needed to reset some stuff after each request.
+* Streamed responses are not streamed yet
+* File upload is experimental
+* No windows support due to signal handling
+
+Please help us to fix those issues by creating pull requests. :)
 
 ### Setup 1. Use external Load-Balancer
 

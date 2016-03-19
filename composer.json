@@ -6,7 +6,7 @@
         "react/event-loop": "^0.4",
         "react/stream": "^0.4",
         "react/http": "dev-master",
-        "react/socket-client": "dev-master",
+        "react/socket-client": "^0.5.0",
         "mkraemer/react-pcntl": "2.0.*"
     },
     "require-dev": {

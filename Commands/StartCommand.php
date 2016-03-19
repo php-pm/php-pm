@@ -47,7 +47,7 @@ class StartCommand extends Command
 
         $this->renderConfig($output, $config);
 
-        $handler = new ProcessManager($config['port'], $config['host'], $config['workers']);
+        $handler = new ProcessManager($output, $config['port'], $config['host'], $config['workers']);
 
         $handler->setBridge($config['bridge']);
         $handler->setAppEnv($config['app-env']);

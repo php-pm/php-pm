@@ -38,7 +38,7 @@ class ProcessSlave
      */
     protected $bridge;
 
-    protected $logFormat = '$remote_addr - $remote_user [$time_local] "$request" $status $bytes_sent "$http_referer" "$http_user_agent"';
+    protected $logFormat = '[$time_local] $remote_addr - $remote_user "$request" $status $bytes_sent "$http_referer"';
 
     /**
      * Contains some configuration options.
@@ -91,8 +91,9 @@ class ProcessSlave
         if ($this->connection->isWritable()) {
             $this->connection->close();
         }
-        $this->server->shutdown();
-        $this->loop->stop();
+        @$this->server->shutdown();
+        @$this->loop->stop();
+
         exit;
     }
 
@@ -267,7 +268,6 @@ class ProcessSlave
             $response->writeHead(200, [
                 'Content-Type' => $this->mimeContentType($filePath),
                 'Content-Length' => filesize($filePath),
-//                'Path' => $filePath
             ]);
             $response->end(file_get_contents($filePath));
             return true;
@@ -281,6 +281,15 @@ class ProcessSlave
         $timeLocal = date('d/M/Y:H:i:s O');
 
         $response->on('end', function () use ($request, $response, $timeLocal) {
+
+            $requestString = $request->getMethod() . ' ' . $request->getPath() . ' HTTP/' . $request->getHttpVersion();
+            $statusCode = $response->getStatusCode();
+
+            if ($response->getStatusCode() < 400) {
+                $requestString = "<info>$requestString</info>";
+                $statusCode = "<info>$statusCode</info>";
+            }
+
             $message = str_replace([
                 '$remote_addr',
                 '$remote_user',
@@ -294,13 +303,17 @@ class ProcessSlave
                 $request->remoteAddress,
                 '-', //todo remote_user
                 $timeLocal,
-                $request->getMethod() . ' ' . $request->getPath() . ' HTTP/' . $request->getHttpVersion(),
-                $response->getStatusCode(),
+                $requestString,
+                $statusCode,
                 $response->getBytesSent(),
                 @$request->getHeaders()['Referer'] ?: '-',
                 @$request->getHeaders()['User-Agent'] ?: '-',
             ],
                 $this->logFormat);
+
+            if ($response->getStatusCode() >= 400) {
+                $message = "<error>$message</error>";
+            }
 
             $this->connection->write(json_encode(array('cmd' => 'log', 'message' => $message)) . PHP_EOL);
         });
