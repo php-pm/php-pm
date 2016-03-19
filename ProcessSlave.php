@@ -248,6 +248,9 @@ class ProcessSlave
 
         $_SERVER['SERVER_NAME'] = @$_SERVER['HTTP_HOST'];
         $_SERVER['REQUEST_URI'] = $request->getPath();
+        $_SERVER['DOCUMENT_ROOT'] = @$_ENV['DOCUMENT_ROOT'] ?: getcwd();
+        $_SERVER['SCRIPT_NAME'] = @$_ENV['SCRIPT_NAME'] ?: 'index.php';
+        $_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'] . $_SERVER['SCRIPT_NAME'];
     }
 
     /**

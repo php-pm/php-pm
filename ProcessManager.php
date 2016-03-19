@@ -571,7 +571,6 @@ new \PHPPM\ProcessSlave('{$this->getBridge()}', '{$this->getAppBootstrap()}', [
     'logging' => $isLogging,
     'static' => $static
 ]);
-
 EOF;
 
         $executableFinder = new PhpExecutableFinder();
