@@ -103,6 +103,13 @@ class ProcessManager
      */
     protected $output;
 
+    /**
+     * How many requests each worker is allowed to handle until it will be restarted.
+     *
+     * @var int
+     */
+    protected $maxRequests = 1000;
+
     protected $filesToTrack = [];
     protected $filesLastMTime = [];
 
@@ -153,6 +160,14 @@ class ProcessManager
             }
         }
         exit;
+    }
+
+    /**
+     * @param int $maxRequests
+     */
+    public function setMaxRequests($maxRequests)
+    {
+        $this->maxRequests = $maxRequests;
     }
 
     /**
@@ -312,7 +327,13 @@ class ProcessManager
                             function () use ($incoming, &$slave) {
                                 $slave['busy'] = false;
                                 $slave['connections']--;
+                                $slave['requests']++;
                                 $incoming->end();
+
+                                if ($slave['requests'] > $this->maxRequests) {
+                                    $info['ready'] = false;
+                                    $slave['connection']->close();
+                                }
 
                                 if ($slave['closeWhenFree']) {
                                     $slave['connection']->close();
@@ -610,6 +631,7 @@ class ProcessManager
             'closeWhenFree' => false,
             'waitForRegister' => true,
             'busy' => false,
+            'requests' => 0,
             'connections' => 0,
             'connection' => null,
         ];

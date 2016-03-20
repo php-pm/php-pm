@@ -21,6 +21,7 @@ trait ConfigTrait
             ->addOption('app-env', null, InputOption::VALUE_OPTIONAL, 'The environment that your application will use to bootstrap (if any)', 'dev')
             ->addOption('debug', null, InputOption::VALUE_OPTIONAL, 'Activates debugging so that your application is more verbose, enables also hot-code reloading. 1|0', 1)
             ->addOption('logging', null, InputOption::VALUE_OPTIONAL, 'Deactivates the http logging to stdout. 1|0', 1)
+            ->addOption('max-requests', null, InputOption::VALUE_OPTIONAL, 'Max requests per work until it will be restarted', 1000)
             ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony');
     }
     
@@ -53,6 +54,7 @@ trait ConfigTrait
         $config['debug'] = $this->optionOrConfigValue($input, 'debug', $config);
         $config['logging'] = $this->optionOrConfigValue($input, 'logging', $config);
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
+        $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
 
         return $config;
     }
