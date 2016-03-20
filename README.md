@@ -178,6 +178,7 @@ Dynamic CMS application: 1270.30 request/s (http://jarves.io)
 * Streamed responses are not streamed yet
 * File upload is experimental
 * No windows support due to signal handling
+* Doesn't fully implement HTTP/1.1, but [reactphp/http](https://github.com/reactphp/http) is working on it.
 
 Please help us to fix those issues by creating pull requests. :)
 
