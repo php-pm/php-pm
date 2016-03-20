@@ -56,6 +56,7 @@ class StartCommand extends Command
         $handler->setAppBootstrap($config['bootstrap']);
         $handler->setMaxRequests($config['max-requests']);
         $handler->setPhpCgiExecutable($config['php-cgi']);
+        $handler->setConcurrentRequestsPerWorker($config['concurrent-requests']);
 
         $handler->run();
     }

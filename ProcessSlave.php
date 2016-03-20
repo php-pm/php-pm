@@ -232,6 +232,13 @@ class ProcessSlave
             $response->writeHead('404');
             $response->end('No Bridge Defined.');
         }
+
+        if (headers_sent()) {
+            //when a script sent headers the cgi process needs to die because the second request
+            //trying to send headers again will fail (headers already sent fatal). Its best to not even
+            //try to send headers because this break the whole of approach of php-pm using php-cgi.
+            $this->shutdown();
+        }
     }
 
     protected function prepareEnvironment(\React\Http\Request $request)

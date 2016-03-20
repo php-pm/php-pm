@@ -22,6 +22,7 @@ trait ConfigTrait
             ->addOption('debug', null, InputOption::VALUE_OPTIONAL, 'Activates debugging so that your application is more verbose, enables also hot-code reloading. 1|0', 1)
             ->addOption('logging', null, InputOption::VALUE_OPTIONAL, 'Deactivates the http logging to stdout. 1|0', 1)
             ->addOption('max-requests', null, InputOption::VALUE_OPTIONAL, 'Max requests per worker until it will be restarted', 1000)
+            ->addOption('concurrent-requests', null, InputOption::VALUE_OPTIONAL, 'If a worker is allowed to handle more than one request at the same time. This can lead to issues when the application does not support it but makes it faster. (like when they operate on globals at the same time) 1|0', 0)
             ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
             ->addOption('php-cgi', null, InputOption::VALUE_OPTIONAL, 'Full path to the php-cgi executable', false);
     }
@@ -56,6 +57,7 @@ trait ConfigTrait
         $config['logging'] = $this->optionOrConfigValue($input, 'logging', $config);
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
+        $config['concurrent-requests'] = (boolean)$this->optionOrConfigValue($input, 'concurrent-requests', $config);
         $config['php-cgi'] = $this->optionOrConfigValue($input, 'php-cgi', $config);
 
         return $config;
