@@ -384,6 +384,15 @@ class ProcessManager
                     continue;
                 }
 
+                if ($slave['busy']) {
+                    //we skip workers that are busy, means worker that are currently handle a connection
+                    //this makes it more robust since most applications are not made to handle
+                    //several request at the same time - even when one request is streaming. Would lead
+                    //to strange effects&crashed in high traffic sites if not considered.
+                    //maybe in the future this can be set application specific.
+                    continue;
+                }
+
                 // we pick a slave that currently handles the fewest connections
                 if (null === $minConnections || $slave['connections'] < $minConnections) {
                     $minConnections = $slave['connections'];
@@ -668,7 +677,11 @@ EOF;
         $file = tempnam(sys_get_temp_dir(), 'dbg');
         file_put_contents($file, $script);
         register_shutdown_function('unlink', $file);
-        $commandline .= ' -C -q ' . ProcessUtils::escapeArgument($file);
+
+        //we can not use -q since this disables basically all header support
+        //but since this is necessary at least in symfony.
+        //e.g. headers_sent() returns always true, although wrong.
+        $commandline .= ' -C ' . ProcessUtils::escapeArgument($file);
 
         $descriptorspec = [
             ['pipe', 'r'], //stdin
