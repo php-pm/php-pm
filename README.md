@@ -41,9 +41,17 @@ To get PHP-PM you need beside the php binary also php-cgi, which comes often wit
 
 `apt-get install php7.0-cgi`
 
-**Mac OSX** (https://github.com/Homebrew/homebrew-php)
+**Mac OS X - Homebrew** (https://github.com/Homebrew/homebrew-php)
 
 `brew install php70`
+
+**Mac OS X - Macports**
+
+`port install php70-cgi`
+
+By default, PPM looks for a binary named `php-cgi`. If your PHP installation uses
+a different binary name, you can specify the full path to that binary with the `php-cgi`
+configuration option (for example: `ppm config --php-cgi=/opt/local/bin/php-cgi70`).
 
 #### Global
 
