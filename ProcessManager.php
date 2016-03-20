@@ -110,6 +110,14 @@ class ProcessManager
      */
     protected $maxRequests = 1000;
 
+    /**
+     * Full path to the php-cgi executable. If not set, we try to determine the
+     * path automatically.
+     *
+     * @var string
+     */
+    protected $phpCgiExecutable = false;
+
     protected $filesToTrack = [];
     protected $filesLastMTime = [];
 
@@ -168,6 +176,14 @@ class ProcessManager
     public function setMaxRequests($maxRequests)
     {
         $this->maxRequests = $maxRequests;
+    }
+
+    /**
+     * @param string $phpCgiExecutable
+     */
+    public function setPhpCgiExecutable($phpCgiExecutable)
+    {
+        $this->phpCgiExecutable = $phpCgiExecutable;
     }
 
     /**
@@ -671,8 +687,12 @@ require_once file_exists($dir . '/vendor/autoload.php')
 new \PHPPM\ProcessSlave($bridge, $bootstrap, $config);
 EOF;
 
-        $executableFinder = new PhpExecutableFinder();
-        $commandline = $executableFinder->find() . '-cgi';
+        if ($this->phpCgiExecutable) {
+          $commandline = $this->phpCgiExecutable;
+        } else {
+          $executableFinder = new PhpExecutableFinder();
+          $commandline = $executableFinder->find() . '-cgi';
+        }
 
         $file = tempnam(sys_get_temp_dir(), 'dbg');
         file_put_contents($file, $script);
