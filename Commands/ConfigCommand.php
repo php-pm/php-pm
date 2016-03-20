@@ -31,7 +31,7 @@ class ConfigCommand extends Command
         $this->renderConfig($output, $config);
 
         $newContent = json_encode($config, JSON_PRETTY_PRINT);
-        if ($newContent === file_get_contents($this->file)) {
+        if (file_exists($this->file) && $newContent === file_get_contents($this->file)) {
             $output->writeln(sprintf('No changes.', realpath($this->file)));
             return;
         }

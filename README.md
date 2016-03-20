@@ -58,9 +58,10 @@ $ ppm --help
 #### Per project
 
 ```bash
-composer require php-pm/php-pm:^0.1.0
-composer require php-pm/httpkernel-adapter:^0.1.0 #if you have httpkernel
-./vendor/bin/ppm config #places a ppm.json in your directory
+# change minimum-stability to dev in your composer.json (until we have a version tagged): "minimum-stability": "dev"
+composer require php-pm/php-pm:dev-master #if you have httpkernel (laravel, symfony)
+composer require php-pm/httpkernel-adapter:dev-master #if you have httpkernel (laravel, symfony)
+./vendor/bin/ppm config --bootstrap=symfony #places a ppm.json in your directory
 ./vendor/bin/ppm start #reads ppm.json and starts the server like you want
 ```
 
