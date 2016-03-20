@@ -69,15 +69,15 @@ $ ppm --help
 # change minimum-stability to dev in your composer.json (until we have a version tagged): "minimum-stability": "dev"
 composer require php-pm/php-pm:dev-master
 composer require php-pm/httpkernel-adapter:dev-master #if you have httpkernel (laravel, symfony)
-./vendor/bin/ppm config --bootstrap=symfony #places a ppm.json in your directory
-./vendor/bin/ppm start #reads ppm.json and starts the server like you want
+./bin/ppm config --bootstrap=symfony #places a ppm.json in your directory
+./bin/ppm start #reads ppm.json and starts the server like you want
 ```
 
 Once configured (composer and ppm.json) you can start your app on your development machine or server instantly:
 
 ```bash
 composer install
-./vendor/bin/ppm start
+./bin/ppm start
 ```
 
 When `debug` is enabled, PHP-PM detects file changes and restarts its worker automatically.
@@ -115,7 +115,7 @@ ppm start
 ppm start ~/my/path/to/symfony/ --bootstrap=Symfony --bridge=HttpKernel
 
 cd ~/my/path/to/symfony/
-./vendor/bin/ppm start
+./bin/ppm start
 ```
 
 ![ppm-start](https://dl.dropboxusercontent.com/u/54069263/ppm-github/start-command.png)
@@ -125,7 +125,7 @@ cd ~/my/path/to/symfony/
 ```bash
 cd my-project
 composer require php-pm/httpkernel-adapter:dev-master
-$ ./bin/ppm start --bootstrap=symfony
+./bin/ppm start --bootstrap=symfony
 ```
 
 #### Laravel
@@ -133,7 +133,7 @@ $ ./bin/ppm start --bootstrap=symfony
 ```bash
 cd my-project
 composer require php-pm/httpkernel-adapter:dev-master
-$ ./vendor/bin/ppm start --bootstrap=laravel
+./bin/ppm start --bootstrap=laravel
 ```
 
 #### Drupal
@@ -141,7 +141,7 @@ $ ./vendor/bin/ppm start --bootstrap=laravel
 ```bash
 cd my-project
 composer require php-pm/httpkernel-adapter:dev-master
-$ ./bin/ppm start --bootstrap=drupal
+./bin/ppm start --bootstrap=drupal
 ```
 
 #### Zend
@@ -149,7 +149,7 @@ $ ./bin/ppm start --bootstrap=drupal
 ```bash
 cd my-project
 composer require php-pm/zend-adapter:dev-master
-$ ./bin/ppm start --bridge=Zf2 --bootstrap=Zf2
+./bin/ppm start --bridge=Zf2 --bootstrap=Zf2
 ```
 
 Each worker starts its own HTTP Server which listens on port 5501, 5502, 5503 etc. Range is `5501 -> 5500+<workersCount>`.
