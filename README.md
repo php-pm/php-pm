@@ -41,6 +41,10 @@ To get PHP-PM you need beside the php binary also php-cgi, which comes often wit
 
 `apt-get install php7.0-cgi`
 
+By default cgi bin is in  `/usr/lib/cgi-bin/php`, so you need to run:
+
+`sudo ln -s /usr/lib/cgi-bin/php /usr/bin/php7.0-cgi`
+
 **Mac OS X - Homebrew** (https://github.com/Homebrew/homebrew-php)
 
 `brew install php70`
