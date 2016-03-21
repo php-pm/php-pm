@@ -886,12 +886,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-pm/php-pm-httpkernel.git",
-                "reference": "55f846c5b62fdf88e4b2188fcc08e262b834106b"
+                "reference": "53302ba6e139a0041202dfd3371671c8501ddc2b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-pm/php-pm-httpkernel/zipball/55f846c5b62fdf88e4b2188fcc08e262b834106b",
-                "reference": "55f846c5b62fdf88e4b2188fcc08e262b834106b",
+                "url": "https://api.github.com/repos/php-pm/php-pm-httpkernel/zipball/53302ba6e139a0041202dfd3371671c8501ddc2b",
+                "reference": "53302ba6e139a0041202dfd3371671c8501ddc2b",
                 "shasum": ""
             },
             "require": {
@@ -905,7 +905,7 @@
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
-            "time": "2016-03-20 13:43:52"
+            "time": "2016-03-21 16:34:36"
         },
         {
             "name": "symfony/event-dispatcher",
