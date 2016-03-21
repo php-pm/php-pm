@@ -344,7 +344,7 @@ class ProcessManager
         $pcntl->on(SIGINT, [$this, 'shutdown']);
 
         if ($this->isDebug()) {
-            $this->loop->addPeriodicTimer(0.5, function() {
+            $this->loop->addPeriodicTimer(0.5, function () {
                 $this->checkChangedFiles();
             });
         }
@@ -689,7 +689,7 @@ class ProcessManager
     protected function commandFiles(array $data, Connection $conn)
     {
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(sprintf('Received %d files from %d', count($data['files']),  $this->getPort($conn)));
+            $this->output->writeln(sprintf('Received %d files from %d', count($data['files']), $this->getPort($conn)));
         }
         $this->filesToTrack = array_unique(array_merge($this->filesToTrack, $data['files']));
     }
