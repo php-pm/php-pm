@@ -86,7 +86,7 @@ composer install
 
 When `debug` is enabled, PHP-PM detects file changes and restarts its worker automatically.
 
-#### Performance & Debugging tips
+#### Performance
 
 To get the maximum performance you should usually use `--app-env=prod` with disabled
 debug `--debug=0`. Also make sure xdebug is disabled. Try with different amount of workers.
@@ -94,11 +94,19 @@ Usually a 10% over your cpu core count is good. Example: If you have 8 real core
 
 If your applications supports it, try enabled concurrent requests per worker: `--concurrent-requests=1`.
 
-To get even more performance (for static file serving or for rather fast applications) try a different event loop:
+To get even more performance (for static file serving or for rather fast applications) try a different event loop (see https://github.com/reactphp/event-loop).
 
+#### Debugging
 
 If you get strange issues in your application and you have no idea where they are coming from try
-using only one worker `--workers=1`. 
+using only one worker `--workers=1` and enable `-v` or `-vv`. 
+
+When debugging you should use xdebug as you're used to. If you set a break point and hold the application, then only one
+worker is stopped until you release the break point. All other workers are fully functional. 
+
+In all workers the STDOUT is redirected to the connected client. So take care, `var_dump`, `echo` are not displayed on the console.
+STDERR is not redirected to the client, but to the console. So, for very simple debugging you could use `error_log('hi')` and you'll see it on the console.
+Per default exceptions and errors are only displayed on the console, prettified with Symfony/Debug component.
 
 ### Adapter
 

@@ -5,7 +5,7 @@ namespace PHPPM;
 use React\Socket\Connection;
 
 /**
- * Little trait used in ProcessManager nad ProcessSlave to have a simple json process communication.
+ * Little trait used in ProcessManager and ProcessSlave to have a simple json process communication.
  */
 trait ProcessCommunicationTrait
 {
@@ -25,8 +25,7 @@ trait ProcessCommunicationTrait
         if (is_callable(array($this, $method))) {
             $this->$method($array, $conn);
         } else {
-            echo($data);
-            throw new \Exception(sprintf('Command %s not found', $method));
+            throw new \Exception(sprintf('Command %s not found. Got %s', $method, $data));
         }
     }
 
