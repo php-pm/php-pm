@@ -3,11 +3,20 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use Monolog\Handler\BufferHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 use PHPPM\React\HttpResponse;
 use PHPPM\React\HttpServer;
+use React\Socket\Connection;
+use Symfony\Component\Debug\BufferingLogger;
+use Symfony\Component\Debug\Debug;
+use Symfony\Component\Debug\ErrorHandler;
 
 class ProcessSlave
 {
+    use ProcessCommunicationTrait;
+
     /**
      * @var \React\Socket\Server
      */
@@ -38,15 +47,33 @@ class ProcessSlave
      */
     protected $bridge;
 
+    /**
+     * @var string
+     */
+    protected $appBootstrap;
+
+    /**
+     * Contains the cached version of last sent files, for performance reasons
+     *
+     * @var array|null
+     */
+    protected $lastSentFiles;
+
+    /**
+     * @var bool
+     */
+    protected $inShutdown = false;
+
     protected $logFormat = '[$time_local] $remote_addr - $remote_user "$request" $status $bytes_sent "$http_referer"';
 
     /**
      * Contains some configuration options.
      *
+     * 'port' => int (server port)
      * 'appenv' => string (App environment)
      * 'static' => boolean (true) (If it should server static files)
      * 'logging' => boolean (false) (If it should log all requests)
-     *
+     * ...
      *
      * @var array
      */
@@ -56,15 +83,10 @@ class ProcessSlave
     {
         gc_disable();
         $this->config = $config;
+        $this->appBootstrap = $appBootstrap;
         $this->bridgeName = $bridgeName;
-        $this->bootstrap($appBootstrap, $config['app-env'], $this->isDebug());
-        $this->connectToMaster();
 
-        if ($this->isDebug()) {
-            $this->sendCurrentFiles();
-        }
-
-        $this->loop->run();
+        $this->run();
     }
 
     /**
@@ -88,11 +110,25 @@ class ProcessSlave
      */
     public function shutdown()
     {
-        if ($this->connection->isWritable()) {
+        if ($this->inShutdown) {
+            return;
+        }
+
+        $this->inShutdown = true;
+
+        $this->sendCurrentFiles();
+        $this->loop->tick();
+
+        if ($this->connection && $this->connection->isWritable()) {
             $this->connection->close();
         }
-        @$this->server->shutdown();
-        @$this->loop->stop();
+        if ($this->server) {
+            @$this->server->shutdown();
+        }
+        if ($this->loop) {
+            $this->loop->tick();
+            @$this->loop->stop();
+        }
 
         exit;
     }
@@ -123,10 +159,20 @@ class ProcessSlave
         return $this->bridge;
     }
 
+    /**
+     * Bootstraps the actual application.
+     *
+     * @param string $appBootstrap
+     * @param string $appenv
+     * @param boolean $debug
+     *
+     * @throws \Exception
+     */
     protected function bootstrap($appBootstrap, $appenv, $debug)
     {
         if ($bridge = $this->getBridge()) {
             $bridge->bootstrap($appBootstrap, $appenv, $debug);
+            $this->sendMessage($this->connection, 'ready');
         }
     }
 
@@ -134,16 +180,27 @@ class ProcessSlave
      * Sends to the master a snapshot of current known php files, so it can track those files and restart
      * slaves if necessary.
      */
-    protected function sendCurrentFiles(){
-        $this->connection->write(json_encode(array('cmd' => 'files', 'files' => get_included_files())) . PHP_EOL);
+    protected function sendCurrentFiles()
+    {
+        $files = get_included_files();
+        $flipped = array_flip($files);
+
+        //speedy way checking if two arrays are different.
+        if (!$this->lastSentFiles || array_diff_key($flipped, $this->lastSentFiles)) {
+            $this->lastSentFiles = $flipped;
+            $this->sendMessage($this->connection, 'files', ['files' => $files]);
+        }
     }
 
     /**
      * Connects to ProcessManager, master process.
      */
-    public function connectToMaster()
+    public function run()
     {
         $this->loop = \React\EventLoop\Factory::create();
+
+        ErrorHandler::register(new ErrorHandler(new BufferingLogger()));
+
         $this->client = stream_socket_client('tcp://127.0.0.1:5500');
         $this->connection = new \React\Socket\Connection($this->client, $this->loop);
         $this->connection->on('error', function ($data) {
@@ -154,7 +211,9 @@ class ProcessSlave
 
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
+        register_shutdown_function([$this, 'shutdown']);
 
+        $this->bindProcessMessage($this->connection);
         $this->connection->on(
             'close',
             \Closure::bind(
@@ -186,7 +245,18 @@ class ProcessSlave
             }
         }
 
-        $this->connection->write(json_encode(array('cmd' => 'register', 'pid' => getmypid(), 'port' => $port)) . PHP_EOL);
+        $this->sendMessage($this->connection, 'register', ['pid' => getmypid(), 'port' => $port]);
+
+        $this->loop->run();
+    }
+
+    public function commandBootstrap(array $data, Connection $conn)
+    {
+        $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
+
+        if ($this->isDebug()) {
+            $this->sendCurrentFiles();
+        }
     }
 
     /**
@@ -223,7 +293,11 @@ class ProcessSlave
                 }
             }
 
-            $bridge->onRequest($request, $response);
+            try {
+                $bridge->onRequest($request, $response);
+            } catch (\Exception $e) {
+
+            }
 
             if ($this->isDebug()) {
                 $this->sendCurrentFiles();
@@ -322,7 +396,8 @@ class ProcessSlave
                 $message = "<error>$message</error>";
             }
 
-            $this->connection->write(json_encode(array('cmd' => 'log', 'message' => $message)) . PHP_EOL);
+
+            $this->sendMessage($this->connection, 'log', ['message' => $message]);
         });
     }
 
