@@ -47,8 +47,6 @@ By default cgi bin is in  `/usr/lib/cgi-bin/php`, so you need to run:
 
 **Mac OS X - Homebrew** (https://github.com/Homebrew/homebrew-php)
 
-**Mac OSX** (https://github.com/Homebrew/homebrew-php)
-
 `brew install php70`
 
 **Mac OS X - Macports**
