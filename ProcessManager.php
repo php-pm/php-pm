@@ -400,13 +400,16 @@ class ProcessManager
                                 $slave['requests']++;
                                 $incoming->end();
 
+                                /** @var Connection $connection */
+                                $connection = $slave['connection'];
+
                                 if ($slave['requests'] > $this->maxRequests) {
-                                    $info['ready'] = false;
-                                    $slave['connection']->close();
+                                    $slave['ready'] = false;
+                                    $connection->close();
                                 }
 
                                 if ($slave['closeWhenFree']) {
-                                    $slave['connection']->close();
+                                    $connection->close();
                                 }
                             }
                         );
@@ -762,19 +765,26 @@ class ProcessManager
 
         $this->inReload = true;
 
-        foreach ($this->slaves as &$info) {
-            $info['ready'] = false; //does not accept new connections
-            $info['keepClosed'] = false;
-            $info['bootstrapFailed'] = 0;
+        foreach ($this->slaves as &$slave) {
+            $slave['ready'] = false; //does not accept new connections
+            $slave['keepClosed'] = false;
 
-            if ($info['connection'] && $info['connection']->isWritable()) {
-                if ($info['busy']) {
-                    $info['closeWhenFree'] = true;
+            //important to not get 'bootstrap failed' exception, when the bootstrap changes files.
+            $slave['duringBootstrap'] = false;
+
+            $slave['bootstrapFailed'] = 0;
+
+            /** @var Connection $connection */
+            $connection = $slave['connection'];
+
+            if ($connection && $connection->isWritable()) {
+                if ($slave['busy']) {
+                    $slave['closeWhenFree'] = true;
                 } else {
-                    $info['connection']->close();
+                    $connection->close();
                 }
             } else {
-                $this->newInstance($info['port']);
+                $this->newInstance($slave['port']);
             }
         };
 
@@ -875,9 +885,8 @@ EOF;
 
         $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
 
-        $this->slaves[$port]['stderr'] = new \React\Stream\Stream($pipes[2], $this->loop);
-
-        $this->slaves[$port]['stderr']->on(
+        $stderr = new \React\Stream\Stream($pipes[2], $this->loop);
+        $stderr->on(
             'data',
             function ($data) use ($port) {
                 if ($this->lastWorkerErrorPrintBy !== $port) {
@@ -887,5 +896,6 @@ EOF;
                 $this->output->write("<error>$data</error>");
             }
         );
+        $this->slaves[$port]['stderr'] = $stderr;
     }
 }

@@ -322,7 +322,7 @@ class ProcessSlave
             $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
         }
 
-        $_SERVER['REMOTE_ADDR'] = @$request->remoteAddress;
+        $_SERVER['REMOTE_ADDR'] = $request->remoteAddress;
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $_SERVER['REQUEST_URI'] = $request->getPath();
