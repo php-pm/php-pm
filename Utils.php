@@ -61,11 +61,11 @@ class Utils
         $entropy .= microtime(true);
 
         if (function_exists('openssl_random_pseudo_bytes')) {
-            $entropy = openssl_random_pseudo_bytes(32, $strong);
+            $entropy .= openssl_random_pseudo_bytes(32, $strong);
         }
         
         if (function_exists('mcrypt_create_iv')) {
-            $entropy = mcrypt_create_iv(32, MCRYPT_DEV_URANDOM);
+            $entropy .= mcrypt_create_iv(32, MCRYPT_DEV_URANDOM);
         }
 
         $hash = hash('whirlpool', $entropy);
