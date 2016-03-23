@@ -132,9 +132,8 @@ cd ~/my/path/to/symfony/
 ./vendor/bin/ppm start
 ```
 
-<p align="center">
 ![ppm-start](https://dl.dropboxusercontent.com/u/54069263/ppm-github/start-command.png)
-</p>
+
 
 #### Symfony
 
@@ -193,9 +192,7 @@ https://github.com/bestmomo/laravel5-example
 
 `ppm start --bootstrap=laravel --app-env=prod --debug=0 --logging=0 --workers=20`
 
-<p align="center">
 [Supercharge Laravel](https://dl.dropboxusercontent.com/u/54069263/ppm-github/laravel.png)
-</p>
 
 ### Issues
 
