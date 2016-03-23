@@ -199,7 +199,7 @@ https://github.com/bestmomo/laravel5-example
 
 ## Issues
 
-* Not production ready yet, as it's in development and needs still some work in the bootstrap classes of supported frameworks. Some people currently trying to use it in production. Stay tuned :)
+* Not production ready yet, as it's in development and needs still some work in the bootstrap classes of supported frameworks. Some people are currently trying to use it in production. Stay tuned :)
 * Memory leaks, memory leaks and memory leaks. You will find also leaks in your application. :) But no big issue since worker restart automatically.
 * Does not work with ExtEventLoop. (So don't install `php70-event`, but you can try LibEventLoop `php56-libevent`)
 * Drupal and Zend is very experimental and not fully working. Try using https://github.com/php-pm/php-pm-drupal.
@@ -231,7 +231,7 @@ server {
 ### Setup 2. Use PPM directly
 
 Since PPM has also a static file server (which isn't quite as fast as nginx, but works for basic usage, see Performance section),
-you can use PPM directly on your server or local. Do not run ppm as root (to get port like 80 working), as it does not sets a new UID of the current process
+you can use PPM directly on your server or local. Do not run ppm as root (to get port like 80 working), as it does not set a new UID of the current process
 and would run all the time as root, which is highly unrecommended.
 
 We're working on that so you can directly replace NGINX+PHP-FPM with PHP-PM, with all its features: daemonize, auto-restart (master process), listening on port 80, vhosts, ssl etc.
