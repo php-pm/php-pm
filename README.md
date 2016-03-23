@@ -192,7 +192,10 @@ https://github.com/bestmomo/laravel5-example
 
 `ppm start --bootstrap=laravel --app-env=prod --debug=0 --logging=0 --workers=20`
 
-[Supercharge Laravel](https://dl.dropboxusercontent.com/u/54069263/ppm-github/laravel.png)
+
+<p align="center">
+<img src="https://dl.dropboxusercontent.com/u/54069263/ppm-github/laravel.png" />
+</p>
 
 ### Issues
 
