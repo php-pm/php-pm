@@ -43,7 +43,33 @@ class Utils
     /**
      * @return bool
      */
-    public static function isWindows(){
+    public static function isWindows()
+    {
         return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+    }
+
+    /**
+     * Generates stronger session ids for session handling.
+     *
+     * @return string
+     */
+    public static function generateSessionId()
+    {
+        $entropy = '';
+
+        $entropy .= uniqid(mt_rand(), true);
+        $entropy .= microtime(true);
+
+        if (function_exists('openssl_random_pseudo_bytes')) {
+            $entropy = openssl_random_pseudo_bytes(32, $strong);
+        }
+        
+        if (function_exists('mcrypt_create_iv')) {
+            $entropy = mcrypt_create_iv(32, MCRYPT_DEV_URANDOM);
+        }
+
+        $hash = hash('whirlpool', $entropy);
+
+        return $hash;
     }
 }

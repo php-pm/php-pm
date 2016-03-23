@@ -163,6 +163,7 @@ class ProcessManager
 
     protected $filesToTrack = [];
     protected $filesLastMTime = [];
+    protected $filesLastMd5 = [];
 
     /**
      * ProcessManager constructor.
@@ -664,7 +665,7 @@ class ProcessManager
             } else {
                 $this->output->writeln(
                     sprintf(
-                        "%d workers (starting at 5501) up and ready. Application is ready at http://%s:%s/",
+                        "<info>%d workers (starting at 5501) up and ready. Application is ready at http://%s:%s/</info>",
                         $this->slaveCount,
                         $this->host,
                         $this->port
@@ -760,13 +761,18 @@ class ProcessManager
             if (isset($this->filesLastMTime[$filePath])) {
                 if ($this->filesLastMTime[$filePath] !== $currentFileMTime) {
                     $this->filesLastMTime[$filePath] = $currentFileMTime;
-                    $reload = true;
 
-                    //since chances are high that this file will change again we
-                    //move this file to the beginning of the array, so next check is way faster.
-                    unset($this->filesToTrack[$idx]);
-                    array_unshift($this->filesToTrack, $filePath);
-                    break;
+                    $md5 = md5_file($filePath);
+                    if (!isset($this->filesLastMd5[$filePath]) || $md5 !== $this->filesLastMd5[$filePath]) {
+                        $this->filesLastMd5[$filePath] = $md5;
+                        $reload = true;
+
+                        //since chances are high that this file will change again we
+                        //move this file to the beginning of the array, so next check is way faster.
+                        unset($this->filesToTrack[$idx]);
+                        array_unshift($this->filesToTrack, $filePath);
+                        break;
+                    }
                 }
             } else {
                 $this->filesLastMTime[$filePath] = $currentFileMTime;
@@ -899,6 +905,7 @@ class ProcessManager
         $bootstrap = var_export($this->getAppBootstrap(), true);
         $config = [
             'port' => $port,
+            'session_path' => session_save_path(),
 
             'host' => Utils::isWindows() ? '127.0.0.1' : $socket,
             'controllerHost' => Utils::isWindows() ? 'tcp://127.0.0.1' : $this->controllerHost,

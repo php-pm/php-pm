@@ -85,6 +85,10 @@ class ProcessSlave
         $this->appBootstrap = $appBootstrap;
         $this->bridgeName = $bridgeName;
 
+        if ($this->config['session_path']) {
+            session_save_path($this->config['session_path']);
+        }
+
         $this->run();
     }
 
@@ -308,6 +312,7 @@ class ProcessSlave
             //when a script sent headers the cgi process needs to die because the second request
             //trying to send headers again will fail (headers already sent fatal). Its best to not even
             //try to send headers because this break the whole of approach of php-pm using php-cgi.
+            error_log('Headers has been sent. Force restart of a worker. Make sure your application does not send headers on its own.');
             $this->shutdown();
         }
     }
