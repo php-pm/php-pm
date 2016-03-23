@@ -197,12 +197,13 @@ https://github.com/bestmomo/laravel5-example
 <img src="https://dl.dropboxusercontent.com/u/54069263/ppm-github/laravel.png" />
 </p>
 
-### Issues
+## Issues
 
+* Not production ready yet, as it's in development and needs still some work in the bootstrap classes of supported frameworks. Some people currently trying to use it in production. Stay tuned :)
 * Memory leaks, memory leaks and memory leaks. You will find also leaks in your application. :) But no big issue since worker restart automatically.
 * Does not work with ExtEventLoop. (So don't install `php70-event`, but you can try LibEventLoop `php56-libevent`)
-* Drupal is very experimental and not fully working. Try using https://github.com/php-pm/php-pm-drupal.
-* Symfony's and Laravel's profiler aren't working yet perfectly since it's still needed to reset some stuff after each request.
+* Drupal and Zend is very experimental and not fully working. Try using https://github.com/php-pm/php-pm-drupal.
+* Laravel's debugger isn't working yet perfectly since it's still needed to reset some stuff after each request.
 * Streamed responses are not streamed yet
 * File upload is experimental
 * No windows support due to signal handling
@@ -210,37 +211,29 @@ https://github.com/bestmomo/laravel5-example
 
 Please help us to fix those issues by creating pull requests. :)
 
-### Setup 1. Use external Load-Balancer
+### Setup 1. Use NGINX
 
-![ReactPHP with external Load-Balancer](doc/reactphp-external-balancer.jpg)
-
-Example config for NGiNX:
+Example config for NGINX:
 
 ```nginx
-upstream backend  {
-    server 127.0.0.1:5501;
-    server 127.0.0.1:5502;
-    server 127.0.0.1:5503;
-    server 127.0.0.1:5504;
-    server 127.0.0.1:5505;
-    server 127.0.0.1:5506;
-}
-
 server {
     root /path/to/symfony/web/;
     server_name servername.com;
     location / {
-        try_files $uri @backend;
+        try_files $uri @ppm;
     }
-    location @backend {
-        proxy_pass http://backend;
+    location @ppm {
+        proxy_pass http://127.0.0.1:8080;
     }
 }
 ```
 
-### Setup 2. Use internal Load-Balancer
+### Setup 2. Use PPM directly
 
-This setup is slower as we can't load balance incoming connections as fast as NGiNX it does,
-but it's perfect for testing purposes.
+Since PPM has also a static file server (which isn't quite as fast as nginx, but works for basic usage, see Performance section),
+you can use PPM directly on your server or local. Do not run ppm as root (to get port like 80 working), as it does not sets a new UID of the current process
+and would run all the time as root, which is highly unrecommended.
+
+We're working on that so you can directly replace NGINX+PHP-FPM with PHP-PM, with all its features: daemonize, auto-restart (master process), listening on port 80, vhosts, ssl etc.
 
 ![ReactPHP with internal Load-Balancer](doc/reactphp-internal-balancer.jpg)
