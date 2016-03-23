@@ -26,7 +26,7 @@ trait ConfigTrait
             ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
             ->addOption('php-cgi', null, InputOption::VALUE_OPTIONAL, 'Full path to the php-cgi executable', false);
     }
-    
+
     protected function renderConfig(OutputInterface $output, array $config)
     {
         $table = new Table($output);
@@ -39,12 +39,29 @@ trait ConfigTrait
         $table->render();
     }
 
+    /**
+     * @return string|null
+     */
+    protected function getConfigPath()
+    {
+        $possiblePaths = [
+            $this->file,
+            sprintf('%s/%s', dirname($GLOBALS['argv'][0]), $this->file)
+        ];
+
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                return realpath($path);
+            }
+        }
+    }
+
     protected function loadConfig(InputInterface $input)
     {
         $config = [];
 
-        if (file_exists($this->file)) {
-            $content = file_get_contents($this->file);
+        if ($path = $this->getConfigPath()) {
+            $content = file_get_contents($path);
             $config = json_decode($content, true);
         }
 

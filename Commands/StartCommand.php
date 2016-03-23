@@ -35,13 +35,13 @@ class StartCommand extends Command
         }
         $config = $this->loadConfig($input);
 
-        if (file_exists($this->file)) {
+        if ($path = $this->getConfigPath()) {
             $modified = '';
-            $fileConfig = json_decode(file_get_contents($this->file), true);
+            $fileConfig = json_decode(file_get_contents($path), true);
             if (json_encode($fileConfig) !== json_encode($config)) {
                 $modified = ', modified by command arguments';
             }
-            $output->writeln(sprintf('<info>Read configuration %s%s.</info>', realpath($this->file), $modified));
+            $output->writeln(sprintf('<info>Read configuration %s%s.</info>', $path, $modified));
         }
         $output->writeln(sprintf('<info>%s</info>', getcwd()));
 
