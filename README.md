@@ -132,7 +132,9 @@ cd ~/my/path/to/symfony/
 ./vendor/bin/ppm start
 ```
 
+<p align="center">
 ![ppm-start](https://dl.dropboxusercontent.com/u/54069263/ppm-github/start-command.png)
+</p>
 
 #### Symfony
 
@@ -169,32 +171,36 @@ $ ./bin/ppm start --bridge=Zf2 --bootstrap=Zf2
 Each worker starts its own HTTP Server which listens on port 5501, 5502, 5503 etc. Range is `5501 -> 5500+<workersCount>`.
 You can integrate those workers directly in a load balancer like NGINX or use http://127.0.0.1:8080 directly.
 
-### Performance
+### Performance (requests/s)
 
-6x3,2 GHz Intel, 16GB RAM. 20 concurrent, 1000 total request: `ab -c 20 -n 1000 http://127.0.0.1:8080/`
+6x4GHz Intel i7, 16GB RAM. 10 concurrent, 1000 total request: `ab -c 10 -n 1000 http://127.0.0.1:8080/`
 
-#### PHP 7, StreamSelectLoop
+#### Symfony, CMS application
 
-```
-/usr/local/bin/php7 ./bin/ppm start ~/www/symfony--bridge=httpKernel --app-env=prod --logging=0 --debug=0 --workers=8
+`ppm start --bootstrap=symfony --app-env=prod --logging=0 --debug=0 --workers=20`
 
-Static file: 2371.93 requests/s
-Dynamic CMS application: 1685.80 request/s (http://jarves.io)
-```
+http://jarves.io
 
-#### PHP 5.6.18, StreamSelectLoop
+| PHP Version              | Dynamic at Jarves | Static file |
+|--------------------------|-------------------|-------------|
+| 7.0.3, StreamSelectLoop  | 2387,67           | 3944,52     |
+| 5.6.18, StreamSelectLoop | 1663,56           | 2636,09     |
+| 5.6.18, LibEventLoop     | 1811,76           | 3441,72     |
 
-```
-/usr/local/bin/php5 ./bin/ppm start ~/www/symfony --bridge=httpKernel --app-env=prod --logging=0 --debug=0 --workers=8
+#### Laravel, example package
 
-Static file: 1818.52 requests/s
-Dynamic CMS application: 1270.30 request/s (http://jarves.io)
-```
+https://github.com/bestmomo/laravel5-example
+
+`ppm start --bootstrap=laravel --app-env=prod --debug=0 --logging=0 --workers=20`
+
+<p align="center">
+[Supercharge Laravel](https://dl.dropboxusercontent.com/u/54069263/ppm-github/laravel.png)
+</p>
 
 ### Issues
 
-* Memory leaks, memory leaks and memory leaks. You will find also leaks in your application. :)
-* Does not work with ExtEventLoop. (So don't install `php70-event`)
+* Memory leaks, memory leaks and memory leaks. You will find also leaks in your application. :) But no big issue since worker restart automatically.
+* Does not work with ExtEventLoop. (So don't install `php70-event`, but you can try LibEventLoop `php56-libevent`)
 * Drupal is very experimental and not fully working. Try using https://github.com/php-pm/php-pm-drupal.
 * Symfony's and Laravel's profiler aren't working yet perfectly since it's still needed to reset some stuff after each request.
 * Streamed responses are not streamed yet

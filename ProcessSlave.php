@@ -18,7 +18,9 @@ class ProcessSlave
     use ProcessCommunicationTrait;
 
     /**
-     * @var \React\Socket\Server
+     * The HTTP Server.
+     *
+     * @var React\Server
      */
     protected $server;
 
@@ -28,14 +30,11 @@ class ProcessSlave
     protected $loop;
 
     /**
-     * @var resource
-     */
-    protected $client;
-
-    /**
+     * Connection to ProcessManager, master process.
+     *
      * @var \React\Socket\Connection
      */
-    protected $connection;
+    protected $controller;
 
     /**
      * @var string
@@ -119,8 +118,8 @@ class ProcessSlave
         $this->sendCurrentFiles();
         $this->loop->tick();
 
-        if ($this->connection && $this->connection->isWritable()) {
-            $this->connection->close();
+        if ($this->controller && $this->controller->isWritable()) {
+            $this->controller->close();
         }
         if ($this->server) {
             @$this->server->shutdown();
@@ -172,7 +171,7 @@ class ProcessSlave
     {
         if ($bridge = $this->getBridge()) {
             $bridge->bootstrap($appBootstrap, $appenv, $debug);
-            $this->sendMessage($this->connection, 'ready');
+            $this->sendMessage($this->controller, 'ready');
         }
     }
 
@@ -188,7 +187,7 @@ class ProcessSlave
         //speedy way checking if two arrays are different.
         if (!$this->lastSentFiles || array_diff_key($flipped, $this->lastSentFiles)) {
             $this->lastSentFiles = $flipped;
-            $this->sendMessage($this->connection, 'files', ['files' => $files]);
+            $this->sendMessage($this->controller, 'files', ['files' => $files]);
         }
     }
 
@@ -201,9 +200,9 @@ class ProcessSlave
 
         ErrorHandler::register(new ErrorHandler(new BufferingLogger()));
 
-        $this->client = stream_socket_client('tcp://127.0.0.1:5500');
-        $this->connection = new \React\Socket\Connection($this->client, $this->loop);
-        $this->connection->on('error', function ($data) {
+        $client = stream_socket_client($this->config['controllerHost']);
+        $this->controller = new \React\Socket\Connection($client, $this->loop);
+        $this->controller->on('error', function ($data) {
             var_dump($data);
         });
 
@@ -213,8 +212,8 @@ class ProcessSlave
         $pcntl->on(SIGINT, [$this, 'shutdown']);
         register_shutdown_function([$this, 'shutdown']);
 
-        $this->bindProcessMessage($this->connection);
-        $this->connection->on(
+        $this->bindProcessMessage($this->controller);
+        $this->controller->on(
             'close',
             \Closure::bind(
                 function () {
@@ -224,7 +223,7 @@ class ProcessSlave
             )
         );
 
-        $this->server = new \React\Socket\Server($this->loop);
+        $this->server = new React\Server($this->loop); //our version for now, because of unix socket support
         $this->server->on('error', function ($data) {
             var_dump($data);
         });
@@ -236,16 +235,18 @@ class ProcessSlave
         });
 
         $port = $this->config['port'];
+        $host = $this->config['host'];
+
         while (true) {
             try {
-                $this->server->listen($port);
+                $this->server->listen($port, $host);
                 break;
             } catch (\React\Socket\ConnectionException $e) {
                 usleep(500);
             }
         }
 
-        $this->sendMessage($this->connection, 'register', ['pid' => getmypid(), 'port' => $port]);
+        $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
 
         $this->loop->run();
     }
@@ -393,7 +394,7 @@ class ProcessSlave
             }
 
 
-            $this->sendMessage($this->connection, 'log', ['message' => $message]);
+            $this->sendMessage($this->controller, 'log', ['message' => $message]);
         });
     }
 

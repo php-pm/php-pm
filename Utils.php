@@ -35,8 +35,15 @@ class Utils
      */
     public static function hijackProperty($object, $propertyName, $newValue)
     {
-        Utils::bindAndCall(function () use ($propertyName, $newValue) {
-            $this->$propertyName = $newValue;
+        Utils::bindAndCall(function () use ($propertyName, $newValue, $object) {
+            $object->$propertyName = $newValue;
         }, $object);
+    }
+
+    /**
+     * @return bool
+     */
+    public static function isWindows(){
+        return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
     }
 }
