@@ -235,5 +235,3 @@ you can use PPM directly on your server or local. Do not run ppm as root (to get
 and would run all the time as root, which is highly unrecommended.
 
 We're working on that so you can directly replace NGINX+PHP-FPM with PHP-PM, with all its features: daemonize, auto-restart (master process), listening on port 80, vhosts, ssl etc.
-
-![ReactPHP with internal Load-Balancer](doc/reactphp-internal-balancer.jpg)
