@@ -155,7 +155,7 @@ $ ./vendor/bin/ppm start --bootstrap=laravel
 
 ```bash
 cd my-project
-composer require php-pm/httpkernel-adapter:dev-master
+composer require php-pm/drupal-adapter:dev-master
 $ ./bin/ppm start --bootstrap=drupal
 ```
 
