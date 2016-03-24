@@ -18,7 +18,6 @@ class ProcessManager
      */
     protected $slaves = [];
 
-
     /**
      * $object_hash => port
      *
@@ -150,7 +149,8 @@ class ProcessManager
 
     /**
      * If a worker is allowed to handle more than one request at the same time.
-     * This can lead to issues when the application does not support it (like when they operate on globals at the same time)
+     * This can lead to issues when the application does not support it
+     * (like when they operate on globals at the same time)
      *
      * @var bool
      */
@@ -169,9 +169,9 @@ class ProcessManager
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
-     * @param int $port
-     * @param string $host
-     * @param int $slaveCount
+     * @param int             $port
+     * @param string          $host
+     * @param int             $slaveCount
      */
     function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
@@ -403,7 +403,9 @@ class ProcessManager
 
                 $took = microtime(true) - $start;
                 if ($this->output->isVeryVerbose() && $took > 1) {
-                    $this->output->writeln(sprintf('<info>took abnormal %f seconds for choosing next free worker</info>', $took));
+                    $this->output->writeln(
+                        sprintf('<info>took abnormal %f seconds for choosing next free worker</info>', $took)
+                    );
                 }
 
                 $slave =& $this->slaves[$id];
@@ -415,7 +417,9 @@ class ProcessManager
 
                 $took = microtime(true) - $start;
                 if ($this->output->isVeryVerbose() && $took > 1) {
-                    $this->output->writeln(sprintf('<info>took abnormal %f seconds for connecting to :%d</info>', $took, $slave['port']));
+                    $this->output->writeln(
+                        sprintf('<info>took abnormal %f seconds for connecting to :%d</info>', $took, $slave['port'])
+                    );
                 }
 
                 $start = microtime(true);
@@ -426,7 +430,9 @@ class ProcessManager
                     function () use ($incoming, &$slave, $start) {
                         $took = microtime(true) - $start;
                         if ($this->output->isVeryVerbose() && $took > 1) {
-                            $this->output->writeln(sprintf('<info>took abnormal %f seconds for handling a connection</info>', $took));
+                            $this->output->writeln(
+                                sprintf('<info>took abnormal %f seconds for handling a connection</info>', $took)
+                            );
                         }
 
                         $slave['busy'] = false;
@@ -538,8 +544,10 @@ class ProcessManager
                         // this connection is not registered, so it died during the ProcessSlave constructor.
                         $this->output->writeln(
                             '<error>Worker permanent closed during PHP-PM bootstrap. Not so cool. ' .
-                            'Not your fault, please create a ticket at github.com/php-pm/php-pm with the output of `ppm start -vv`.</error>'
+                            'Not your fault, please create a ticket at github.com/php-pm/php-pm with' .
+                            'the output of `ppm start -vv`.</error>'
                         );
+
                         return;
                     }
 
@@ -573,7 +581,7 @@ class ProcessManager
     /**
      * A slave sent a `status` command.
      *
-     * @param array $data
+     * @param array      $data
      * @param Connection $conn
      */
     protected function commandStatus(array $data, Connection $conn)
@@ -584,7 +592,7 @@ class ProcessManager
     /**
      * A slave sent a `register` command.
      *
-     * @param array $data
+     * @param array      $data
      * @param Connection $conn
      */
     protected function commandRegister(array $data, Connection $conn)
@@ -593,7 +601,9 @@ class ProcessManager
         $port = (int)$data['port'];
 
         if (!isset($this->slaves[$port]) || !$this->slaves[$port]['waitForRegister']) {
-            throw new \LogicException('A slaves wanted to register on master which was not expected. Emergency close. port=' . $port);
+            throw new \LogicException(
+                'A slaves wanted to register on master which was not expected. Emergency close. port=' . $port
+            );
         }
 
         $this->ports[spl_object_hash($conn)] = $port;
@@ -631,6 +641,7 @@ class ProcessManager
      * Whether the given connection is registered.
      *
      * @param Connection $conn
+     *
      * @return bool
      */
     protected function isConnectionRegistered(Connection $conn)
@@ -644,7 +655,7 @@ class ProcessManager
      * A slave sent a `ready` commands which basically says that the slave bootstrapped successfully the
      * application and is ready to accept connections.
      *
-     * @param array $data
+     * @param array      $data
      * @param Connection $conn
      */
     protected function commandReady(array $data, Connection $conn)
@@ -691,13 +702,23 @@ class ProcessManager
 
         if ($this->isDebug()) {
 
+            $this->output->writeln('');
+
             if (!$this->emergencyMode) {
                 $this->emergencyMode = true;
-                $this->output->writeln(sprintf(PHP_EOL
-                    . '<error>Application bootstrap failed. We are entering emergencymode now. All offline. Waiting for file changes ...</error>'));
+                $this->output->writeln(
+                    sprintf(
+                        '<error>Application bootstrap failed. We are entering emergencymode now. All offline. ' .
+                        'Waiting for file changes ...</error>'
+                    )
+                );
             } else {
-                $this->output->writeln(sprintf(PHP_EOL
-                    . '<error>Application bootstrap failed. We are still in emergency mode. All offline. Waiting for file changes ...</error>'));
+                $this->output->writeln(
+                    sprintf(
+                        '<error>Application bootstrap failed. We are still in emergency mode. All offline. ' .
+                        'Waiting for file changes ...</error>'
+                    )
+                );
             }
 
             foreach ($this->slaves as &$slave) {
@@ -714,7 +735,7 @@ class ProcessManager
      *
      * @Todo, integrate Monolog.
      *
-     * @param array $data
+     * @param array      $data
      * @param Connection $conn
      */
     protected function commandLog(array $data, Connection $conn)
@@ -723,7 +744,7 @@ class ProcessManager
     }
 
     /**
-     * @param array $data
+     * @param array      $data
      * @param Connection $conn
      */
     protected function commandFiles(array $data, Connection $conn)
@@ -740,7 +761,9 @@ class ProcessManager
      * This approach uses simple filemtime to check against modifications. It is using this technique because
      * all other file watching stuff have either big dependencies or do not work under all platforms without
      * installing a pecl extension. Also this way is interestingly fast and is only used when debug=true.
+     *
      * @param bool $restartWorkers
+     *
      * @return bool
      */
     protected function checkChangedFiles($restartWorkers = true)
@@ -756,6 +779,10 @@ class ProcessManager
         $start = microtime(true);
 
         foreach ($this->filesToTrack as $idx => $filePath) {
+            if (!file_exists($filePath)) {
+                continue;
+            }
+
             $currentFileMTime = filemtime($filePath);
 
             if (isset($this->filesLastMTime[$filePath])) {
@@ -835,6 +862,7 @@ class ProcessManager
 
     /**
      * @param int $port
+     *
      * @return string
      */
     protected function getNewSlaveSocket($port)
@@ -925,7 +953,11 @@ require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
 
-new \PHPPM\ProcessSlave($bridge, $bootstrap, $config);
+require_once $dir . '/functions.php';
+
+//global for all global methods
+\PHPPM\ProcessSlave::\$slave = new \PHPPM\ProcessSlave($bridge, $bootstrap, $config);
+\PHPPM\ProcessSlave::\$slave->run();
 EOF;
 
         if ($this->phpCgiExecutable) {

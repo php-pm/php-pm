@@ -3,19 +3,22 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
-use Monolog\Handler\BufferHandler;
-use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
 use PHPPM\React\HttpResponse;
 use PHPPM\React\HttpServer;
 use React\Socket\Connection;
 use Symfony\Component\Debug\BufferingLogger;
-use Symfony\Component\Debug\Debug;
 use Symfony\Component\Debug\ErrorHandler;
 
 class ProcessSlave
 {
     use ProcessCommunicationTrait;
+
+    /**
+     * Current instance, used by global functions.
+     *
+     * @var ProcessSlave
+     */
+    public static $slave;
 
     /**
      * The HTTP Server.
@@ -50,6 +53,11 @@ class ProcessSlave
      * @var string
      */
     protected $appBootstrap;
+
+    /**
+     * @var string[]
+     */
+    protected $watchedFiles = [];
 
     /**
      * Contains the cached version of last sent files, for performance reasons
@@ -88,8 +96,6 @@ class ProcessSlave
         if ($this->config['session_path']) {
             session_save_path($this->config['session_path']);
         }
-
-        $this->run();
     }
 
     /**
@@ -180,12 +186,23 @@ class ProcessSlave
     }
 
     /**
+     * Adds a file path to the watcher list queue which will be sent
+     * to the master process after each request.
+     *
+     * @param string $path
+     */
+    public function registerFile($path)
+    {
+        $this->watchedFiles[] = $path;
+    }
+
+    /**
      * Sends to the master a snapshot of current known php files, so it can track those files and restart
      * slaves if necessary.
      */
     protected function sendCurrentFiles()
     {
-        $files = get_included_files();
+        $files = array_merge($this->watchedFiles, get_included_files());
         $flipped = array_flip($files);
 
         //speedy way checking if two arrays are different.
@@ -193,6 +210,8 @@ class ProcessSlave
             $this->lastSentFiles = $flipped;
             $this->sendMessage($this->controller, 'files', ['files' => $files]);
         }
+
+        $this->watchedFiles = [];
     }
 
     /**
@@ -312,7 +331,10 @@ class ProcessSlave
             //when a script sent headers the cgi process needs to die because the second request
             //trying to send headers again will fail (headers already sent fatal). Its best to not even
             //try to send headers because this break the whole of approach of php-pm using php-cgi.
-            error_log('Headers has been sent. Force restart of a worker. Make sure your application does not send headers on its own.');
+            error_log(
+                'Headers has been sent. Force restart of a worker. ' .
+                'Make sure your application does not send headers on its own.'
+            );
             $this->shutdown();
         }
     }
