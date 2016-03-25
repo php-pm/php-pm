@@ -723,7 +723,9 @@ class ProcessManager
 
             foreach ($this->slaves as &$slave) {
                 $slave['keepClosed'] = true;
-                $slave['connection']->close();
+                if(!empty($slave['connection'])) {
+                    $slave['connection']->close();
+                }
             }
         } else {
             $this->output->writeln(sprintf('<error>Application bootstrap failed. Restart worker ...</error>'));
