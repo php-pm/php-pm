@@ -3,6 +3,22 @@
 namespace PHPPM;
 
 /**
+ * Helper class to avoid creating closures in static context
+ * See https://bugs.php.net/bug.php?id=64761
+ */
+class ClosureHelper
+{
+    /**
+     * Return a closure that assigns a property value
+     */
+    public function getPropertyAccessor($propertyName, $newValue) {
+        return function () use ($propertyName, $newValue) {
+            $this->$propertyName = $newValue;
+        };
+    }
+}
+
+/**
  * Nitty gritty helper methods to hijack objects. Useful to reset properties that would otherwise run amok
  * and result in memory leaks.
  */
@@ -35,9 +51,8 @@ class Utils
      */
     public static function hijackProperty($object, $propertyName, $newValue)
     {
-        Utils::bindAndCall(function () use ($propertyName, $newValue, $object) {
-            $object->$propertyName = $newValue;
-        }, $object);
+        $closure = (new ClosureHelper())->getPropertyAccessor($propertyName, $newValue);
+        Utils::bindAndCall($closure, $object);
     }
 
     /**
