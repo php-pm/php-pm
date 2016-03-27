@@ -41,9 +41,17 @@ To get PHP-PM you need beside the php binary also php-cgi, which comes often wit
 
 `apt-get install php7.0-cgi`
 
+`apt-get install php7.0-cgi`
+
 By default cgi bin is in  `/usr/lib/cgi-bin/php`, so you need to run:
 
 `sudo ln -s /usr/lib/cgi-bin/php /usr/bin/php7.0-cgi`
+
+**Red Hat/Centos (RHEL-7, 6)** (https://webtatic.com/packages/php70/)
+
+install webtatic first
+
+`yum install php70w`
 
 **Mac OS X - Homebrew** (https://github.com/Homebrew/homebrew-php)
 
