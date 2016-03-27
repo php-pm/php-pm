@@ -173,7 +173,7 @@ class ProcessManager
      * @param string          $host
      * @param int             $slaveCount
      */
-    function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
+    public function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
         $this->output = $output;
         $this->slaveCount = $slaveCount;
