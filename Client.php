@@ -19,7 +19,7 @@ class Client
      */
     protected $connection;
 
-    function __construct($controllerPort = 8080)
+    public function __construct($controllerPort = 8080)
     {
         $this->controllerPort = $controllerPort;
         $this->loop = \React\EventLoop\Factory::create();
