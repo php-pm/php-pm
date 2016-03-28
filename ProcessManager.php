@@ -98,6 +98,11 @@ class ProcessManager
     protected $logging = true;
 
     /**
+     * @var bool
+     */
+    protected $servingStatic = true;
+
+    /**
      * @var string
      */
     protected $host = '127.0.0.1';
@@ -173,7 +178,7 @@ class ProcessManager
      * @param string          $host
      * @param int             $slaveCount
      */
-    function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
+    public function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
         $this->output = $output;
         $this->slaveCount = $slaveCount;
@@ -306,6 +311,22 @@ class ProcessManager
     public function setLogging($logging)
     {
         $this->logging = $logging;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function isServingStatic()
+    {
+        return $this->servingStatic;
+    }
+
+    /**
+     * @param boolean $servingStatic
+     */
+    public function setServingStatic($servingStatic)
+    {
+        $this->servingStatic = $servingStatic;
     }
 
     /**
@@ -941,7 +962,7 @@ class ProcessManager
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
-            'static' => true
+            'static' => $this->isServingStatic(),
         ];
 
         $config = var_export($config, true);
