@@ -73,7 +73,7 @@ trait ConfigTrait
         $config['app-env'] = $this->optionOrConfigValue($input, 'app-env', $config);
         $config['debug'] = $this->optionOrConfigValue($input, 'debug', $config);
         $config['logging'] = $this->optionOrConfigValue($input, 'logging', $config);
-        $config['static'] = $this->optionOrConfigValue($input, 'static', $config);
+        $config['static'] = (boolean)$this->optionOrConfigValue($input, 'static', $config);
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
         $config['concurrent-requests'] = (boolean)$this->optionOrConfigValue($input, 'concurrent-requests', $config);

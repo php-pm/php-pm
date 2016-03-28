@@ -57,10 +57,7 @@ class StartCommand extends Command
         $handler->setMaxRequests($config['max-requests']);
         $handler->setPhpCgiExecutable($config['php-cgi']);
         $handler->setConcurrentRequestsPerWorker($config['concurrent-requests']);
-
-        if(isset($config['static'])) {
-            $handler->setServingStatic((boolean)$config['static']);
-        }
+        $handler->setServingStatic($config['static']);
 
         $handler->run();
     }
