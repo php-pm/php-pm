@@ -708,7 +708,7 @@ class ProcessManager
                 $this->emergencyMode = true;
                 $this->output->writeln(
                     sprintf(
-                        '<error>Application bootstrap failed. We are entering emergencymode now. All offline. ' .
+                        '<error>Application bootstrap failed. We are entering emergency mode now. All offline. ' .
                         'Waiting for file changes ...</error>'
                     )
                 );
@@ -824,7 +824,7 @@ class ProcessManager
     }
 
     /**
-     * Closed all salves, so we automatically reconnect. Necessary when files have changed.
+     * Closes all salves, so we automatically reconnect. Necessary when watched files have changed.
      */
     protected function restartWorker()
     {
