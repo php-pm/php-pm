@@ -71,6 +71,11 @@ class ProcessSlave
      */
     protected $inShutdown = false;
 
+    /**
+     * @var BufferingLogger
+     */
+    protected $errorLogger;
+
     protected $logFormat = '[$time_local] $remote_addr - $remote_user "$request" $status $bytes_sent "$http_referer"';
 
     /**
@@ -123,10 +128,40 @@ class ProcessSlave
             return;
         }
 
+        if ($this->errorLogger && $logs = $this->errorLogger->cleanLogs()) {
+            $messages = array_map(
+                function ($item) {
+                    //array($level, $message, $context);
+                    $message = $item[1];
+                    $context = $item[2];
+
+                    if (isset($context['file'])) {
+                        $message .= ' in ' . $context['file'] . ':' . $context['line'];
+                    }
+
+                    foreach ($context['stack'] as $idx => $stack) {
+                        $message .= PHP_EOL . sprintf(
+                            "#%d: %s%s %s%s",
+                            $idx,
+                            isset($stack['class']) ? $stack['class'] . '->' : '',
+                            $stack['function'],
+                            isset ($stack['file']) ? 'in' . $stack['file'] : '',
+                            isset($stack['line']) ? ':' . $stack['line'] : ''
+                        );
+                    }
+                    return $message;
+                },
+                $logs
+            );
+            error_log(implode(PHP_EOL, $messages));
+        }
+
         $this->inShutdown = true;
 
-        $this->sendCurrentFiles();
-        $this->loop->tick();
+        if ($this->loop) {
+            $this->sendCurrentFiles();
+            $this->loop->tick();
+        }
 
         if ($this->controller && $this->controller->isWritable()) {
             $this->controller->close();
@@ -135,6 +170,7 @@ class ProcessSlave
             @$this->server->shutdown();
         }
         if ($this->loop) {
+            $this->sendCurrentFiles();
             $this->loop->tick();
             @$this->loop->stop();
         }
@@ -171,8 +207,8 @@ class ProcessSlave
     /**
      * Bootstraps the actual application.
      *
-     * @param string $appBootstrap
-     * @param string $appenv
+     * @param string  $appBootstrap
+     * @param string  $appenv
      * @param boolean $debug
      *
      * @throws \Exception
@@ -221,7 +257,8 @@ class ProcessSlave
     {
         $this->loop = \React\EventLoop\Factory::create();
 
-        ErrorHandler::register(new ErrorHandler(new BufferingLogger()));
+        $this->errorLogger = new BufferingLogger();
+        ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
         $client = stream_socket_client($this->config['controllerHost']);
         $this->controller = new \React\Socket\Connection($client, $this->loop);
@@ -287,7 +324,7 @@ class ProcessSlave
      * Handles incoming requests and transforms a $request into a $response by reference.
      *
      * @param \React\Http\Request $request
-     * @param HttpResponse $response
+     * @param HttpResponse        $response
      *
      * @throws \Exception
      */
@@ -332,7 +369,7 @@ class ProcessSlave
             //trying to send headers again will fail (headers already sent fatal). Its best to not even
             //try to send headers because this break the whole of approach of php-pm using php-cgi.
             error_log(
-                'Headers has been sent. Force restart of a worker. ' .
+                'Headers has been sent, but not redirected to client. Force restart of a worker. ' .
                 'Make sure your application does not send headers on its own.'
             );
             $this->shutdown();
@@ -361,7 +398,8 @@ class ProcessSlave
 
     /**
      * @param \React\Http\Request $request
-     * @param HttpResponse $response
+     * @param HttpResponse        $response
+     *
      * @return bool returns true if successfully served
      */
     protected function serveStatic(\React\Http\Request $request, HttpResponse $response)
@@ -375,6 +413,7 @@ class ProcessSlave
                 'Content-Length' => filesize($filePath),
             ]);
             $response->end(file_get_contents($filePath));
+
             return true;
         }
 
@@ -427,6 +466,7 @@ class ProcessSlave
 
     /**
      * @param string $filename
+     *
      * @return string
      */
     protected function mimeContentType($filename)
@@ -493,6 +533,7 @@ class ProcessSlave
             $finfo = finfo_open(FILEINFO_MIME);
             $mimetype = finfo_file($finfo, $filename);
             finfo_close($finfo);
+
             return $mimetype;
         } else {
             return 'application/octet-stream';

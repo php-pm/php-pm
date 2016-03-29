@@ -15,3 +15,16 @@ function ppm_register_file($path)
 {
     ProcessSlave::$slave->registerFile($path);
 }
+
+/**
+ * Dumps information about a variable into your console output.
+ *
+ * @param mixed $expression The variable you want to export.
+ * @param mixed $_          [optional]
+ */
+function ppm_log($expression, $_ = null)
+{
+    ob_start();
+    call_user_func_array('var_dump', func_get_args());
+    file_put_contents('php://stderr', ob_get_clean() . PHP_EOL, FILE_APPEND);
+}

@@ -20,7 +20,7 @@ More information can be found in the article: [Bring High Performance Into Your 
 
 * Performance boost up to 15x (compared to PHP-FPM, Symfony applications).
 * Integrated load balancer.
-* Hot-Code reload (when PHP files changes).
+* Hot-Code reload (when PHP files change).
 * Static file serving for easy development procedures.
 * Support for HttpKernel (Symfony/Laravel), Drupal (experimental), Zend (experimental).
 
