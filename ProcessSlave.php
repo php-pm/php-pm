@@ -139,15 +139,17 @@ class ProcessSlave
                         $message .= ' in ' . $context['file'] . ':' . $context['line'];
                     }
 
-                    foreach ($context['stack'] as $idx => $stack) {
-                        $message .= PHP_EOL . sprintf(
-                            "#%d: %s%s %s%s",
-                            $idx,
-                            isset($stack['class']) ? $stack['class'] . '->' : '',
-                            $stack['function'],
-                            isset ($stack['file']) ? 'in' . $stack['file'] : '',
-                            isset($stack['line']) ? ':' . $stack['line'] : ''
-                        );
+                    if (isset($context['stack'])) {
+                        foreach ($context['stack'] as $idx => $stack) {
+                            $message .= PHP_EOL . sprintf(
+                                    "#%d: %s%s %s%s",
+                                    $idx,
+                                    isset($stack['class']) ? $stack['class'] . '->' : '',
+                                    $stack['function'],
+                                    isset ($stack['file']) ? 'in' . $stack['file'] : '',
+                                    isset($stack['line']) ? ':' . $stack['line'] : ''
+                                );
+                        }
                     }
                     return $message;
                 },
