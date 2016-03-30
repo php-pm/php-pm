@@ -459,7 +459,7 @@ class ProcessManager
 
                 $start = microtime(true);
 
-                $additionalHeader = ['X-Real-IP' => $incoming->getRemoteAddress()];
+                $additionalHeader = ['X-Remote-IP' => $incoming->getRemoteAddress()];
                 $headerRedirected = false;
 
                 if ($this->isHeaderEnd($buffer)) {
