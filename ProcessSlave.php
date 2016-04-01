@@ -340,9 +340,9 @@ class ProcessSlave
 
         $this->handleRequest($request, $response);
 
-        if (memory_get_peak_usage(true) / 1024 / 1024 > substr(ini_get('memory_limit'), 0, -1) / 2) {
+        if (memory_get_usage() > Utils::getMaxMemory() * 0.8) {
+            //80% of allowed memory used, so let's call the garbage collector.
             gc_collect_cycles();
-//            echo sprintf("%d - (%s/%s)\n", getmypid(), memory_get_peak_usage(true) / 1024 / 1024, ini_get('memory_limit'));
         }
     }
 

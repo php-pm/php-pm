@@ -171,6 +171,20 @@ class ProcessManager
     protected $filesLastMd5 = [];
 
     /**
+     * Counter of handled clients.
+     *
+     * @var int
+     */
+    protected $handledRequests = 0;
+
+    /**
+     * Max requests until GC is called.
+     *
+     * @var int
+     */
+    protected $maxRequestsUntilGC = 5000;
+
+    /**
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
@@ -534,7 +548,14 @@ class ProcessManager
             }
 
             if (null !== $minPort) {
+                $this->handledRequests++;
+
                 $cb($minPort);
+
+                if ($this->handledRequests >= $this->maxRequestsUntilGC) {
+                    $this->handledRequests = 0;
+                    gc_collect_cycles();
+                }
 
                 return;
             }
