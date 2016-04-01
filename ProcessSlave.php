@@ -480,6 +480,7 @@ class ProcessSlave
             'php' => 'text/html',
             'css' => 'text/css',
             'js' => 'application/javascript',
+            'ts' => 'application/javascript',
             'json' => 'application/json',
             'xml' => 'application/xml',
             'swf' => 'application/x-shockwave-flash',
@@ -529,16 +530,18 @@ class ProcessSlave
         );
 
         $ext = strtolower(substr($filename, strrpos($filename, '.') + 1));
-        if (array_key_exists($ext, $mimeTypes)) {
+        if (isset($mimeTypes[$ext])) {
             return $mimeTypes[$ext];
         } elseif (function_exists('finfo_open')) {
             $finfo = finfo_open(FILEINFO_MIME);
-            $mimetype = finfo_file($finfo, $filename);
-            finfo_close($finfo);
 
-            return $mimetype;
-        } else {
-            return 'application/octet-stream';
+            //we need to suppress all stuff of this call due to https://bugs.php.net/bug.php?id=71615
+            $mimetype = @finfo_file($finfo, $filename);
+            if ($mimetype) {
+                return $mimetype;
+            }
         }
+
+        return 'application/octet-stream';
     }
 }
