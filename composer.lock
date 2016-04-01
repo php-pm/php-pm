@@ -482,16 +482,16 @@
         },
         {
             "name": "react/promise",
-            "version": "v2.2.2",
+            "version": "v2.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/promise.git",
-                "reference": "3aacad8bf10c7d83e6fa2089d413529888c2bedf"
+                "reference": "8ffacee1171e33a1c129f424bf1ec36e062eba82"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/promise/zipball/3aacad8bf10c7d83e6fa2089d413529888c2bedf",
-                "reference": "3aacad8bf10c7d83e6fa2089d413529888c2bedf",
+                "url": "https://api.github.com/repos/reactphp/promise/zipball/8ffacee1171e33a1c129f424bf1ec36e062eba82",
+                "reference": "8ffacee1171e33a1c129f424bf1ec36e062eba82",
                 "shasum": ""
             },
             "require": {
@@ -522,7 +522,7 @@
                 }
             ],
             "description": "A lightweight implementation of CommonJS Promises/A for PHP",
-            "time": "2016-02-26 19:09:02"
+            "time": "2016-03-24 21:20:22"
         },
         {
             "name": "react/socket",
@@ -886,12 +886,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-pm/php-pm-httpkernel.git",
-                "reference": "53302ba6e139a0041202dfd3371671c8501ddc2b"
+                "reference": "f5fd4d71a88b8e2267d6787445e950fdbb0660d9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-pm/php-pm-httpkernel/zipball/53302ba6e139a0041202dfd3371671c8501ddc2b",
-                "reference": "53302ba6e139a0041202dfd3371671c8501ddc2b",
+                "url": "https://api.github.com/repos/php-pm/php-pm-httpkernel/zipball/f5fd4d71a88b8e2267d6787445e950fdbb0660d9",
+                "reference": "f5fd4d71a88b8e2267d6787445e950fdbb0660d9",
                 "shasum": ""
             },
             "require": {
@@ -905,7 +905,7 @@
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
-            "time": "2016-03-21 16:34:36"
+            "time": "2016-03-29 14:16:09"
         },
         {
             "name": "symfony/event-dispatcher",
