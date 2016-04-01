@@ -537,6 +537,7 @@ class ProcessSlave
 
             //we need to suppress all stuff of this call due to https://bugs.php.net/bug.php?id=71615
             $mimetype = @finfo_file($finfo, $filename);
+            finfo_close($finfo);
             if ($mimetype) {
                 return $mimetype;
             }
