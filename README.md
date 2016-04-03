@@ -64,7 +64,7 @@ a different binary name, you can specify the full path to that binary with the `
 configuration option (for example: `ppm config --php-cgi=/opt/local/bin/php-cgi70`).
 
 On Ubuntu for example per default `pcntl_*` functions are disabled.
-If you get `Warning: pcntl_signal() has been disabled for security reasons`, you should activate these function:
+If you get `Warning: pcntl_signal() has been disabled for security reasons`, you should activate these functions:
 
 Open `/etc/php5/cgi/php.ini`, find line `disable_functions = pcntl_alarm,pcntl_fork, ...` and place a `;` in front of it:
 
