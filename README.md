@@ -63,6 +63,19 @@ By default, PPM looks for a binary named `php-cgi`. If your PHP installation use
 a different binary name, you can specify the full path to that binary with the `php-cgi`
 configuration option (for example: `ppm config --php-cgi=/opt/local/bin/php-cgi70`).
 
+On Ubuntu for example per default `pcntl_*` functions are disabled.
+If you get `Warning: pcntl_signal() has been disabled for security reasons`, you should activate these function:
+
+Open `/etc/php5/cgi/php.ini`, find line `disable_functions = pcntl_alarm,pcntl_fork, ...` and place a `;` in front of it:
+
+```
+; This directive allows you to disable certain functions for security reasons.
+; It receives a comma-delimited list of function names.
+; http://php.net/disable-functions
+;disable_functions = pcntl_alarm,pcntl_fork, ...
+```
+
+
 #### Global
 
 ```bash
