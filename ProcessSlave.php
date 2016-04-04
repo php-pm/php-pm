@@ -389,9 +389,9 @@ class ProcessSlave
             $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
         }
 
-        //HTTP_X_REAL_IP is always set, either through ProcessMaster or by a proxy
-        //in front of ProcessMaster.
-        $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_REAL_IP'];
+        //Using ProcessManager in front of the slaves masks the real/proxy ip
+        $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_REMOTE_IP'];
+        unset($_SERVER['HTTP_X_REMOTE_IP']);
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $_SERVER['REQUEST_URI'] = $request->getPath();
