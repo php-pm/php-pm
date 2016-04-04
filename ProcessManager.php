@@ -393,6 +393,7 @@ class ProcessManager
 
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
+        $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
 
         if ($this->isDebug()) {
             $this->loop->addPeriodicTimer(0.5, function () {
@@ -410,6 +411,17 @@ class ProcessManager
         }
 
         $this->loop->run();
+    }
+
+    /**
+     * Handling zombie processes on SIGCHLD
+     */
+    public function handleSigchld()
+    {
+        $pid = pcntl_waitpid(-1, $status, WNOHANG);
+        if ($this->output->isVeryVerbose()) {
+            $this->output->writeln("<info>Child {$pid} status {$status}</info>");
+        }
     }
 
     /**
