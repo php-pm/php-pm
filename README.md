@@ -251,10 +251,20 @@ server {
 }
 ```
 
+To get the real remote IP in your Symfony application for example, don't forget to add ppm (default `127.0.0.1`)
+as trusted reverse proxy.
+
+```yml
+# app/config/config.yml
+# ...
+framework:
+    trusted_proxies:  [127.0.0.1]
+```
+
+More information at http://symfony.com/doc/current/cookbook/request/load_balancer_reverse_proxy.html.
+
 ### Setup 2. Use PPM directly
 
 Since PPM has also a static file server (which isn't quite as fast as nginx, but works for basic usage, see Performance section),
 you can use PPM directly on your server or local. Do not run ppm as root (to get port like 80 working), as it does not set a new UID of the current process
 and would run all the time as root, which is highly unrecommended.
-
-We're working on that so you can directly replace NGINX+PHP-FPM with PHP-PM, with all its features: daemonize, auto-restart (master process), listening on port 80, vhosts, ssl etc.
