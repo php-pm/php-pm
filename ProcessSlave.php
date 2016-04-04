@@ -391,8 +391,8 @@ class ProcessSlave
 
         //We receive X-PHP-PM-Remote-IP from ProcessManager.
         //This header is only used to proxy the remoteAddress from master -> slave.
-        $_SERVER['REMOTE_ADDR'] = $_SERVER['X_PHP_PM_REMOTE_IP'];
-        unset($_SERVER['X_PHP_PM_REMOTE_IP']);
+        $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_IP'];
+        unset($_SERVER['HTTP_X_PHP_PM_REMOTE_IP']);
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $_SERVER['REQUEST_URI'] = $request->getPath();
