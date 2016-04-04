@@ -1,0 +1,29 @@
+language: php
+
+php:
+  - 5.5
+  - 5.6
+  - 7.0
+
+install:
+  - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
+  - composer install
+
+script:
+  - ./vendor/bin/phpunit
+
+matrix:
+  allow_failures:
+    - php: nightly
+
+  fast_finish: true
+
+# cache vendors
+cache:
+  directories:
+    - vendor
+    - $HOME/.composer/cache
+
+# This triggers builds to run on the new TravisCI infrastructure.
+# See: http://docs.travis-ci.com/user/workers/container-based-infrastructure/
+sudo: false
