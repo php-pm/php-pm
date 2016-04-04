@@ -389,7 +389,10 @@ class ProcessSlave
             $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
         }
 
-        $_SERVER['REMOTE_ADDR'] = $request->remoteAddress;
+        //We receive X-PHP-PM-Remote-IP from ProcessManager.
+        //This header is only used to proxy the remoteAddress from master -> slave.
+        $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_IP'];
+        unset($_SERVER['HTTP_X_PHP_PM_REMOTE_IP']);
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $_SERVER['REQUEST_URI'] = $request->getPath();
@@ -446,7 +449,7 @@ class ProcessSlave
                 '$http_referer',
                 '$http_user_agent',
             ], [
-                $request->remoteAddress,
+                $_SERVER['REMOTE_ADDR'],
                 '-', //todo remote_user
                 $timeLocal,
                 $requestString,

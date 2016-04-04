@@ -7,11 +7,12 @@ PPM - PHP Process Manager
 
 PHP-PM is a process manager, supercharger and load balancer for PHP applications.
 
+[![Build Status](https://travis-ci.org/php-pm/php-pm.svg?branch=master)](https://travis-ci.org/php-pm/php-pm)
+
 It's based on ReactPHP and works best with applications that use request-response frameworks like Symfony's HTTPKernel.
 The approach of this is to kill the expensive bootstrap of PHP (declaring symbols, loading/parsing files) and the bootstrap of feature-rich frameworks. See Performance section for a quick hint.
 PHP-PM basically spawns several PHP instances as worker bootstraping your application (eg. the whole Symfony Kernel) and hold it in the memory to be prepared for every
 incoming request: This is why PHP-PM makes your application so fast.
- 
 
 More information can be found in the article: [Bring High Performance Into Your PHP App (with ReactPHP)](http://marcjschmidt.de/blog/2014/02/08/php-high-performance.html)
 
@@ -62,6 +63,19 @@ install webtatic first
 By default, PPM looks for a binary named `php-cgi`. If your PHP installation uses
 a different binary name, you can specify the full path to that binary with the `php-cgi`
 configuration option (for example: `ppm config --php-cgi=/opt/local/bin/php-cgi70`).
+
+On Ubuntu for example per default `pcntl_*` functions are disabled.
+If you get `Warning: pcntl_signal() has been disabled for security reasons`, you should activate these functions:
+
+Open `/etc/php5/cgi/php.ini`, find line `disable_functions = pcntl_alarm,pcntl_fork, ...` and place a `;` in front of it:
+
+```
+; This directive allows you to disable certain functions for security reasons.
+; It receives a comma-delimited list of function names.
+; http://php.net/disable-functions
+;disable_functions = pcntl_alarm,pcntl_fork, ...
+```
+
 
 #### Global
 
@@ -238,10 +252,20 @@ server {
 }
 ```
 
+To get the real remote IP in your Symfony application for example, don't forget to add ppm (default `127.0.0.1`)
+as trusted reverse proxy.
+
+```yml
+# app/config/config.yml
+# ...
+framework:
+    trusted_proxies:  [127.0.0.1]
+```
+
+More information at http://symfony.com/doc/current/cookbook/request/load_balancer_reverse_proxy.html.
+
 ### Setup 2. Use PPM directly
 
 Since PPM has also a static file server (which isn't quite as fast as nginx, but works for basic usage, see Performance section),
 you can use PPM directly on your server or local. Do not run ppm as root (to get port like 80 working), as it does not set a new UID of the current process
 and would run all the time as root, which is highly unrecommended.
-
-We're working on that so you can directly replace NGINX+PHP-FPM with PHP-PM, with all its features: daemonize, auto-restart (master process), listening on port 80, vhosts, ssl etc.

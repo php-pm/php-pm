@@ -421,20 +421,20 @@ class ProcessManager
     {
         // preload sent data from $incoming to $buffer, otherwise it would be lost,
         // since getNextSlave is async.
-        $redirect = null;
-        $buffer = '';
+        $redirectionActive = false;
+        $incomingBuffer = '';
         $incoming->on(
             'data',
-            function ($data) use (&$redirect, &$buffer) {
-                if (!$redirect) {
-                    $buffer .= $data;
+            function ($data) use (&$redirectionActive, &$incomingBuffer) {
+                if (!$redirectionActive) {
+                    $incomingBuffer .= $data;
                 }
             }
         );
 
         $start = microtime(true);
         $this->getNextSlave(
-            function ($id) use ($incoming, &$buffer, &$redirect, $start) {
+            function ($id) use ($incoming, &$incomingBuffer, &$redirectionActive, $start) {
 
                 $took = microtime(true) - $start;
                 if ($this->output->isVeryVerbose() && $took > 1) {
@@ -458,7 +458,17 @@ class ProcessManager
                 }
 
                 $start = microtime(true);
-                $stream->write($buffer);
+
+                $headersToReplace = ['X-PHP-PM-Remote-IP' => $incoming->getRemoteAddress()];
+                $headerRedirected = false;
+
+                if ($this->isHeaderEnd($incomingBuffer)) {
+                    $incomingBuffer = $this->replaceHeader($incomingBuffer, $headersToReplace);
+                    $headerRedirected = true;
+                    $stream->write($incomingBuffer);
+                }
+
+                $redirectionActive = true;
 
                 $stream->on(
                     'close',
@@ -491,15 +501,28 @@ class ProcessManager
 
                 $stream->on(
                     'data',
-                    function ($data) use ($incoming) {
-                        $incoming->write($data);
+                    function ($buffer) use ($incoming) {
+                        $incoming->write($buffer);
                     }
                 );
 
                 $incoming->on(
                     'data',
-                    function ($data) use ($stream) {
-                        $stream->write($data);
+                    function ($buffer) use ($stream, &$incomingBuffer, $headersToReplace, &$headerRedirected) {
+
+                        if (!$headerRedirected) {
+                            $incomingBuffer .= $buffer;
+                            if ($this->isHeaderEnd($incomingBuffer)) {
+                                $incomingBuffer = $this->replaceHeader($incomingBuffer, $headersToReplace);
+                                $headerRedirected = true;
+                                $stream->write($incomingBuffer);
+                            } else {
+                                //head has not completely received yet, wait
+                            }
+                        } else {
+                            //incomingBuffer has already been redirect, so rediect now buffer per buffer
+                            $stream->write($buffer);
+                        }
                     }
                 );
 
@@ -511,6 +534,44 @@ class ProcessManager
                 );
             }
         );
+    }
+
+
+    /**
+     * Checks whether the end of the header is in $buffer.
+     *
+     * @param string $buffer
+     *
+     * @return bool
+     */
+    protected function isHeaderEnd($buffer) {
+        return false !== strpos($buffer, "\r\n\r\n");
+    }
+
+    /**
+     * Replaces or injects header
+     *
+     * @param string   $header
+     * @param string[] $headersToReplace
+     *
+     * @return string
+     */
+    protected function replaceHeader($header, $headersToReplace) {
+        $result = $header;
+
+        foreach ($headersToReplace as $key => $value) {
+            if (false !== $headerPosition = stripos($result, $key . ':')) {
+                //check how long the header is
+                $length = strpos(substr($header, $headerPosition), "\r\n");
+                $result = substr_replace($result, "$key: $value", $headerPosition, $length);
+            } else {
+                //$key is not in header yet, add it at the end
+                $end = strpos($result, "\r\n\r\n");
+                $result = substr_replace($result, "\r\n$key: $value", $end, 0);
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -643,9 +704,13 @@ class ProcessManager
         $port = (int)$data['port'];
 
         if (!isset($this->slaves[$port]) || !$this->slaves[$port]['waitForRegister']) {
-            throw new \LogicException(
-                'A slaves wanted to register on master which was not expected. Emergency close. port=' . $port
-            );
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(sprintf(
+                    '<error>A slaves wanted to register on master which was not expected. port=%s</error>',
+                    $port));
+            }
+            $conn->close();
+            return;
         }
 
         $this->ports[spl_object_hash($conn)] = $port;
