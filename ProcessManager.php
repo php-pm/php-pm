@@ -419,7 +419,7 @@ class ProcessManager
     public function handleSigchld()
     {
         $pid = pcntl_waitpid(-1, $status, WNOHANG);
-        if ($this->isDebug()) {
+        if ($this->output->isVeryVerbose()) {
             $this->output->writeln("<info>Child {$pid} status {$status}</info>");
         }
     }
