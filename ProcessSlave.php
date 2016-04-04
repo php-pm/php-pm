@@ -389,7 +389,9 @@ class ProcessSlave
             $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
         }
 
-        $_SERVER['REMOTE_ADDR'] = $request->remoteAddress;
+        //HTTP_X_REAL_IP is always set, either through ProcessMaster or by a proxy
+        //in front of ProcessMaster.
+        $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_REAL_IP'];
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $_SERVER['REQUEST_URI'] = $request->getPath();
@@ -446,7 +448,7 @@ class ProcessSlave
                 '$http_referer',
                 '$http_user_agent',
             ], [
-                $request->remoteAddress,
+                $_SERVER['REMOTE_ADDR'],
                 '-', //todo remote_user
                 $timeLocal,
                 $requestString,

@@ -421,12 +421,12 @@ class ProcessManager
     {
         // preload sent data from $incoming to $buffer, otherwise it would be lost,
         // since getNextSlave is async.
-        $redirect = null;
+        $redirectionActive = false;
         $buffer = '';
         $incoming->on(
             'data',
-            function ($data) use (&$redirect, &$buffer) {
-                if (!$redirect) {
+            function ($data) use (&$redirectionActive, &$buffer) {
+                if (!$redirectionActive) {
                     $buffer .= $data;
                 }
             }
@@ -434,7 +434,7 @@ class ProcessManager
 
         $start = microtime(true);
         $this->getNextSlave(
-            function ($id) use ($incoming, &$buffer, &$redirect, $start) {
+            function ($id) use ($incoming, &$buffer, &$redirectionActive, $start) {
 
                 $took = microtime(true) - $start;
                 if ($this->output->isVeryVerbose() && $took > 1) {
@@ -458,7 +458,16 @@ class ProcessManager
                 }
 
                 $start = microtime(true);
+
+                $additionalHeader = ['X-Real-IP' => $incoming->getRemoteAddress()];
+                $headerRedirected = false;
+
+                if ($this->isHeaderEnd($buffer)) {
+                    $buffer = $this->injectHeader($buffer, $additionalHeader);
+                    $headerRedirected = true;
+                }
                 $stream->write($buffer);
+                $redirectionActive = true;
 
                 $stream->on(
                     'close',
@@ -491,15 +500,19 @@ class ProcessManager
 
                 $stream->on(
                     'data',
-                    function ($data) use ($incoming) {
-                        $incoming->write($data);
+                    function ($buffer) use ($incoming) {
+                        $incoming->write($buffer);
                     }
                 );
 
                 $incoming->on(
                     'data',
-                    function ($data) use ($stream) {
-                        $stream->write($data);
+                    function ($buffer) use ($stream, $additionalHeader, &$headerRedirected) {
+                        if (!$headerRedirected && $this->isHeaderEnd($buffer)) {
+                            $buffer = $this->injectHeader($buffer, $additionalHeader);
+                            $headerRedirected = true;
+                        }
+                        $stream->write($buffer);
                     }
                 );
 
@@ -511,6 +524,38 @@ class ProcessManager
                 );
             }
         );
+    }
+
+
+    /**
+     * Checks whether the end of the header is in $buffer.
+     *
+     * @param string $buffer
+     *
+     * @return bool
+     */
+    protected function isHeaderEnd($buffer) {
+        return false !== strpos($buffer, "\r\n\r\n");
+    }
+
+    /**
+     * @param string   $header
+     * @param string[] $additionalHeader
+     *
+     * @return string
+     */
+    protected function injectHeader($header, $additionalHeader) {
+        $result = $header;
+
+        foreach ($additionalHeader as $key => $value) {
+            if (false === stripos($result, $key . ':')) {
+                //$key is not already in the header, so inject it
+                $end = strpos($result, "\r\n\r\n");
+                $result = substr_replace($result, "\r\n$key: $value", $end, 0);
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -643,9 +688,13 @@ class ProcessManager
         $port = (int)$data['port'];
 
         if (!isset($this->slaves[$port]) || !$this->slaves[$port]['waitForRegister']) {
-            throw new \LogicException(
-                'A slaves wanted to register on master which was not expected. Emergency close. port=' . $port
-            );
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(sprintf(
+                    '<error>A slaves wanted to register on master which was not expected. port=%s</error>',
+                    $port));
+            }
+            $conn->close();
+            return;
         }
 
         $this->ports[spl_object_hash($conn)] = $port;
