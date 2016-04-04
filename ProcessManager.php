@@ -189,7 +189,7 @@ class ProcessManager
      *
      * @var int
      */
-    protected $maxRequestsUntilGC = 5000;
+    protected $maxRequestsGC = 1000;
 
     /**
      * Timeout in seconds for master to worker connection.
@@ -259,6 +259,14 @@ class ProcessManager
     public function setMaxRequests($maxRequests)
     {
         $this->maxRequests = $maxRequests;
+    }
+
+    /**
+     * @param int $maxRequestsGC
+     */
+    public function setMaxRequestsGC($maxRequestsGC)
+    {
+        $this->maxRequestsGC = $maxRequestsGC;
     }
 
     /**
@@ -696,7 +704,7 @@ class ProcessManager
 
                 $cb($minPort);
 
-                if ($this->handledRequests >= $this->maxRequestsUntilGC) {
+                if ($this->handledRequests >= $this->maxRequestsGC) {
                     $this->handledRequests = 0;
                     gc_collect_cycles();
                 }
