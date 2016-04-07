@@ -17,7 +17,6 @@ incoming request: This is why PHP-PM makes your application so fast.
 
 More information can be found in the article: [Bring High Performance Into Your PHP App (with ReactPHP)](http://marcjschmidt.de/blog/2014/02/08/php-high-performance.html)
 
-
 ### Features
 
 * Performance boost up to 15x (compared to PHP-FPM, Symfony applications).
@@ -34,6 +33,18 @@ More information can be found in the article: [Bring High Performance Into Your 
 * No fighting with vagrant / virtual machine settings. 
 * Checkout a new project, run `ppm start` - done. (if configured with `ppm config`)
 * No hassle with domain names (/etc/hosts), just use different ports for your app without root access.
+
+
+### Badge all the things
+
+Does your app/library support PPM? Show it!
+
+[![PPM Compatible](https://raw.githubusercontent.com/php-pm/ppm-badge/master/ppm-badge.png)](https://github.com/php-pm/php-pm)
+
+```
+[![PPM Compatible](https://raw.githubusercontent.com/php-pm/ppm-badge/master/ppm-badge.png)](https://github.com/php-pm/php-pm)
+```
+
 
 ### Installation
 
