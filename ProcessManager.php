@@ -471,6 +471,15 @@ class ProcessManager
 
                 $start = microtime(true);
 
+                if (!is_resource($incoming->stream)) {
+                    //Firefox closes somehow a connection directly after opening, at this state we need to check
+                    //whether the connection is still alive, to keep going. This check prevents the server from crashing
+                    $slave['busy'] = false;
+                    $slave['connections']--;
+                    $stream->close();
+                    return;
+                }
+
                 $headersToReplace = ['X-PHP-PM-Remote-IP' => $incoming->getRemoteAddress()];
                 $headerRedirected = false;
 
