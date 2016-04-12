@@ -1079,6 +1079,8 @@ class ProcessManager
         $script = <<<EOF
 <?php
 
+set_time_limit(0);
+
 require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
