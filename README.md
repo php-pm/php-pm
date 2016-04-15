@@ -136,6 +136,10 @@ using only one worker `--workers=1` and enable `-v` or `-vv`.
 When debugging you should use xdebug as you're used to. If you set a break point and hold the application, then only one
 worker is stopped until you release the break point. All other workers are fully functional. 
 
+**Note for XDebug and PHPStorm**: Since php-pm uses at least two processes, there are two xdebug instances as well. PHPStorm is per default configured to only acceppt one connection at a time. You need to increase that. You won't get xdebug working with your application if you don't increase that count.
+
+![Xdebug and PHPStorm](https://dl.dropboxusercontent.com/u/54069263/ppm-github/xdebug-phpstorm.png)
+
 In all workers the STDOUT is redirected to the connected client. So take care, `var_dump`, `echo` are not displayed on the console.
 STDERR is not redirected to the client, but to the console. So, for very simple debugging you could use `error_log('hi')` and you'll see it on the console.
 Per default exceptions and errors are only displayed on the console, prettified with Symfony/Debug component.
