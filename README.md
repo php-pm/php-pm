@@ -136,7 +136,7 @@ using only one worker `--workers=1` and enable `-v` or `-vv`.
 When debugging you should use xdebug as you're used to. If you set a break point and hold the application, then only one
 worker is stopped until you release the break point. All other workers are fully functional. 
 
-**Note for XDebug and PHPStorm**: Since php-pm uses at least two processes, there are two xdebug instances as well. PHPStorm is per default configured to only acceppt one connection at a time. You need to increase that. You won't get xdebug working with your application if you don't increase that count.
+**Note for XDebug and PHPStorm**: Since php-pm uses at least two processes, there are two xdebug instances as well. PHPStorm is per default configured to only accept one connection at a time. You need to increase that. You won't get xdebug working with your application if you don't increase that count.
 
 ![Xdebug and PHPStorm](https://dl.dropboxusercontent.com/u/54069263/ppm-github/xdebug-phpstorm.png)
 
@@ -235,17 +235,17 @@ https://github.com/bestmomo/laravel5-example
 
 ## Issues
 
-* Not production ready yet, as it's in development and needs still some work in the bootstrap classes of supported frameworks. Some people are currently trying to use it in production. Stay tuned :)
-* Memory leaks, memory leaks and memory leaks. You will find also leaks in your application. :) But no big issue since worker restart automatically.
+* Not production ready yet, as it's in development and still needs some work in the bootstrap classes of supported frameworks. Some people are currently trying to use it in production. Stay tuned :)
+* Memory leaks, memory leaks and memory leaks. You will also find leaks in your application. :) But no big issue since workers restart automatically.
 * Does not work with ExtEventLoop. (So don't install `php70-event`, but you can try LibEventLoop `php56-libevent`)
 * Drupal and Zend is very experimental and not fully working. Try using https://github.com/php-pm/php-pm-drupal.
-* Laravel's debugger isn't working yet perfectly since it's still needed to reset some stuff after each request.
+* Laravel's debugger isn't working perfectly yet since it's still needed to reset some stuff after each request.
 * Streamed responses are not streamed yet
 * File upload is experimental
 * No windows support due to signal handling
 * Doesn't fully implement HTTP/1.1, but [reactphp/http](https://github.com/reactphp/http) is working on it.
 
-Please help us to fix those issues by creating pull requests. :)
+Please help us fix these issues by creating pull requests. :)
 
 ### Setup 1. Use NGINX
 
