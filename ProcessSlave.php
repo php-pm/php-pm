@@ -93,7 +93,6 @@ class ProcessSlave
 
     public function __construct($bridgeName = null, $appBootstrap, array $config = [])
     {
-        gc_disable();
         $this->config = $config;
         $this->appBootstrap = $appBootstrap;
         $this->bridgeName = $bridgeName;
@@ -146,7 +145,7 @@ class ProcessSlave
                                     $idx,
                                     isset($stack['class']) ? $stack['class'] . '->' : '',
                                     $stack['function'],
-                                    isset ($stack['file']) ? 'in' . $stack['file'] : '',
+                                    isset($stack['file']) ? 'in' . $stack['file'] : '',
                                     isset($stack['line']) ? ':' . $stack['line'] : ''
                                 );
                         }
@@ -264,9 +263,6 @@ class ProcessSlave
 
         $client = stream_socket_client($this->config['controllerHost']);
         $this->controller = new \React\Socket\Connection($client, $this->loop);
-        $this->controller->on('error', function ($data) {
-            var_dump($data);
-        });
 
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
 
@@ -286,16 +282,11 @@ class ProcessSlave
         );
 
         $this->server = new React\Server($this->loop); //our version for now, because of unix socket support
-        $this->server->on('error', function ($data) {
-            var_dump($data);
-        });
 
         $http = new HttpServer($this->server);
         $http->on('request', array($this, 'onRequest'));
-        $http->on('error', function ($data) {
-            var_dump($data);
-        });
 
+        //port is only used for tcp connection. If unix socket, 'host' contains the socket path
         $port = $this->config['port'];
         $host = $this->config['host'];
 
@@ -339,13 +330,14 @@ class ProcessSlave
         }
 
         $this->handleRequest($request, $response);
-
-        if (memory_get_usage() > Utils::getMaxMemory() * 0.8) {
-            //80% of allowed memory used, so let's call the garbage collector.
-            gc_collect_cycles();
-        }
     }
 
+    /**
+     * Handle a redirected request from master.
+     *
+     * @param \React\Http\Request $request
+     * @param HttpResponse $response
+     */
     protected function handleRequest(\React\Http\Request $request, HttpResponse $response)
     {
         if ($bridge = $this->getBridge()) {
@@ -369,9 +361,9 @@ class ProcessSlave
         if (headers_sent()) {
             //when a script sent headers the cgi process needs to die because the second request
             //trying to send headers again will fail (headers already sent fatal). Its best to not even
-            //try to send headers because this break the whole of approach of php-pm using php-cgi.
+            //try to send headers because this break the whole approach of php-pm using php-cgi.
             error_log(
-                'Headers has been sent, but not redirected to client. Force restart of a worker. ' .
+                'Headers have been sent, but not redirected to client. Force restart of a worker. ' .
                 'Make sure your application does not send headers on its own.'
             );
             $this->shutdown();
@@ -413,9 +405,28 @@ class ProcessSlave
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
 
+            $mTime = filemtime($filePath);
+
+            if (isset($request->getHeaders()['If-Modified-Since'])) {
+                $ifModifiedSince = $request->getHeaders()['If-Modified-Since'];
+                if ($ifModifiedSince && strtotime($ifModifiedSince) === $mTime) {
+                    // Client's cache IS current, so we just respond '304 Not Modified'.
+                    $response->writeHead(304, [
+                        'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
+                    ]);
+                    $response->end();
+                    return true;
+                }
+            }
+
+            $expires = 3600; //1 h
             $response->writeHead(200, [
                 'Content-Type' => $this->mimeContentType($filePath),
                 'Content-Length' => filesize($filePath),
+                'Pragma' => 'public',
+                'Cache-Control' => 'max-age=' . $expires,
+                'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
+                'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
             ]);
             $response->end(file_get_contents($filePath));
 
