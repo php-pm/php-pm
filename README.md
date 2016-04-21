@@ -60,9 +60,9 @@ By default cgi bin is in  `/usr/lib/cgi-bin/php`, so you need to run:
 
 **Red Hat/Centos (RHEL-7, 6)** (https://webtatic.com/packages/php70/)
 
-install webtatic first
+install Webtatic first
 
-`yum install php70w`
+`yum install php70w-cli`
 
 **Mac OS X - Homebrew** (https://github.com/Homebrew/homebrew-php)
 
