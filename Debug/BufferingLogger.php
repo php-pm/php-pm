@@ -9,8 +9,6 @@ use Psr\Log\AbstractLogger;
  *
  * A buffering logger that stacks logs for later.
  * Based on Symfony's BufferingLogger
- *
- * @package PHPFPM\Debug
  */
 class BufferingLogger extends AbstractLogger
 {
