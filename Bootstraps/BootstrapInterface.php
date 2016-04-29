@@ -9,4 +9,5 @@ interface BootstrapInterface
 {
     public function __construct($appenv, $debug);
     public function getApplication();
+    public function getStaticDirectory();
 }
