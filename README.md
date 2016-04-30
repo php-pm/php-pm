@@ -48,7 +48,7 @@ Does your app/library support PPM? Show it!
 
 ### Installation
 
-To get PHP-PM you need beside the php binary also php-cgi, which comes often with php. If not availabe try to install it:
+To get PHP-PM you need beside the php binary also php-cgi, which comes often with php. If not available try to install it:
 
 **Debian/Ubuntu** (https://www.digitalocean.com/community/tutorials/how-to-upgrade-to-php-7-on-ubuntu-14-04)
 
