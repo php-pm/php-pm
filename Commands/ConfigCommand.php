@@ -26,7 +26,7 @@ class ConfigCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $config = $this->loadConfig($input);
+        $config = $this->loadConfig($input, $output);
 
         $this->renderConfig($output, $config);
 

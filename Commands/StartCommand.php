@@ -33,7 +33,7 @@ class StartCommand extends Command
         if ($workingDir = $input->getArgument('working-directory')) {
             chdir($workingDir);
         }
-        $config = $this->loadConfig($input);
+        $config = $this->loadConfig($input, $output);
 
         if ($path = $this->getConfigPath()) {
             $modified = '';

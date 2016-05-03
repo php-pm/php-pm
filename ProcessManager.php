@@ -1190,12 +1190,7 @@ require_once $dir . '/functions.php';
 \PHPPM\ProcessSlave::\$slave->run();
 EOF;
 
-        if ($this->phpCgiExecutable) {
-            $commandline = $this->phpCgiExecutable;
-        } else {
-            $executableFinder = new PhpExecutableFinder();
-            $commandline = $executableFinder->find() . '-cgi';
-        }
+        $commandline = $this->phpCgiExecutable;
 
         $file = tempnam(sys_get_temp_dir(), 'dbg');
         file_put_contents($file, $script);

@@ -6,6 +6,7 @@ use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Process\PhpExecutableFinder;
 
 trait ConfigTrait
 {
@@ -59,7 +60,7 @@ trait ConfigTrait
         }
     }
 
-    protected function loadConfig(InputInterface $input)
+    protected function loadConfig(InputInterface $input, OutputInterface $output)
     {
         $config = [];
 
@@ -79,8 +80,33 @@ trait ConfigTrait
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
         $config['concurrent-requests'] = (boolean)$this->optionOrConfigValue($input, 'concurrent-requests', $config);
-        $config['cgi-path'] = $this->optionOrConfigValue($input, 'cgi-path', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
+
+        $config['cgi-path'] = $this->optionOrConfigValue($input, 'cgi-path', $config);
+
+        if (false === $config['cgi-path']) {
+            //not set in config nor in command options -> autodetect path
+            $executableFinder = new PhpExecutableFinder();
+            $binary = $executableFinder->find();
+
+            $cgiPaths = [
+                $binary . '-cgi', //php7.0 -> php7.0-cgi
+                str_replace('php', 'php-cgi', $binary), //php7.0 => php-cgi7.0
+            ];
+
+            foreach ($cgiPaths as $cgiPath) {
+                $path = trim(`which $cgiPath`);
+                if ($path) {
+                    $config['cgi-path'] = $path;
+                    break;
+                }
+            }
+
+            if (false === $config['cgi-path']) {
+                $output->writeln('<error>PPM could find a php-cgi path. Please specify by --cgi-path=</error>');
+                exit(1);
+            }
+        }
 
         return $config;
     }
