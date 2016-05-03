@@ -133,6 +133,13 @@ class ProcessManager
     protected $phpCgiExecutable = false;
 
     /**
+     * Path to socket folder.
+     *
+     * @var string
+     */
+    protected $socketPath = '.ppm/run/';
+
+    /**
      * @var bool
      */
     protected $inShutdown = false;
@@ -364,6 +371,14 @@ class ProcessManager
     public function setDebug($debug)
     {
         $this->debug = $debug;
+    }
+
+    /**
+     * @param string $socketPath
+     */
+    public function setSocketPath($socketPath)
+    {
+        $this->socketPath = $socketPath;
     }
 
     /**
@@ -1068,7 +1083,17 @@ class ProcessManager
     protected function getSockFile($affix)
     {
         //since all commands set setcwd() we can make sure we are in the current application folder
-        $run = getcwd() . '/.ppm/run/';
+
+        if ('/' === substr($this->socketPath, 0, 1)) {
+            $run = $this->socketPath;
+        } else {
+            $run = getcwd() . '/' . $this->socketPath;
+        }
+
+        if ('/' !== substr($run, -1)) {
+            $run .= '/';
+        }
+
         if (!is_dir($run) && !mkdir($run, 0777, true)) {
             throw new \RuntimeException(sprintf('Could not create %d folder.', $run));
         }
