@@ -74,7 +74,7 @@ install Webtatic first
 
 By default, PPM looks for a binary named `php-cgi`. If your PHP installation uses
 a different binary name, you can specify the full path to that binary with the `php-cgi`
-configuration option (for example: `ppm config --php-cgi=/opt/local/bin/php-cgi70`).
+configuration option (for example: `ppm config --cgi-path=/opt/local/bin/php-cgi70`).
 
 On Ubuntu for example per default `pcntl_*` functions are disabled.
 If you get `Warning: pcntl_signal() has been disabled for security reasons`, you should activate these functions:
