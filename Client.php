@@ -7,7 +7,7 @@ class Client
     /**
      * @var int
      */
-    protected $controllerPort = 5100;
+    protected $controllerPort;
 
     /**
      * @var \React\EventLoop\ExtEventLoop|\React\EventLoop\LibEventLoop|\React\EventLoop\LibEvLoop|\React\EventLoop\StreamSelectLoop
@@ -19,7 +19,7 @@ class Client
      */
     protected $connection;
 
-    public function __construct($controllerPort = 8080)
+    public function __construct($controllerPort = 5500)
     {
         $this->controllerPort = $controllerPort;
         $this->loop = \React\EventLoop\Factory::create();
@@ -34,7 +34,7 @@ class Client
             $this->connection->close();
             unset($this->connection);
         }
-        $client = stream_socket_client('tcp://127.0.0.1:5500');
+        $client = stream_socket_client('tcp://127.0.0.1:' . $this->controllerPort);
         $this->connection = new \React\Socket\Connection($client, $this->loop);
         return $this->connection;
     }
