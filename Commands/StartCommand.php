@@ -30,22 +30,7 @@ class StartCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if ($workingDir = $input->getArgument('working-directory')) {
-            chdir($workingDir);
-        }
-        $config = $this->loadConfig($input, $output);
-
-        if ($path = $this->getConfigPath()) {
-            $modified = '';
-            $fileConfig = json_decode(file_get_contents($path), true);
-            if (json_encode($fileConfig) !== json_encode($config)) {
-                $modified = ', modified by command arguments';
-            }
-            $output->writeln(sprintf('<info>Read configuration %s%s.</info>', $path, $modified));
-        }
-        $output->writeln(sprintf('<info>%s</info>', getcwd()));
-
-        $this->renderConfig($output, $config);
+        $config = $this->initializeConfig($input, $output);
 
         $handler = new ProcessManager($output, $config['port'], $config['host'], $config['workers']);
 

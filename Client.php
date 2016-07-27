@@ -2,31 +2,37 @@
 
 namespace PHPPM;
 
+use React\EventLoop\Factory;
+use React\EventLoop\LoopInterface;
+use React\Socket\Connection;
+
 class Client
 {
+    use ProcessCommunicationTrait;
+
     /**
      * @var int
      */
     protected $controllerPort;
 
     /**
-     * @var \React\EventLoop\ExtEventLoop|\React\EventLoop\LibEventLoop|\React\EventLoop\LibEvLoop|\React\EventLoop\StreamSelectLoop
+     * @var LoopInterface
      */
     protected $loop;
 
     /**
-     * @var \React\Socket\Connection
+     * @var Connection
      */
     protected $connection;
 
     public function __construct($controllerPort = 5500)
     {
         $this->controllerPort = $controllerPort;
-        $this->loop = \React\EventLoop\Factory::create();
+        $this->loop = Factory::create();
     }
 
     /**
-     * @return \React\Socket\Connection
+     * @return Connection
      */
     protected function getConnection()
     {
@@ -34,8 +40,8 @@ class Client
             $this->connection->close();
             unset($this->connection);
         }
-        $client = stream_socket_client('tcp://127.0.0.1:' . $this->controllerPort);
-        $this->connection = new \React\Socket\Connection($client, $this->loop);
+        $client = stream_socket_client($this->getControllerSocket());
+        $this->connection = new Connection($client, $this->loop);
         return $this->connection;
     }
 
@@ -46,15 +52,15 @@ class Client
         $connection = $this->getConnection();
 
         $result = '';
-        $connection->on('data', function($data) use ($result) {
+        $connection->on('data', function($data) use (&$result) {
             $result .= $data;
         });
 
-        $connection->on('close', function() use ($callback, $result) {
+        $connection->on('close', function() use ($callback, &$result) {
             $callback($result);
         });
 
-        $connection->write(json_encode($data));
+        $connection->write(json_encode($data) . PHP_EOL);
     }
 
     public function getStatus(callable $callback)
@@ -62,6 +68,31 @@ class Client
         $this->request('status', [], function($result) use ($callback) {
             $callback(json_decode($result, true));
         });
+        $this->loop->run();
+    }
+
+    /**
+     * @return string
+     */
+    protected function getControllerSocket()
+    {
+        $host = $this->getNewControllerHost(false);
+        $port = $this->controllerPort;
+        $localSocket = '';
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $localSocket = 'tcp://' . $host . ':' . $port;
+        } elseif (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            // enclose IPv6 addresses in square brackets before appending port
+            $localSocket = 'tcp://[' . $host . ']:' . $port;
+        } elseif (preg_match('#^unix://#', $host)) {
+            $localSocket = $host;
+        } else {
+            throw new \UnexpectedValueException(
+                '"' . $host . '" does not match to a set of supported transports. ' .
+                'Supported transports are: IPv4, IPv6 and unix:// .'
+                , 1433253311);
+        }
+        return $localSocket;
     }
 
 }

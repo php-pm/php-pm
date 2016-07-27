@@ -119,4 +119,33 @@ trait ConfigTrait
 
         return isset($config[$name]) ? $config[$name] : $input->getOption($name);
     }
+
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @param bool $render
+     * @return array|mixed
+     */
+    protected function initializeConfig(InputInterface $input, OutputInterface $output, $render = true)
+    {
+        if ($workingDir = $input->getArgument('working-directory')) {
+            chdir($workingDir);
+        }
+        $config = $this->loadConfig($input, $output);
+
+        if ($path = $this->getConfigPath()) {
+            $modified = '';
+            $fileConfig = json_decode(file_get_contents($path), true);
+            if (json_encode($fileConfig) !== json_encode($config)) {
+                $modified = ', modified by command arguments';
+            }
+            $output->writeln(sprintf('<info>Read configuration %s%s.</info>', $path, $modified));
+        }
+        $output->writeln(sprintf('<info>%s</info>', getcwd()));
+
+        if ($render) {
+            $this->renderConfig($output, $config);
+        }
+        return $config;
+    }
 }
