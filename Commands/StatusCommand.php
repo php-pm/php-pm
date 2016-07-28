@@ -9,6 +9,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class StatusCommand extends Command
 {
+    use ConfigTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -25,9 +27,14 @@ class StatusCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $config = $this->initializeConfig($input, $output, false);
+
         $handler = new Client();
-        $handler->getStatus(function($status) {
-            var_dump($status);
+        $handler->setSocketPath($config['socket-path']);
+        $handler->getStatus(function($status) use ($output) {
+            foreach ($status as $key => $value) {
+                $output->writeln(sprintf('%s: %s', $key, $value));
+            }
         });
     }
 

@@ -133,13 +133,6 @@ class ProcessManager
     protected $phpCgiExecutable = false;
 
     /**
-     * Path to socket folder.
-     *
-     * @var string
-     */
-    protected $socketPath = '.ppm/run/';
-
-    /**
      * @var bool
      */
     protected $inShutdown = false;
@@ -374,22 +367,6 @@ class ProcessManager
     }
 
     /**
-     * @param string $socketPath
-     */
-    public function setSocketPath($socketPath)
-    {
-        $this->socketPath = $socketPath;
-    }
-
-    /**
-     * @return string
-     */
-    protected function getNewControllerHost()
-    {
-        return $this->getSockFile('controller');
-    }
-
-    /**
      * Starts the main loop. Blocks.
      */
     public function run()
@@ -409,7 +386,7 @@ class ProcessManager
         $this->controller = new React\Server($this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
-        $this->controllerHost = Utils::isWindows() ? '127.0.0.1' : $this->getNewControllerHost();
+        $this->controllerHost = $this->getNewControllerHost();
         $this->controller->listen(5500, $this->controllerHost);
 
         $this->web = new \React\Socket\Server($this->loop);
@@ -774,7 +751,16 @@ class ProcessManager
      */
     protected function commandStatus(array $data, Connection $conn)
     {
-        $conn->end(json_encode('todo'));
+        //remove nasty info about worker's bootstrap fail
+        $conn->removeAllListeners('close');
+        if ($this->output->isVeryVerbose()) {
+            $conn->on('close', function () {
+                $this->output->writeln('Status command requested');
+            });
+        }
+        $conn->end(json_encode([
+            'slave_count' => $this->slaveCount
+        ]));
     }
 
     /**
@@ -1057,54 +1043,6 @@ class ProcessManager
         };
 
         $this->inReload = false;
-    }
-
-    /**
-     * @param int $port
-     *
-     * @return string
-     */
-    protected function getNewSlaveSocket($port)
-    {
-        if (Utils::isWindows()) {
-            //we have no unix domain sockets support
-            return '127.0.0.1';
-        }
-
-        return $this->getSockFile($port);
-    }
-
-    /**
-     *
-     * @param string $affix
-     *
-     * @return string
-     */
-    protected function getSockFile($affix)
-    {
-        //since all commands set setcwd() we can make sure we are in the current application folder
-
-        if ('/' === substr($this->socketPath, 0, 1)) {
-            $run = $this->socketPath;
-        } else {
-            $run = getcwd() . '/' . $this->socketPath;
-        }
-
-        if ('/' !== substr($run, -1)) {
-            $run .= '/';
-        }
-
-        if (!is_dir($run) && !mkdir($run, 0777, true)) {
-            throw new \RuntimeException(sprintf('Could not create %d folder.', $run));
-        }
-
-        $sock = $run. $affix . '.sock';
-
-        if (file_exists($sock)) {
-            unlink($sock);
-        }
-
-        return 'unix://' . $sock;
     }
 
     /**

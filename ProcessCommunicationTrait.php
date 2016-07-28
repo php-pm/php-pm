@@ -10,6 +10,13 @@ use React\Socket\Connection;
 trait ProcessCommunicationTrait
 {
     /**
+     * Path to socket folder.
+     *
+     * @var string
+     */
+    protected $socketPath = '.ppm/run/';
+
+    /**
      * Parses a received message. Redirects to the appropriate `command*` method.
      *
      * @param array $data
@@ -70,5 +77,69 @@ trait ProcessCommunicationTrait
     {
         $message['cmd'] = $command;
         $conn->write(json_encode($message) . PHP_EOL);
+    }
+
+    /**
+     *
+     * @param string $affix
+     * @param bool $removeOld
+     * @return string
+     */
+    protected function getSockFile($affix, $removeOld)
+    {
+        if (Utils::isWindows()) {
+            //we have no unix domain sockets support
+            return '127.0.0.1';
+        }
+        //since all commands set setcwd() we can make sure we are in the current application folder
+
+        if ('/' === substr($this->socketPath, 0, 1)) {
+            $run = $this->socketPath;
+        } else {
+            $run = getcwd() . '/' . $this->socketPath;
+        }
+
+        if ('/' !== substr($run, -1)) {
+            $run .= '/';
+        }
+
+        if (!is_dir($run) && !mkdir($run, 0777, true)) {
+            throw new \RuntimeException(sprintf('Could not create %d folder.', $run));
+        }
+
+        $sock = $run. $affix . '.sock';
+
+        if ($removeOld && file_exists($sock)) {
+            unlink($sock);
+        }
+
+        return 'unix://' . $sock;
+    }
+
+    /**
+     * @param int $port
+     *
+     * @return string
+     */
+    protected function getNewSlaveSocket($port)
+    {
+        return $this->getSockFile($port, true);
+    }
+
+    /**
+     * @param bool $removeOld
+     * @return string
+     */
+    protected function getNewControllerHost($removeOld = true)
+    {
+        return $this->getSockFile('controller', $removeOld);
+    }
+
+    /**
+     * @param string $socketPath
+     */
+    public function setSocketPath($socketPath)
+    {
+        $this->socketPath = $socketPath;
     }
 }
