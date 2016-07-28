@@ -92,7 +92,7 @@ Open `/etc/php5/cgi/php.ini`, find line `disable_functions = pcntl_alarm,pcntl_f
 #### Global
 
 ```bash
-$ git clone git@github.com:php-pm/php-pm.git
+$ git clone https://github.com/php-pm/php-pm.git
 $ cd php-pm
 $ composer install
 $ ln -s `pwd`/bin/ppm /usr/local/bin/ppm
