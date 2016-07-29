@@ -24,6 +24,7 @@ trait ConfigTrait
             ->addOption('logging', null, InputOption::VALUE_OPTIONAL, 'Enable/Disable http logging to stdout. 1|0', 1)
             ->addOption('static', null, InputOption::VALUE_OPTIONAL, 'Enable/Disable static file serving. 1|0', 1)
             ->addOption('max-requests', null, InputOption::VALUE_OPTIONAL, 'Max requests per worker until it will be restarted', 1000)
+            ->addOption('max-requests-gc', null, InputOption::VALUE_OPTIONAL, 'Delay in number of requests to run Garbage Collector in master process', 1000)
             ->addOption('concurrent-requests', null, InputOption::VALUE_OPTIONAL, 'If a worker is allowed to handle more than one request at the same time. This can lead to issues when the application does not support it but makes it faster. (like when they operate on globals at the same time) 1|0', 0)
             ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
 
@@ -79,6 +80,7 @@ trait ConfigTrait
         $config['static'] = (boolean)$this->optionOrConfigValue($input, 'static', $config);
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
+        $config['max-requests-gc'] = (int)$this->optionOrConfigValue($input, 'max-requests-gc', $config);
         $config['concurrent-requests'] = (boolean)$this->optionOrConfigValue($input, 'concurrent-requests', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
 
