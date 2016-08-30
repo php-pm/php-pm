@@ -178,13 +178,6 @@ class ProcessManager
     protected $maxRequests = 2000;
 
     /**
-     * Max requests until GC is called.
-     *
-     * @var int
-     */
-    protected $maxRequestsUntilGC = 5000;
-
-    /**
      * Timeout in seconds for master to worker connection.
      *
      * @var int
@@ -372,9 +365,6 @@ class ProcessManager
     public function run()
     {
         Debug::enable();
-
-        //necessary, since connections will be dropped without reasons after several hundred connections.
-        gc_disable();
 
         //make whatever is necessary to disable all stuff that could buffer output
         ini_set('zlib.output_compression', 0);
@@ -672,11 +662,6 @@ class ProcessManager
                 $this->handledRequests++;
 
                 $cb($minPort);
-
-                if ($this->handledRequests >= $this->maxRequestsUntilGC) {
-                    $this->handledRequests = 0;
-                    gc_collect_cycles();
-                }
 
                 return;
             }
