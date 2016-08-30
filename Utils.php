@@ -94,20 +94,22 @@ class Utils
     public static function getMaxMemory()
     {
         $memoryLimit = ini_get('memory_limit');
-        if (-1 === $memoryLimit) {
-            return 128 * 1024 * 1024; //default 128mb
+        
+        // if no limit
+        if (-1 == $memoryLimit) {
+            return 134217728; //128 * 1024 * 1024 default 128mb
         }
-
-        $lastChar = strtolower(substr($memoryLimit, -1));
-
-        if ('g' === $lastChar) {
-            $memoryLimit = substr($memoryLimit, 0, -1) * 1024 * 1024 * 1024;
-        } else if ('m' === $lastChar) {
-            $memoryLimit = substr($memoryLimit, 0, -1) * 1024 * 1024;
-        } else if ('k' === $lastChar) {
-            $memoryLimit = substr($memoryLimit, 0, -1) * 1024;
+        
+        // if set to exact byte
+        if (is_numeric($memoryLimit)) {
+            return (int) $memoryLimit;
         }
-
-        return $memoryLimit;
+        
+        // if short hand version http://php.net/manual/en/faq.using.php#faq.using.shorthandbytes
+        return substr($memoryLimit, 0, -1) * [
+            'g' => 1073741824, //1024 * 1024 * 1024
+            'm' => 1048576, //1024 * 1024
+            'k' => 1024
+        ][strtolower(substr($memoryLimit, -1))];
     }
 }
