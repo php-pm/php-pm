@@ -2,7 +2,6 @@
 
 namespace PHPPM\React;
 
-use React\Http\MultipartParser;
 use React\Http\Request;
 
 class RequestParser extends \React\Http\RequestParser
