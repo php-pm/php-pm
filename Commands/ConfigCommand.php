@@ -32,7 +32,7 @@ class ConfigCommand extends Command
 
         $newContent = json_encode($config, JSON_PRETTY_PRINT);
         if (file_exists($this->file) && $newContent === file_get_contents($this->file)) {
-            $output->writeln(sprintf('<info>No changes written to file %s.</info>', realpath($this->file)));
+            $output->writeln(sprintf('No changes.', realpath($this->file)));
             return;
         }
 
