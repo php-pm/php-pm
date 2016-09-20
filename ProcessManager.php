@@ -1035,7 +1035,7 @@ class ProcessManager
      *
      * @param integer $port
      */
-    function newInstance($port)
+    protected function newInstance($port)
     {
         if ($this->inShutdown) {
             //when we are in the shutdown phase, we close all connections
