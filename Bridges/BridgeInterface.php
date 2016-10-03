@@ -27,7 +27,7 @@ interface BridgeInterface
      * Handle a request using a HttpKernelInterface implementing application.
      *
      * @param \React\Http\Request $request
-     * @param \React\Http\Response $response
+     * @param \PHPPM\React\HttpResponse $response
      */
     public function onRequest(\React\Http\Request $request, HttpResponse $response);
 }
