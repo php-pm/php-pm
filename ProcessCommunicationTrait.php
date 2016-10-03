@@ -51,7 +51,7 @@ trait ProcessCommunicationTrait
                 function ($data) use ($conn, &$buffer) {
                     $buffer .= $data;
 
-                    if (substr($buffer, -1) === PHP_EOL) {
+                    if (substr($buffer, -strlen(PHP_EOL)) === PHP_EOL) {
                         foreach (explode(PHP_EOL, $buffer) as $message) {
                             if ($message) {
                                 $this->processMessage($message, $conn);
