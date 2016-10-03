@@ -104,7 +104,7 @@ trait ProcessCommunicationTrait
         }
 
         if (!is_dir($run) && !mkdir($run, 0777, true)) {
-            throw new \RuntimeException(sprintf('Could not create %d folder.', $run));
+            throw new \RuntimeException(sprintf('Could not create %s folder.', $run));
         }
 
         $sock = $run. $affix . '.sock';
