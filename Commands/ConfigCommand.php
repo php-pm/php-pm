@@ -19,7 +19,7 @@ class ConfigCommand extends Command
 
         $this
             ->setName('config')
-            ->setDescription('Configured ppm.json in current folder');
+            ->setDescription('Configure ppm.json in current folder');
 
         $this->configurePPMOptions($this);
     }
