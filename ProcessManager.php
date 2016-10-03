@@ -390,6 +390,7 @@ class ProcessManager
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
         $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
+        $pcntl->on(SIGUSR1, [$this, 'restartWorker']);
 
         if ($this->isDebug()) {
             $this->loop->addPeriodicTimer(0.5, function () {
@@ -992,9 +993,9 @@ class ProcessManager
     }
 
     /**
-     * Closes all salves, so we automatically reconnect. Necessary when watched files have changed.
+     * Closes all slaves, so we automatically reconnect. Necessary when watched files have changed.
      */
-    protected function restartWorker()
+    public function restartWorker()
     {
         if ($this->inReload) {
             return;
