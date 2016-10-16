@@ -2,15 +2,16 @@
 
 namespace PHPPM\React;
 
+use React\Http\MultipartParser;
 use React\Http\Request;
 
-class RequestParser extends \React\Http\RequestHeaderParser
+class RequestParser extends \React\Http\RequestParser
 {
-    public function parseRequest($data)
+    public function parseHeaders($data)
     {
-        $return = parent::parseRequest($data);
-        $this->fixHeaderNames($return[0]);
-        return $return;
+        $request = parent::parseHeaders($data);
+        $this->fixHeaderNames($request);
+        return $request;
     }
 
     //fix header names (Content-type => Content-Type)
@@ -27,6 +28,6 @@ class RequestParser extends \React\Http\RequestHeaderParser
             $headers['Content-Type'] = explode(';', $headers['Content-Type'])[0];
         }
 
-        $request->__construct($request->getMethod(), $request->getPath(), $request->getQuery(), $request->getHttpVersion(), $headers);
+        $request->__construct($request->getMethod(), $request->getUrl(), $request->getQuery(), $request->getHttpVersion(), $headers, $request->getBody());
     }
 }
