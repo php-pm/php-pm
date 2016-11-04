@@ -7,7 +7,7 @@
         "symfony/process": "^2.6|^3.0",
         "react/event-loop": "^0.4",
         "react/stream": "^0.4",
-        "react/http": "dev-master#cd15204bd15d106d7832c680e4fb0ca0ce2f5e30",
+        "react/http": "dev-streaming-multipart",
         "react/socket-client": "^0.5.0",
         "mkraemer/react-pcntl": "2.0.*",
         "monolog/monolog": "^1.3"
