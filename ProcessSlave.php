@@ -76,6 +76,13 @@ class ProcessSlave
      */
     protected $errorLogger;
 
+    /**
+     * Copy of $_SERVER during bootstrap.
+     *
+     * @var array
+     */
+    protected $baseServer;
+
     protected $logFormat = '[$time_local] $remote_addr - $remote_user "$request" $status $bytes_sent "$http_referer"';
 
     /**
@@ -96,6 +103,7 @@ class ProcessSlave
         $this->config = $config;
         $this->appBootstrap = $appBootstrap;
         $this->bridgeName = $bridgeName;
+        $this->baseServer = $_SERVER;
 
         if ($this->config['session_path']) {
             session_save_path($this->config['session_path']);
@@ -372,6 +380,7 @@ class ProcessSlave
 
     protected function prepareEnvironment(\React\Http\Request $request)
     {
+        $_SERVER = $this->baseServer;
         $_SERVER['REQUEST_METHOD'] = $request->getMethod();
         $_SERVER['REQUEST_TIME'] = (int)microtime(true);
         $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
