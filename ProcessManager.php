@@ -745,7 +745,8 @@ class ProcessManager
             });
         }
         $conn->end(json_encode([
-            'slave_count' => $this->slaveCount
+            'slaveCount' => $this->slaveCount,
+            'handledRequests' => $this->handledRequests,
         ]));
     }
 

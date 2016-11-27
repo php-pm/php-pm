@@ -23,6 +23,8 @@ class StatusCommand extends Command
             ->addArgument('working-directory', null, 'working directory', './')
             ->setDescription('Status of all processes')
         ;
+
+        $this->configurePPMOptions($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
