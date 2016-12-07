@@ -5,9 +5,8 @@ namespace PHPPM;
 
 use React\Socket\Connection;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Process\PhpExecutableFinder;
-use Symfony\Component\Process\ProcessUtils;
 use Symfony\Component\Debug\Debug;
+use Symfony\Component\Process\ProcessUtils;
 
 class ProcessManager
 {
@@ -745,8 +744,9 @@ class ProcessManager
             });
         }
         $conn->end(json_encode([
-            'slaveCount' => $this->slaveCount,
-            'handledRequests' => $this->handledRequests,
+            'slave_count' => $this->slaveCount,
+            'handled_requests' => $this->handledRequests,
+            'handled_requests_per_worker' => array_column($this->slaves, 'requests', 'port')
         ]));
     }
 
