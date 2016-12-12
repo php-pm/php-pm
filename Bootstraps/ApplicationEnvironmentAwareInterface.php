@@ -3,7 +3,7 @@
 namespace PHPPM\Bootstraps;
 
 
-interface InitializeInterface
+interface ApplicationEnvironmentAwareInterface
 {
     public function initialize($appenv, $debug);
 }
