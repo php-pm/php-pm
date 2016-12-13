@@ -6,6 +6,7 @@ namespace PHPPM;
 use PHPPM\React\HttpResponse;
 use PHPPM\React\HttpServer;
 use PHPPM\Debug\BufferingLogger;
+use React\EventLoop\LoopInterface;
 use React\Socket\Connection;
 use Symfony\Component\Debug\ErrorHandler;
 
@@ -28,7 +29,7 @@ class ProcessSlave
     protected $server;
 
     /**
-     * @var \React\EventLoop\LibEventLoop|\React\EventLoop\StreamSelectLoop
+     * @var LoopInterface
      */
     protected $loop;
 
@@ -225,7 +226,7 @@ class ProcessSlave
     protected function bootstrap($appBootstrap, $appenv, $debug)
     {
         if ($bridge = $this->getBridge()) {
-            $bridge->bootstrap($appBootstrap, $appenv, $debug);
+            $bridge->bootstrap($appBootstrap, $appenv, $debug, $this->loop);
             $this->sendMessage($this->controller, 'ready');
         }
     }
