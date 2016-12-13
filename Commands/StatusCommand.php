@@ -50,7 +50,7 @@ class StatusCommand extends Command
         if (is_array($status)) {
             $p = PHP_EOL;
             foreach ($status as $key => $value) {
-                $p .= sprintf('%s%s: %s', str_repeat("\t", $indentLevel), $key, $this > parseStatus($value, $indentLevel + 1));
+                $p .= sprintf('%s%s: %s', str_repeat("\t", $indentLevel), $key, $this->parseStatus($value, $indentLevel + 1));
             }
         } else {
             $p = $status . PHP_EOL;
