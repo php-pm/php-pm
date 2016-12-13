@@ -12,7 +12,7 @@ interface BridgeInterface
      * Bootstrap an application implementing the HttpKernelInterface.
      *
      * @param string|null $appBootstrap The environment your application will use to bootstrap (if any)
-     * @param $appenv
+     * @param string $appenv
      * @param boolean $debug If debug is enabled
      * @param LoopInterface $loop
      * @see http://stackphp.com
