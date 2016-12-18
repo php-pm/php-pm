@@ -19,7 +19,7 @@ class ConfigCommand extends Command
 
         $this
             ->setName('config')
-            ->setDescription('Configure ppm.json in current folder');
+            ->setDescription('Configure config file, default - ppm.json');
 
         $this->configurePPMOptions($this);
     }
@@ -27,16 +27,31 @@ class ConfigCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $config = $this->loadConfig($input, $output);
+        // to be sure we have valid config path
+        $configPath = $this->getConfig($input);
 
         $this->renderConfig($output, $config);
 
         $newContent = json_encode($config, JSON_PRETTY_PRINT);
-        if (file_exists($this->file) && $newContent === file_get_contents($this->file)) {
-            $output->writeln(sprintf('No changes to %s file.', realpath($this->file)));
+        if (file_exists($configPath) && $newContent === file_get_contents($configPath)) {
+            $output->writeln(sprintf('No changes to %s file.', realpath($configPath)));
             return;
         }
 
-        file_put_contents($this->file, $newContent);
-        $output->writeln(sprintf('<info>%s file written.</info>', realpath($this->file)));
+        file_put_contents($configPath, $newContent);
+        $output->writeln(sprintf('<info>%s file written.</info>', realpath($configPath)));
+    }
+
+    /**
+     * @param InputInterface $input
+     * @return string
+     */
+    private function getConfig(InputInterface $input)
+    {
+        $configPath = $this->getConfigPath($input);
+        if (is_null($configPath)) {
+            $configPath = $input->getOption('config') ?: $this->file;
+        }
+        return $configPath;
     }
 }

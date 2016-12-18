@@ -28,7 +28,8 @@ trait ConfigTrait
             ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
 
             ->addOption('cgi-path', null, InputOption::VALUE_OPTIONAL, 'Full path to the php-cgi executable', false)
-            ->addOption('socket-path', null, InputOption::VALUE_OPTIONAL, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/');
+            ->addOption('socket-path', null, InputOption::VALUE_OPTIONAL, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
+            ->addOption('config', 'c', InputOption::VALUE_OPTIONAL, 'Path to config file', '');
     }
 
     protected function renderConfig(OutputInterface $output, array $config)
@@ -44,11 +45,13 @@ trait ConfigTrait
     }
 
     /**
-     * @return string|null
+     * @param InputInterface $input
+     * @return null|string
      */
-    protected function getConfigPath()
+    protected function getConfigPath(InputInterface $input)
     {
         $possiblePaths = [
+            $input->getOption('config'),
             $this->file,
             sprintf('%s/%s', dirname($GLOBALS['argv'][0]), $this->file)
         ];
@@ -64,7 +67,7 @@ trait ConfigTrait
     {
         $config = [];
 
-        if ($path = $this->getConfigPath()) {
+        if ($path = $this->getConfigPath($input)) {
             $content = file_get_contents($path);
             $config = json_decode($content, true);
         }
@@ -133,7 +136,7 @@ trait ConfigTrait
         }
         $config = $this->loadConfig($input, $output);
 
-        if ($path = $this->getConfigPath()) {
+        if ($path = $this->getConfigPath($input)) {
             $modified = '';
             $fileConfig = json_decode(file_get_contents($path), true);
             if (json_encode($fileConfig) !== json_encode($config)) {
