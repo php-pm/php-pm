@@ -184,6 +184,11 @@ class ProcessManager
     protected $timeout = 30;
 
     /**
+     * Controller port
+     */
+    const CONTROLLER_PORT = 5500;
+
+    /**
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
@@ -203,7 +208,7 @@ class ProcessManager
     /**
      * Handles termination signals, so we can gracefully stop all servers.
      */
-    public function shutdown()
+    public function shutdown($graceful = false)
     {
         if ($this->inShutdown) {
             return;
@@ -211,9 +216,13 @@ class ProcessManager
 
         $this->inShutdown = true;
 
+        $this->output->writeln($graceful
+        	? '<info>Shutdown received, exiting.</info>'
+        	: '<error>Termination received, exiting.</error>'
+        );
+
         //this method is also called during startup when something crashed, so
         //make sure we don't operate on nulls.
-        $this->output->writeln('<error>Termination received, exiting.</error>');
         if ($this->controller) {
             @$this->controller->shutdown();
         }
@@ -376,7 +385,7 @@ class ProcessManager
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
         $this->controllerHost = $this->getNewControllerHost();
-        $this->controller->listen(5500, $this->controllerHost);
+        $this->controller->listen(self::CONTROLLER_PORT, $this->controllerHost);
 
         $this->web = new \React\Socket\Server($this->loop);
         $this->web->on('connection', array($this, 'onWeb'));
@@ -403,7 +412,7 @@ class ProcessManager
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
 
         for ($i = 0; $i < $this->slaveCount; $i++) {
-            $this->newInstance(5501 + $i);
+            $this->newInstance((self::CONTROLLER_PORT+1) + $i);
         }
 
         $this->loop->run();
@@ -691,7 +700,7 @@ class ProcessManager
                     if (!$this->isConnectionRegistered($conn)) {
                         // this connection is not registered, so it died during the ProcessSlave constructor.
                         $this->output->writeln(
-                            '<error>Worker permanent closed during PHP-PM bootstrap. Not so cool. ' .
+                            '<error>Worker permanently closed during PHP-PM bootstrap. Not so cool. ' .
                             'Not your fault, please create a ticket at github.com/php-pm/php-pm with' .
                             'the output of `ppm start -vv`.</error>'
                         );
@@ -748,6 +757,25 @@ class ProcessManager
             'handled_requests' => $this->handledRequests,
             'handled_requests_per_worker' => array_column($this->slaves, 'requests', 'port')
         ]));
+    }
+
+    /**
+     * A slave sent a `stop` command.
+     *
+     * @param array      $data
+     * @param Connection $conn
+     */
+    protected function commandStop(array $data, Connection $conn)
+    {
+        if ($this->output->isVeryVerbose()) {
+            $conn->on('close', function () {
+                $this->output->writeln('Stop command requested');
+            });
+        }
+
+        $conn->end(json_encode([]));
+
+        $this->shutdown(true);
     }
 
     /**
@@ -841,8 +869,9 @@ class ProcessManager
             } else {
                 $this->output->writeln(
                     sprintf(
-                        "<info>%d workers (starting at 5501) up and ready. Application is ready at http://%s:%s/</info>",
+                        "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
                         $this->slaveCount,
+                        self::CONTROLLER_PORT+1,
                         $this->host,
                         $this->port
                     )

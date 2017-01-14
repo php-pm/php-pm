@@ -25,7 +25,7 @@ class Client
      */
     protected $connection;
 
-    public function __construct($controllerPort = 5500)
+    public function __construct($controllerPort = ProcessManager::CONTROLLER_PORT)
     {
         $this->controllerPort = $controllerPort;
         $this->loop = Factory::create();
@@ -95,4 +95,11 @@ class Client
         return $localSocket;
     }
 
+    public function stopProcessManager(callable $callback)
+    {
+        $this->request('stop', [], function($result) use ($callback) {
+            $callback(json_decode($result, true));
+        });
+        $this->loop->run();
+    }
 }
