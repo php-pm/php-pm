@@ -21,10 +21,10 @@ class StartCommand extends Command
 
         $this
             ->setName('start')
-            ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your application.', './')
             ->setDescription('Starts the server')
+            ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your application.', './')
         ;
-        
+
         $this->configurePPMOptions($this);
     }
 
