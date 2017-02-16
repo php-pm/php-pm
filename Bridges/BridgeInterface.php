@@ -2,19 +2,22 @@
 
 namespace PHPPM\Bridges;
 
+use PHPPM\Bootstraps\BootstrapInterface;
 use PHPPM\React\HttpResponse;
+use React\EventLoop\LoopInterface;
 
 interface BridgeInterface
 {
     /**
      * Bootstrap an application implementing the HttpKernelInterface.
      *
-     * @param string $appBootstrap The name of the class used to bootstrap the application
      * @param string|null $appBootstrap The environment your application will use to bootstrap (if any)
+     * @param string $appenv
      * @param boolean $debug If debug is enabled
+     * @param LoopInterface $loop
      * @see http://stackphp.com
      */
-    public function bootstrap($appBootstrap, $appenv, $debug);
+    public function bootstrap($appBootstrap, $appenv, $debug, LoopInterface $loop);
 
     /**
      * Returns the repository which is used as root for the static file serving.
