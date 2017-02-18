@@ -46,12 +46,22 @@ trait ConfigTrait
 
     /**
      * @param InputInterface $input
-     * @return null|string
+     * @param bool $create
+     * @return string
+     * @throws \Exception
      */
-    protected function getConfigPath(InputInterface $input)
+    protected function getConfigPath(InputInterface $input, $create = false)
     {
+        $configOption = $input->getOption('config');
+        if ($configOption && !file_exists($configOption)) {
+            if ($create) {
+                file_put_contents($configOption, json_encode([]));
+            } else {
+                throw new \Exception(sprintf('Config file not found: "%s"', $configOption));
+            }
+        }
         $possiblePaths = [
-            $input->getOption('config'),
+            $configOption,
             $this->file,
             sprintf('%s/%s', dirname($GLOBALS['argv'][0]), $this->file)
         ];
@@ -61,6 +71,7 @@ trait ConfigTrait
                 return realpath($path);
             }
         }
+        return '';
     }
 
     protected function loadConfig(InputInterface $input, OutputInterface $output)

@@ -26,9 +26,11 @@ class ConfigCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $configPath = $this->getConfigPath($input, true);
+        if (!$configPath) {
+            $configPath = $this->file;
+        }
         $config = $this->loadConfig($input, $output);
-        // to be sure we have valid config path
-        $configPath = $this->getConfig($input);
 
         $this->renderConfig($output, $config);
 
@@ -40,18 +42,5 @@ class ConfigCommand extends Command
 
         file_put_contents($configPath, $newContent);
         $output->writeln(sprintf('<info>%s file written.</info>', realpath($configPath)));
-    }
-
-    /**
-     * @param InputInterface $input
-     * @return string
-     */
-    private function getConfig(InputInterface $input)
-    {
-        $configPath = $this->getConfigPath($input);
-        if (is_null($configPath)) {
-            $configPath = $input->getOption('config') ?: $this->file;
-        }
-        return $configPath;
     }
 }
