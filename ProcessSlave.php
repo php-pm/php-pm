@@ -177,7 +177,7 @@ class ProcessSlave
             $this->controller->close();
         }
         if ($this->server) {
-            @$this->server->shutdown();
+            @$this->server->close();
         }
         if ($this->loop) {
             $this->sendCurrentFiles();
