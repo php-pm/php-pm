@@ -16,7 +16,6 @@
         "guzzlehttp/psr7": "1.2.3"
     },
     "require-dev": {
-        "php-pm/httpkernel-adapter": "dev-master",
         "mockery/mockery": "^0.9.4",
         "phpunit/phpunit": "^5.3"
     },
@@ -28,6 +27,7 @@
     "suggest": {
         "php-pm/httpkernel-adapter": "HttpKernel adapter for Symfony and Laravel frameworks",
         "php-pm/zend-adapter": "Zend application framework adapter",
+        "php-pm/psr7-adapter": "PSR-7 adapter",
         "ext-libevent": "Allows for use of a more performant event-loop implementation.",
         "ext-libev": "Allows for use of a more performant event-loop implementation.",
         "ext-event": "Allows for use of a more performant event-loop implementation."
