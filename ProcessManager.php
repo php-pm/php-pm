@@ -224,10 +224,10 @@ class ProcessManager
         //this method is also called during startup when something crashed, so
         //make sure we don't operate on nulls.
         if ($this->controller) {
-            @$this->controller->shutdown();
+            @$this->controller->close();
         }
         if ($this->web) {
-            @$this->web->shutdown();
+            @$this->web->close();
         }
         if ($this->loop) {
             $this->loop->tick();
@@ -387,9 +387,8 @@ class ProcessManager
         $this->controllerHost = $this->getNewControllerHost();
         $this->controller->listen(self::CONTROLLER_PORT, $this->controllerHost);
 
-        $this->web = new \React\Socket\Server($this->loop);
+        $this->web = new \React\Socket\Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
         $this->web->on('connection', array($this, 'onWeb'));
-        $this->web->listen($this->port, $this->host);
 
         $this->tcpConnector = new \React\SocketClient\TcpConnector($this->loop);
 

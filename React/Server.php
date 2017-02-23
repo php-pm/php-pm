@@ -68,15 +68,30 @@ class Server extends EventEmitter implements ServerInterface
         $this->emit('connection', array($client));
     }
 
-    public function getPort()
+    public function getAddress()
     {
-        $name = stream_socket_get_name($this->master, false);
+        if (!is_resource($this->master)) {
+            return null;
+        }
 
-        return (int) substr(strrchr($name, ':'), 1);
+        $address = stream_socket_get_name($this->master, false);
+
+        // check if this is an IPv6 address which includes multiple colons but no square brackets
+        $pos = strrpos($address, ':');
+        if ($pos !== false && strpos($address, ':') < $pos && substr($address, 0, 1) !== '[') {
+            $port = substr($address, $pos + 1);
+            $address = '[' . substr($address, 0, $pos) . ']:' . $port;
+        }
+
+        return $address;
     }
 
-    public function shutdown()
+    public function close()
     {
+        if (!is_resource($this->master)) {
+            return;
+        }
+
         $this->loop->removeStream($this->master);
         fclose($this->master);
         $this->removeAllListeners();
