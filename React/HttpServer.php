@@ -33,7 +33,7 @@ class HttpServer extends EventEmitter implements ServerInterface
             $parser = new RequestParser();
             $parser->on('headers', function (Request $request, $bodyBuffer) use ($conn, $parser) {
                 // attach remote ip to the request as metadata
-                $request->remoteAddress = $conn->getRemoteAddress();
+                $request->remoteAddress = parse_url($conn->getRemoteAddress(), PHP_URL_HOST);
 
                 $this->handleRequest($conn, $request, $bodyBuffer);
 
