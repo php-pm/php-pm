@@ -270,7 +270,14 @@ class ProcessSlave
         $this->errorLogger = BufferingLogger::create();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
-        $client = stream_socket_client($this->config['controllerHost']);
+        while (true) {
+            try {
+                $client = stream_socket_client($this->config['controllerHost']);
+                break;
+            } catch (\Exception $e) {
+                usleep(500);
+            }
+        }
         $this->controller = new \React\Socket\Connection($client, $this->loop);
 
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
