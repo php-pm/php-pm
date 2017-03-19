@@ -516,7 +516,7 @@ class ProcessManager
 
             $start = microtime(true);
 
-            $headersToReplace = ['X-PHP-PM-Remote-IP' => $incoming->getRemoteAddress()];
+            $headersToReplace = ['X-PHP-PM-Remote-IP' => parse_url($incoming->getRemoteAddress(), PHP_URL_HOST)];
             $headerRedirected = false;
 
             if ($this->isHeaderEnd($incomingBuffer)) {
