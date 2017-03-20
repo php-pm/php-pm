@@ -276,7 +276,7 @@ class ProcessSlave
                 $client = stream_socket_client($this->config['controllerHost']);
                 break;
             } catch (\Exception $e) {
-                usleep(pow(2, $exp) * 1000);
+                usleep(pow(2, $exp) * mt_rand(1000, 1500));
                 $exp++;
             }
         }
