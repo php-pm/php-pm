@@ -1165,7 +1165,7 @@ EOF;
     private function terminateSlave($slaveProcess, $slavePid)
     {
         // check for not null and status
-        if (is_a($slaveProcess, Process::class) && $slaveProcess->isRunning()) {
+        if ($slaveProcess instanceof Process && $slaveProcess->isRunning()) {
             $slaveProcess->terminate();
         }
 
