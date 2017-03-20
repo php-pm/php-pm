@@ -6,6 +6,7 @@
         "symfony/console": "^2.6|^3.0",
         "symfony/debug": "^2.6|^3.0",
         "symfony/process": "^2.6|^3.0",
+        "react/child-process": "^0.4.0",
         "react/event-loop": "^0.4",
         "react/stream": "^0.4",
         "react/http": "dev-master#cd15204bd15d106d7832c680e4fb0ca0ce2f5e30",

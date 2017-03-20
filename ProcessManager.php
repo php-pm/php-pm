@@ -3,6 +3,7 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use React\ChildProcess\Process;
 use React\Socket\Connection;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
@@ -235,14 +236,7 @@ class ProcessManager
         }
 
         foreach ($this->slaves as $slave) {
-            if (is_resource($slave['process'])) {
-                proc_terminate($slave['process']);
-            }
-
-            if ($slave['pid']) {
-                //make sure its dead
-                posix_kill($slave['pid'], SIGKILL);
-            }
+            $this->terminateSlave($slave['process'], $slave['pid']);
         }
         exit;
     }
@@ -715,15 +709,8 @@ class ProcessManager
                     }
 
                     $slave['ready'] = false;
-                    if (isset($slave['stderr'])) {
-                        $slave['stderr']->close();
-                    }
 
-                    if (is_resource($slave['process'])) {
-                        proc_terminate($slave['process'], SIGKILL);
-                    }
-
-                    posix_kill($slave['pid'], SIGKILL); //make sure its really dead
+                    $this->terminateSlave($slave['process'], $slave['pid']);
 
                     if ($slave['duringBootstrap']) {
                         $this->bootstrapFailed($conn);
@@ -1154,17 +1141,12 @@ EOF;
         //e.g. headers_sent() returns always true, although wrong.
         $commandline .= ' -C ' . ProcessUtils::escapeArgument($file);
 
-        $descriptorspec = [
-            ['pipe', 'r'], //stdin
-            ['pipe', 'w'], //stdout
-            ['pipe', 'w'], //stderr
-        ];
-
         $this->slaves[$port] = $slave;
-        $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
 
-        $stderr = new \React\Stream\Stream($pipes[2], $this->loop);
-        $stderr->on(
+        $process = new Process($commandline);
+        $this->slaves[$port]['process'] = $process;
+        $process->start($this->loop);
+        $process->stderr->on(
             'data',
             function ($data) use ($port) {
                 if ($this->lastWorkerErrorPrintBy !== $port) {
@@ -1174,6 +1156,21 @@ EOF;
                 $this->output->write("<error>$data</error>");
             }
         );
-        $this->slaves[$port]['stderr'] = $stderr;
+    }
+
+    /**
+     * @param Process|null $slaveProcess
+     * @param int|null $slavePid
+     */
+    private function terminateSlave($slaveProcess, $slavePid)
+    {
+        // check for not null and status
+        if (is_a($slaveProcess, Process::class) && $slaveProcess->isRunning()) {
+            $slaveProcess->terminate();
+        }
+
+        if (is_int($slavePid)) {
+            posix_kill($slavePid, SIGKILL); //make sure its really dead
+        }
     }
 }
