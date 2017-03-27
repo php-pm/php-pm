@@ -3,10 +3,12 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
-use PHPPM\React\HttpResponse;
-use PHPPM\React\HttpServer;
 use PHPPM\Debug\BufferingLogger;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use React\EventLoop\LoopInterface;
+use React\Http\Response;
+use React\Http\Server;
 use React\Socket\Connection;
 use Symfony\Component\Debug\ErrorHandler;
 
@@ -299,8 +301,7 @@ class ProcessSlave
 
         $this->server = new React\Server($this->loop); //our version for now, because of unix socket support
 
-        $http = new HttpServer($this->server);
-        $http->on('request', array($this, 'onRequest'));
+        new Server($this->server, [$this, 'onRequest']);
 
         //port is only used for tcp connection. If unix socket, 'host' contains the socket path
         $port = $this->config['port'];
@@ -310,7 +311,7 @@ class ProcessSlave
             try {
                 $this->server->listen($port, $host);
                 break;
-            } catch (\React\Socket\ConnectionException $e) {
+            } catch (\Exception $e) {
                 usleep(500);
             }
         }
@@ -332,46 +333,48 @@ class ProcessSlave
     /**
      * Handles incoming requests and transforms a $request into a $response by reference.
      *
-     * @param \React\Http\Request $request
-     * @param HttpResponse        $response
+     * @param RequestInterface $request
      *
+     * @return ResponseInterface
      * @throws \Exception
      */
-    public function onRequest(\React\Http\Request $request, HttpResponse $response)
+    public function onRequest(RequestInterface $request)
     {
         $this->prepareEnvironment($request);
 
-        if ($this->isLogging()) {
-            $this->setupResponseLogging($request, $response);
-        }
+        $response = $this->handleRequest($request);
 
-        $this->handleRequest($request, $response);
+        if ($this->isLogging()) {
+            $this->logResponse($request, $response);
+        }
+        return $response;
     }
 
     /**
      * Handle a redirected request from master.
      *
-     * @param \React\Http\Request $request
-     * @param HttpResponse $response
+     * @param RequestInterface $request
+     * @return ResponseInterface
      */
-    protected function handleRequest(\React\Http\Request $request, HttpResponse $response)
+    protected function handleRequest(RequestInterface $request)
     {
         if ($bridge = $this->getBridge()) {
 
             if ($this->isServingStatic()) {
-                if (true === $this->serveStatic($request, $response)) {
-                    return;
+                $staticResponse = $this->serveStatic($request);
+                if ($staticResponse instanceof ResponseInterface) {
+                    return $staticResponse;
                 }
             }
 
-            $bridge->onRequest($request, $response);
+            $response = $bridge->onRequest($request);
 
             if ($this->isDebug()) {
                 $this->sendCurrentFiles();
             }
         } else {
-            $response->writeHead('404');
-            $response->end('No Bridge Defined.');
+            $response = new Response(404);
+            $response->getBody()->write('No Bridge Defined.');
         }
 
         if (headers_sent()) {
@@ -384,18 +387,23 @@ class ProcessSlave
             );
             $this->shutdown();
         }
+        return $response;
     }
 
-    protected function prepareEnvironment(\React\Http\Request $request)
+    protected function prepareEnvironment(RequestInterface $request)
     {
         $_SERVER = $this->baseServer;
         $_SERVER['REQUEST_METHOD'] = $request->getMethod();
         $_SERVER['REQUEST_TIME'] = (int)microtime(true);
         $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
-        $_SERVER['QUERY_STRING'] = http_build_query($request->getQuery());
 
-        foreach ($request->getHeaders() as $name => $value) {
-            $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
+        //https://github.com/reactphp/http/pull/146#issue-214687443
+        //Note: The method getQueryParams will be removed with the Request class.
+        //This will be handled in a seperated PR which will implement the ServerRequestInterface
+        //$_SERVER['QUERY_STRING'] = http_build_query($request->getQueryParams());
+
+        foreach ($request->getHeaders() as $name => $valueArr) {
+            $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $request->getHeaderLine($name);
         }
 
         //We receive X-PHP-PM-Remote-IP from ProcessManager.
@@ -404,40 +412,37 @@ class ProcessSlave
         unset($_SERVER['HTTP_X_PHP_PM_REMOTE_IP']);
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-        $_SERVER['REQUEST_URI'] = $request->getPath();
+        $_SERVER['REQUEST_URI'] = $request->getUri()->getPath();
         $_SERVER['DOCUMENT_ROOT'] = isset($_ENV['DOCUMENT_ROOT']) ? $_ENV['DOCUMENT_ROOT'] : getcwd();
         $_SERVER['SCRIPT_NAME'] = isset($_ENV['SCRIPT_NAME']) ? $_ENV['SCRIPT_NAME'] : 'index.php';
         $_SERVER['SCRIPT_FILENAME'] = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/' . $_SERVER['SCRIPT_NAME'];
     }
 
     /**
-     * @param \React\Http\Request $request
-     * @param HttpResponse        $response
-     *
-     * @return bool returns true if successfully served
+     * @param RequestInterface $request
+     * @return ResponseInterface returns ResponseInterface if successfully served, false otherwise
      */
-    protected function serveStatic(\React\Http\Request $request, HttpResponse $response)
+    protected function serveStatic(RequestInterface $request)
     {
-        $filePath = $this->getBridge()->getStaticDirectory() . $request->getPath();
+        $filePath = $this->getBridge()->getStaticDirectory() . $request->getUri()->getPath();
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
 
             $mTime = filemtime($filePath);
 
-            if (isset($request->getHeaders()['If-Modified-Since'])) {
-                $ifModifiedSince = $request->getHeaders()['If-Modified-Since'];
+            if ($request->hasHeader('If-Modified-Since')) {
+                $ifModifiedSince = $request->getHeaderLine('If-Modified-Since');
                 if ($ifModifiedSince && strtotime($ifModifiedSince) === $mTime) {
                     // Client's cache IS current, so we just respond '304 Not Modified'.
-                    $response->writeHead(304, [
+                    $response = new Response(304, [
                         'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
                     ]);
-                    $response->end();
-                    return true;
+                    return $response;
                 }
             }
 
             $expires = 3600; //1 h
-            $response->writeHead(200, [
+            $response = new Response(200, [
                 'Content-Type' => $this->mimeContentType($filePath),
                 'Content-Length' => filesize($filePath),
                 'Pragma' => 'public',
@@ -445,56 +450,52 @@ class ProcessSlave
                 'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
                 'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
             ]);
-            $response->end(file_get_contents($filePath));
+            $response->getBody()->write(file_get_contents($filePath));
 
-            return true;
+            return $response;
         }
-
         return false;
     }
 
-    protected function setupResponseLogging(\React\Http\Request $request, HttpResponse $response)
+    protected function logResponse(RequestInterface $request, ResponseInterface $response)
     {
         $timeLocal = date('d/M/Y:H:i:s O');
 
-        $response->on('end', function () use ($request, $response, $timeLocal) {
+        $requestString = $request->getMethod() . ' ' . $request->getUri()->getPath() . ' HTTP/' . $request->getProtocolVersion();
+        $statusCode = $response->getStatusCode();
 
-            $requestString = $request->getMethod() . ' ' . $request->getPath() . ' HTTP/' . $request->getHttpVersion();
-            $statusCode = $response->getStatusCode();
+        if ($statusCode < 400) {
+            $requestString = "<info>$requestString</info>";
+            $statusCode = "<info>$statusCode</info>";
+        }
 
-            if ($response->getStatusCode() < 400) {
-                $requestString = "<info>$requestString</info>";
-                $statusCode = "<info>$statusCode</info>";
-            }
+        $message = str_replace([
+            '$remote_addr',
+            '$remote_user',
+            '$time_local',
+            '$request',
+            '$status',
+            '$bytes_sent',
+            '$http_referer',
+            '$http_user_agent',
+        ], [
+            $_SERVER['REMOTE_ADDR'],
+            '-', //todo remote_user
+            $timeLocal,
+            $requestString,
+            $statusCode,
+            $response->getBody()->getSize(),
+            $request->hasHeader('Referer') ? $request->getHeaderLine('Referer') : '-',
+            $request->hasHeader('User-Agent') ? $request->getHeaderLine('User-Agent') : '-'
+        ],
+            $this->logFormat);
 
-            $message = str_replace([
-                '$remote_addr',
-                '$remote_user',
-                '$time_local',
-                '$request',
-                '$status',
-                '$bytes_sent',
-                '$http_referer',
-                '$http_user_agent',
-            ], [
-                $_SERVER['REMOTE_ADDR'],
-                '-', //todo remote_user
-                $timeLocal,
-                $requestString,
-                $statusCode,
-                $response->getBytesSent(),
-                isset($request->getHeaders()['Referer']) ? $request->getHeaders()['Referer'] : '-',
-                isset($request->getHeaders()['User-Agent']) ? $request->getHeaders()['User-Agent'] : '-',
-            ],
-                $this->logFormat);
-
-            if ($response->getStatusCode() >= 400) {
-                $message = "<error>$message</error>";
-            }
+        if ($response->getStatusCode() >= 400) {
+            $message = "<error>$message</error>";
+        }
 
 
-            $this->sendMessage($this->controller, 'log', ['message' => $message]);
-        });
+        $this->sendMessage($this->controller, 'log', ['message' => $message]);
     }
 
     /**

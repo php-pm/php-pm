@@ -443,7 +443,7 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/legionth/http",
-                "reference": "c0aef5da52404f458222acf3554c5f591c63395d"
+                "reference": "fd1affb7699a57557f0b422ae46a257a90166138"
             },
             "require": {
                 "evenement/evenement": "^2.0 || ^1.0",
@@ -473,7 +473,7 @@
                 "server",
                 "streaming"
             ],
-            "time": "2017-03-26 04:02:22"
+            "time": "2017-03-27 22:31:15"
         },
         {
             "name": "react/promise",

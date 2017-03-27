@@ -2,8 +2,8 @@
 
 namespace PHPPM\Bridges;
 
-use PHPPM\Bootstraps\BootstrapInterface;
-use PHPPM\React\HttpResponse;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use React\EventLoop\LoopInterface;
 
 interface BridgeInterface
@@ -29,8 +29,8 @@ interface BridgeInterface
     /**
      * Handle a request using a HttpKernelInterface implementing application.
      *
-     * @param \React\Http\Request $request
-     * @param \PHPPM\React\HttpResponse $response
+     * @param RequestInterface $request
+     * @return ResponseInterface
      */
-    public function onRequest(\React\Http\Request $request, HttpResponse $response);
+    public function onRequest(RequestInterface $request);
 }
