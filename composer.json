@@ -7,7 +7,7 @@
         "symfony/debug": "^2.6|^3.0",
         "symfony/process": "^2.6|^3.0",
         "react/event-loop": "^0.4",
-        "react/stream": "^0.5",
+        "react/stream": "^0.6",
         "react/http": "dev-handle-psr7-responses",
         "react/socket-client": "^0.6",
         "react/socket": "^0.5",

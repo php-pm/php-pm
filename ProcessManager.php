@@ -4,6 +4,7 @@ declare(ticks = 1);
 namespace PHPPM;
 
 use React\Socket\Connection;
+use React\Stream\ReadableResourceStream;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
@@ -1163,7 +1164,7 @@ EOF;
         $this->slaves[$port] = $slave;
         $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
 
-        $stderr = new \React\Stream\Stream($pipes[2], $this->loop);
+        $stderr = new ReadableResourceStream($pipes[2], $this->loop);
         $stderr->on(
             'data',
             function ($data) use ($port) {

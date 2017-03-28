@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "d8f4dedd0fb35cfc40832da8a86d57a6",
+    "content-hash": "ecfd2a02f0d5b7c20c9e0347caf8d255",
     "packages": [
         {
             "name": "evenement/evenement",
@@ -662,16 +662,16 @@
         },
         {
             "name": "react/stream",
-            "version": "v0.5.0",
+            "version": "v0.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/stream.git",
-                "reference": "6ccc4bd601e362aebfe5f449411a08b5f38b229d"
+                "reference": "b68463756d8be851829b7a9de8200c9d19eb997e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/stream/zipball/6ccc4bd601e362aebfe5f449411a08b5f38b229d",
-                "reference": "6ccc4bd601e362aebfe5f449411a08b5f38b229d",
+                "url": "https://api.github.com/repos/reactphp/stream/zipball/b68463756d8be851829b7a9de8200c9d19eb997e",
+                "reference": "b68463756d8be851829b7a9de8200c9d19eb997e",
                 "shasum": ""
             },
             "require": {
@@ -698,12 +698,18 @@
             "license": [
                 "MIT"
             ],
-            "description": "Basic readable and writable stream interfaces that support piping.",
+            "description": "Event-driven readable and writable streams for non-blocking I/O in ReactPHP",
             "keywords": [
+                "event-driven",
+                "io",
+                "non-blocking",
                 "pipe",
-                "stream"
+                "reactphp",
+                "readable",
+                "stream",
+                "writable"
             ],
-            "time": "2017-03-08T08:17:17+00:00"
+            "time": "2017-03-26T18:02:15+00:00"
         },
         {
             "name": "ringcentral/psr7",
