@@ -427,7 +427,7 @@ class ProcessSlave
     {
         $filePath = $this->getStaticDirectory() . $request->getUri()->getPath();
 
-        if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
+        if (substr($filePath, -4) !== '.php' && is_file($filePath) && is_readable($filePath)) {
 
             $mTime = filemtime($filePath);
 
