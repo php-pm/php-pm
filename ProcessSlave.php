@@ -3,9 +3,12 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use MKraemer\ReactPCNTL\PCNTL;
+use PHPPM\Bridges\BridgeInterface;
 use PHPPM\Debug\BufferingLogger;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Http\Response;
 use React\Http\Server;
@@ -49,7 +52,7 @@ class ProcessSlave
     protected $bridgeName;
 
     /**
-     * @var Bridges\BridgeInterface
+     * @var BridgeInterface
      */
     protected $bridge;
 
@@ -268,7 +271,7 @@ class ProcessSlave
      */
     public function run()
     {
-        $this->loop = \React\EventLoop\Factory::create();
+        $this->loop = Factory::create();
 
         $this->errorLogger = BufferingLogger::create();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
@@ -283,7 +286,7 @@ class ProcessSlave
         }
         $this->controller = new DuplexResourceStream($client, $this->loop);
 
-        $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
+        $pcntl = new PCNTL($this->loop);
 
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
@@ -398,10 +401,7 @@ class ProcessSlave
         $_SERVER['REQUEST_TIME'] = (int)microtime(true);
         $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
 
-        //https://github.com/reactphp/http/pull/146#issue-214687443
-        //Note: The method getQueryParams will be removed with the Request class.
-        //This will be handled in a seperated PR which will implement the ServerRequestInterface
-        //$_SERVER['QUERY_STRING'] = http_build_query($request->getQueryParams());
+        $_SERVER['QUERY_STRING'] = $request->getUri()->getQuery();
 
         foreach ($request->getHeaders() as $name => $valueArr) {
             $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $request->getHeaderLine($name);

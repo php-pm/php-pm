@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "ecfd2a02f0d5b7c20c9e0347caf8d255",
+    "content-hash": "e87c5fcdf7a6418da6ba75cd467b6d80",
     "packages": [
         {
             "name": "evenement/evenement",
@@ -51,6 +51,58 @@
                 "event-emitter"
             ],
             "time": "2012-11-02T14:49:47+00:00"
+        },
+        {
+            "name": "http-interop/http-middleware",
+            "version": "0.4.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/http-interop/http-middleware.git",
+                "reference": "9a801fe60e70d5d608b61d56b2dcde29516c81b9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/http-interop/http-middleware/zipball/9a801fe60e70d5d608b61d56b2dcde29516c81b9",
+                "reference": "9a801fe60e70d5d608b61d56b2dcde29516c81b9",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0",
+                "psr/http-message": "^1.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Interop\\Http\\ServerMiddleware\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "http://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for HTTP server-side middleware",
+            "keywords": [
+                "factory",
+                "http",
+                "middleware",
+                "psr",
+                "psr-17",
+                "psr-7",
+                "request",
+                "response"
+            ],
+            "time": "2017-01-14T15:23:42+00:00"
         },
         {
             "name": "mkraemer/react-pcntl",
@@ -443,11 +495,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/legionth/http",
-                "reference": "fd1affb7699a57557f0b422ae46a257a90166138"
+                "reference": "b71e67b2d5159fe67ab0f1bf5b9ea1fd9a5a6354"
             },
             "require": {
                 "evenement/evenement": "^2.0 || ^1.0",
                 "php": ">=5.3.0",
+                "react/promise": "^2.0 || ^1.1",
                 "react/socket": "^0.5",
                 "react/stream": "^0.6 || ^0.5 || ^0.4.4",
                 "ringcentral/psr7": "^1.2"
@@ -473,7 +526,7 @@
                 "server",
                 "streaming"
             ],
-            "time": "2017-03-27 22:31:15"
+            "time": "2017-03-28 10:51:18"
         },
         {
             "name": "react/promise",
