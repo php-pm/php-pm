@@ -346,7 +346,18 @@ class ProcessSlave
     {
         $this->prepareEnvironment($request);
 
-        $response = $this->handleRequest($request);
+        $catchLog = function ($e) {
+            ppm_log((string) $e);
+            return new Response(500);
+        };
+
+        try {
+            $response = $this->handleRequest($request);
+        } catch (\Throwable $t) {
+            $response = $catchLog($t);
+        } catch (\Exception $e) {
+            $response = $catchLog($e);
+        }
 
         if ($this->isLogging()) {
             $this->logResponse($request, $response);
