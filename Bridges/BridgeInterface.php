@@ -20,13 +20,6 @@ interface BridgeInterface
     public function bootstrap($appBootstrap, $appenv, $debug, LoopInterface $loop);
 
     /**
-     * Returns the repository which is used as root for the static file serving.
-     *
-     * @return string
-     */
-    public function getStaticDirectory();
-
-    /**
      * Handle a request using a HttpKernelInterface implementing application.
      *
      * @param RequestInterface $request

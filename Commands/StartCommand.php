@@ -43,7 +43,7 @@ class StartCommand extends Command
         $handler->setPhpCgiExecutable($config['cgi-path']);
         $handler->setSocketPath($config['socket-path']);
         $handler->setConcurrentRequestsPerWorker($config['concurrent-requests']);
-        $handler->setServingStatic($config['static']);
+        $handler->setStaticDirectory($config['static-directory']);
 
         $handler->run();
     }
