@@ -3,6 +3,7 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use Evenement\EventEmitterInterface;
 use MKraemer\ReactPCNTL\PCNTL;
 use PHPPM\Bridges\BridgeInterface;
 use PHPPM\Debug\BufferingLogger;
@@ -346,6 +347,8 @@ class ProcessSlave
     {
         $this->prepareEnvironment($request);
 
+        $logTime = date('d/M/Y:H:i:s O');
+
         $catchLog = function ($e) {
             ppm_log((string) $e);
             return new Response(500);
@@ -354,13 +357,15 @@ class ProcessSlave
         try {
             $response = $this->handleRequest($request);
         } catch (\Throwable $t) {
+            // PHP >= 7.0
             $response = $catchLog($t);
         } catch (\Exception $e) {
+            // PHP < 7.0
             $response = $catchLog($e);
         }
 
         if ($this->isLogging()) {
-            $this->logResponse($request, $response);
+            $this->logResponse($request, $response, $logTime);
         }
         return $response;
     }
@@ -468,45 +473,64 @@ class ProcessSlave
         return false;
     }
 
-    protected function logResponse(RequestInterface $request, ResponseInterface $response)
+    /**
+     * @param RequestInterface $request
+     * @param ResponseInterface $response
+     * @param string $timeLocal
+     */
+    protected function logResponse(RequestInterface $request, ResponseInterface $response, $timeLocal)
     {
-        $timeLocal = date('d/M/Y:H:i:s O');
+        $logFunction = function($size) use ($request, $response, $timeLocal) {
+            $requestString = $request->getMethod() . ' ' . $request->getUri()->getPath() . ' HTTP/' . $request->getProtocolVersion();
+            $statusCode = $response->getStatusCode();
 
-        $requestString = $request->getMethod() . ' ' . $request->getUri()->getPath() . ' HTTP/' . $request->getProtocolVersion();
-        $statusCode = $response->getStatusCode();
+            if ($statusCode < 400) {
+                $requestString = "<info>$requestString</info>";
+                $statusCode = "<info>$statusCode</info>";
+            }
 
-        if ($statusCode < 400) {
-            $requestString = "<info>$requestString</info>";
-            $statusCode = "<info>$statusCode</info>";
+            $message = str_replace([
+                '$remote_addr',
+                '$remote_user',
+                '$time_local',
+                '$request',
+                '$status',
+                '$bytes_sent',
+                '$http_referer',
+                '$http_user_agent',
+            ], [
+                $_SERVER['REMOTE_ADDR'],
+                '-', //todo remote_user
+                $timeLocal,
+                $requestString,
+                $statusCode,
+                $size,
+                $request->hasHeader('Referer') ? $request->getHeaderLine('Referer') : '-',
+                $request->hasHeader('User-Agent') ? $request->getHeaderLine('User-Agent') : '-'
+            ],
+                $this->logFormat);
+
+            if ($response->getStatusCode() >= 400) {
+                $message = "<error>$message</error>";
+            }
+
+            $this->sendMessage($this->controller, 'log', ['message' => $message]);
+        };
+
+        if ($response->getBody() instanceof EventEmitterInterface) {
+            /** @var EventEmitterInterface $body */
+            $body = $response->getBody();
+            $size = strlen(\RingCentral\Psr7\str($response));
+            $body->on('data', function($data) use (&$size) {
+                $size += strlen($data);
+            });
+            //using `close` event since `end` is not fired for files
+            $body->on('close', function() use (&$size, $logFunction) {
+                $logFunction($size);
+            });
+        } else {
+            $logFunction(strlen(\RingCentral\Psr7\str($response)));
         }
-
-        $message = str_replace([
-            '$remote_addr',
-            '$remote_user',
-            '$time_local',
-            '$request',
-            '$status',
-            '$bytes_sent',
-            '$http_referer',
-            '$http_user_agent',
-        ], [
-            $_SERVER['REMOTE_ADDR'],
-            '-', //todo remote_user
-            $timeLocal,
-            $requestString,
-            $statusCode,
-            $response->getBody()->getSize(),
-            $request->hasHeader('Referer') ? $request->getHeaderLine('Referer') : '-',
-            $request->hasHeader('User-Agent') ? $request->getHeaderLine('User-Agent') : '-'
-        ],
-            $this->logFormat);
-
-        if ($response->getStatusCode() >= 400) {
-            $message = "<error>$message</error>";
-        }
-
-
-        $this->sendMessage($this->controller, 'log', ['message' => $message]);
     }
 
     /**
