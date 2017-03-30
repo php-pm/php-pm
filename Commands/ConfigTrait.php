@@ -26,6 +26,7 @@ trait ConfigTrait
             ->addOption('static-directory', null, InputOption::VALUE_OPTIONAL, 'Static files root directory, if not provided static files will not be served', '')
             ->addOption('max-requests', null, InputOption::VALUE_OPTIONAL, 'Max requests per worker until it will be restarted', 1000)
             ->addOption('concurrent-requests', null, InputOption::VALUE_OPTIONAL, 'If a worker is allowed to handle more than one request at the same time. This can lead to issues when the application does not support it but makes it faster. (like when they operate on globals at the same time) 1|0', 0)
+            ->addOption('populate-server-var', null, InputOption::VALUE_OPTIONAL, 'If a worker application uses $_SERVER var it needs to be populated by request data 1|0', 1)
             ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
             ->addOption('cgi-path', null, InputOption::VALUE_OPTIONAL, 'Full path to the php-cgi executable', false)
             ->addOption('socket-path', null, InputOption::VALUE_OPTIONAL, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
@@ -93,6 +94,7 @@ trait ConfigTrait
         $config['static-directory'] = $this->optionOrConfigValue($input, 'static-directory', $config);
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
+        $config['populate-server-var'] = (boolean)$this->optionOrConfigValue($input, 'populate-server-var', $config);
         $config['concurrent-requests'] = (boolean)$this->optionOrConfigValue($input, 'concurrent-requests', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
 
@@ -120,6 +122,11 @@ trait ConfigTrait
                 $output->writeln('<error>PPM could find a php-cgi path. Please specify by --cgi-path=</error>');
                 exit(1);
             }
+        }
+
+        if ($config['populate-server-var'] === true && $config['concurrent-requests'] === true) {
+            $output->writeln('<error>PPM cannot populate $_SERVER var while processing concurrent requests, disable one of options</error>');
+            exit(1);
         }
 
         return $config;

@@ -135,6 +135,14 @@ class ProcessSlave
     }
 
     /**
+     * @return boolean
+     */
+    public function isPopulateServer()
+    {
+        return $this->config['populate-server-var'];
+    }
+
+    /**
      * Shuts down the event loop. This basically exits the process.
      */
     public function shutdown()
@@ -345,7 +353,14 @@ class ProcessSlave
      */
     public function onRequest(RequestInterface $request)
     {
-        $this->prepareEnvironment($request);
+        if ($this->isPopulateServer()) {
+            $this->prepareEnvironment($request);
+        }
+
+        $request->remoteAddress = trim(
+            parse_url('tcp://' . $request->getHeaderLine('X-PHP-PM-Remote-IP'), PHP_URL_HOST),
+            '[]'
+        );
 
         $logTime = date('d/M/Y:H:i:s O');
 
@@ -499,7 +514,7 @@ class ProcessSlave
                 '$http_referer',
                 '$http_user_agent',
             ], [
-                $_SERVER['REMOTE_ADDR'],
+                $request->remoteAddress,
                 '-', //todo remote_user
                 $timeLocal,
                 $requestString,
