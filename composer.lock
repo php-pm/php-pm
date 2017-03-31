@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "e87c5fcdf7a6418da6ba75cd467b6d80",
+    "content-hash": "4d899f2d99d7b3a42e273667eda4d52b",
     "packages": [
         {
             "name": "evenement/evenement",
@@ -491,17 +491,23 @@
         },
         {
             "name": "react/http",
-            "version": "dev-handle-psr7-responses",
+            "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/legionth/http",
-                "reference": "64839a4f097b429993497ad26876e11de1c8c791"
+                "url": "https://github.com/reactphp/http.git",
+                "reference": "34edb9a6d09564002ed9e6ce13852d9da82049a3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/reactphp/http/zipball/34edb9a6d09564002ed9e6ce13852d9da82049a3",
+                "reference": "34edb9a6d09564002ed9e6ce13852d9da82049a3",
+                "shasum": ""
             },
             "require": {
                 "evenement/evenement": "^2.0 || ^1.0",
                 "php": ">=5.3.0",
                 "react/promise": "^2.0 || ^1.1",
-                "react/socket": "^0.5",
+                "react/socket": "^0.7 || ^0.6 || ^0.5",
                 "react/stream": "^0.6 || ^0.5 || ^0.4.4",
                 "ringcentral/psr7": "^1.2"
             },
@@ -514,19 +520,20 @@
                     "React\\Http\\": "src"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
             "description": "Event-driven, streaming plaintext HTTP and secure HTTPS server for ReactPHP",
             "keywords": [
-                "HTTP",
-                "HTTPS",
-                "ReactPHP",
                 "event-driven",
+                "http",
+                "https",
+                "reactphp",
                 "server",
                 "streaming"
             ],
-            "time": "2017-03-30 11:55:45"
+            "time": "2017-03-31 07:47:35"
         },
         {
             "name": "react/promise",

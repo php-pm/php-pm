@@ -8,7 +8,7 @@
         "symfony/process": "^2.6|^3.0",
         "react/event-loop": "^0.4",
         "react/stream": "^0.6",
-        "react/http": "dev-handle-psr7-responses",
+        "react/http": "dev-master",
         "react/socket-client": "^0.6",
         "react/socket": "^0.5",
         "mkraemer/react-pcntl": "2.0.*",
@@ -33,11 +33,5 @@
         "ext-libev": "Allows for use of a more performant event-loop implementation.",
         "ext-event": "Allows for use of a more performant event-loop implementation."
     },
-    "bin": ["bin/ppm"],
-    "repositories": [
-        {
-            "type": "git",
-            "url": "https://github.com/legionth/http"
-        }
-    ]
+    "bin": ["bin/ppm"]
 }
