@@ -3,6 +3,7 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use RuntimeException;
 use PHPPM\React\HttpResponse;
 use PHPPM\React\HttpServer;
 use PHPPM\Debug\BufferingLogger;
@@ -310,7 +311,7 @@ class ProcessSlave
             try {
                 $this->server->listen($port, $host);
                 break;
-            } catch (\React\Socket\ConnectionException $e) {
+            } catch (RuntimeException $e) {
                 usleep(500);
             }
         }

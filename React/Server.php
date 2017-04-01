@@ -5,7 +5,7 @@ namespace PHPPM\React;
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
 use React\Socket\Connection;
-use React\Socket\ConnectionException;
+use RuntimeException;
 use React\Socket\ServerInterface;
 
 /**
@@ -46,7 +46,7 @@ class Server extends EventEmitter implements ServerInterface
         $this->master = stream_socket_server($localSocket, $errno, $errstr);
         if (false === $this->master) {
             $message = "Could not bind to $localSocket . Error: [$errno] $errstr";
-            throw new ConnectionException($message, $errno);
+            throw new RuntimeException($message, $errno);
         }
         stream_set_blocking($this->master, 0);
         $this->loop->addReadStream($this->master, function ($master) {
