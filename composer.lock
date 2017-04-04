@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "4d899f2d99d7b3a42e273667eda4d52b",
+    "content-hash": "6ccca9152c44fc0d1766ea32da431d55",
     "packages": [
         {
             "name": "evenement/evenement",
@@ -405,16 +405,16 @@
         },
         {
             "name": "react/dns",
-            "version": "v0.4.6",
+            "version": "v0.4.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/dns.git",
-                "reference": "a4c32f0021c742a1781c445270cb29a2d4b76fed"
+                "reference": "e09ca286e3e18fea93317315dd7fc59d7963af8a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/dns/zipball/a4c32f0021c742a1781c445270cb29a2d4b76fed",
-                "reference": "a4c32f0021c742a1781c445270cb29a2d4b76fed",
+                "url": "https://api.github.com/repos/reactphp/dns/zipball/e09ca286e3e18fea93317315dd7fc59d7963af8a",
+                "reference": "e09ca286e3e18fea93317315dd7fc59d7963af8a",
                 "shasum": ""
             },
             "require": {
@@ -422,7 +422,7 @@
                 "react/cache": "~0.4.0|~0.3.0",
                 "react/promise": "~2.1|~1.2",
                 "react/promise-timer": "~1.1",
-                "react/socket": "^0.5 || ^0.4.4",
+                "react/socket": "^0.7 || ^0.6 || ^0.5 || ^0.4.4",
                 "react/stream": "^0.6 || ^0.5 || ^0.4.5"
             },
             "require-dev": {
@@ -443,7 +443,7 @@
                 "dns",
                 "dns-resolver"
             ],
-            "time": "2017-03-11T13:46:09+00:00"
+            "time": "2017-03-31T16:21:48+00:00"
         },
         {
             "name": "react/event-loop",
@@ -491,17 +491,11 @@
         },
         {
             "name": "react/http",
-            "version": "dev-master",
+            "version": "dev-server-request",
             "source": {
                 "type": "git",
-                "url": "https://github.com/reactphp/http.git",
-                "reference": "34edb9a6d09564002ed9e6ce13852d9da82049a3"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/http/zipball/34edb9a6d09564002ed9e6ce13852d9da82049a3",
-                "reference": "34edb9a6d09564002ed9e6ce13852d9da82049a3",
-                "shasum": ""
+                "url": "https://github.com/legionth/http",
+                "reference": "3f02cd0412ef300e08601bda1522f4893bdb1b45"
             },
             "require": {
                 "evenement/evenement": "^2.0 || ^1.0",
@@ -512,7 +506,8 @@
                 "ringcentral/psr7": "^1.2"
             },
             "require-dev": {
-                "phpunit/phpunit": "^4.8.10||^5.0"
+                "phpunit/phpunit": "^4.8.10||^5.0",
+                "react/socket-client": "^0.6"
             },
             "type": "library",
             "autoload": {
@@ -520,20 +515,19 @@
                     "React\\Http\\": "src"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
             "description": "Event-driven, streaming plaintext HTTP and secure HTTPS server for ReactPHP",
             "keywords": [
+                "HTTP",
+                "HTTPS",
+                "ReactPHP",
                 "event-driven",
-                "http",
-                "https",
-                "reactphp",
                 "server",
                 "streaming"
             ],
-            "time": "2017-03-31 07:47:35"
+            "time": "2017-04-03 10:42:06"
         },
         {
             "name": "react/promise",
@@ -1476,16 +1470,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "4.0.7",
+            "version": "4.0.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "09e2277d14ea467e5a984010f501343ef29ffc69"
+                "reference": "ef7b2f56815df854e66ceaee8ebe9393ae36a40d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/09e2277d14ea467e5a984010f501343ef29ffc69",
-                "reference": "09e2277d14ea467e5a984010f501343ef29ffc69",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/ef7b2f56815df854e66ceaee8ebe9393ae36a40d",
+                "reference": "ef7b2f56815df854e66ceaee8ebe9393ae36a40d",
                 "shasum": ""
             },
             "require": {
@@ -1535,7 +1529,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2017-03-01T09:12:17+00:00"
+            "time": "2017-04-02T07:44:40+00:00"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -1725,16 +1719,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "5.7.17",
+            "version": "5.7.19",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "68752b665d3875f9a38a357e3ecb35c79f8673bf"
+                "reference": "69c4f49ff376af2692bad9cebd883d17ebaa98a1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/68752b665d3875f9a38a357e3ecb35c79f8673bf",
-                "reference": "68752b665d3875f9a38a357e3ecb35c79f8673bf",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/69c4f49ff376af2692bad9cebd883d17ebaa98a1",
+                "reference": "69c4f49ff376af2692bad9cebd883d17ebaa98a1",
                 "shasum": ""
             },
             "require": {
@@ -1803,7 +1797,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2017-03-19T16:52:12+00:00"
+            "time": "2017-04-03T02:22:27+00:00"
         },
         {
             "name": "phpunit/phpunit-mock-objects",

@@ -7,8 +7,8 @@ use Evenement\EventEmitterInterface;
 use MKraemer\ReactPCNTL\PCNTL;
 use PHPPM\Bridges\BridgeInterface;
 use PHPPM\Debug\BufferingLogger;
-use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Http\Response;
@@ -346,21 +346,25 @@ class ProcessSlave
     /**
      * Handles incoming requests and transforms a $request into a $response by reference.
      *
-     * @param RequestInterface $request
+     * @param ServerRequestInterface $request
      *
      * @return ResponseInterface
      * @throws \Exception
      */
-    public function onRequest(RequestInterface $request)
+    public function onRequest(ServerRequestInterface $request)
     {
         if ($this->isPopulateServer()) {
             $this->prepareEnvironment($request);
         }
 
-        $request->remoteAddress = trim(
-            parse_url('tcp://' . $request->getHeaderLine('X-PHP-PM-Remote-IP'), PHP_URL_HOST),
-            '[]'
-        );
+        $remoteIp = $request->getHeaderLine('X-PHP-PM-Remote-IP');
+        $remotePort = $request->getHeaderLine('X-PHP-PM-Remote-Port');
+
+        $request = $request->withoutHeader('X-PHP-PM-Remote-IP');
+        $request = $request->withoutHeader('X-PHP-PM-Remote-Port');
+
+        $request = $request->withAttribute('remote_address', $remoteIp);
+        $request = $request->withAttribute('remote_port', $remotePort);
 
         $logTime = date('d/M/Y:H:i:s O');
 
@@ -380,7 +384,7 @@ class ProcessSlave
         }
 
         if ($this->isLogging()) {
-            $this->logResponse($request, $response, $logTime);
+            $this->logResponse($request, $response, $logTime, $remoteIp);
         }
         return $response;
     }
@@ -388,10 +392,10 @@ class ProcessSlave
     /**
      * Handle a redirected request from master.
      *
-     * @param RequestInterface $request
+     * @param ServerRequestInterface $request
      * @return ResponseInterface
      */
-    protected function handleRequest(RequestInterface $request)
+    protected function handleRequest(ServerRequestInterface $request)
     {
         if ($this->getStaticDirectory()) {
             $staticResponse = $this->serveStatic($request);
@@ -402,7 +406,7 @@ class ProcessSlave
 
         if ($bridge = $this->getBridge()) {
 
-            $response = $bridge->onRequest($request);
+            $response = $bridge->process($request);
 
             if ($this->isDebug()) {
                 $this->sendCurrentFiles();
@@ -425,7 +429,7 @@ class ProcessSlave
         return $response;
     }
 
-    protected function prepareEnvironment(RequestInterface $request)
+    protected function prepareEnvironment(ServerRequestInterface $request)
     {
         $_SERVER = $this->baseServer;
         $_SERVER['REQUEST_METHOD'] = $request->getMethod();
@@ -438,10 +442,12 @@ class ProcessSlave
             $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $request->getHeaderLine($name);
         }
 
-        //We receive X-PHP-PM-Remote-IP from ProcessManager.
-        //This header is only used to proxy the remoteAddress from master -> slave.
+        //We receive X-PHP-PM-Remote-IP and X-PHP-PM-Remote-Port from ProcessManager.
+        //This headers is only used to proxy the remoteAddress and remotePort from master -> slave.
         $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_IP'];
         unset($_SERVER['HTTP_X_PHP_PM_REMOTE_IP']);
+        $_SERVER['REMOTE_PORT'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_PORT'];
+        unset($_SERVER['HTTP_X_PHP_PM_REMOTE_PORT']);
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $_SERVER['REQUEST_URI'] = $request->getUri()->getPath();
@@ -451,10 +457,10 @@ class ProcessSlave
     }
 
     /**
-     * @param RequestInterface $request
+     * @param ServerRequestInterface $request
      * @return ResponseInterface|false returns ResponseInterface if successfully served, false otherwise
      */
-    protected function serveStatic(RequestInterface $request)
+    protected function serveStatic(ServerRequestInterface $request)
     {
         $filePath = $this->getStaticDirectory() . $request->getUri()->getPath();
 
@@ -489,13 +495,14 @@ class ProcessSlave
     }
 
     /**
-     * @param RequestInterface $request
+     * @param ServerRequestInterface $request
      * @param ResponseInterface $response
      * @param string $timeLocal
+     * @param string $remoteIp
      */
-    protected function logResponse(RequestInterface $request, ResponseInterface $response, $timeLocal)
+    protected function logResponse(ServerRequestInterface $request, ResponseInterface $response, $timeLocal, $remoteIp)
     {
-        $logFunction = function($size) use ($request, $response, $timeLocal) {
+        $logFunction = function($size) use ($request, $response, $timeLocal, $remoteIp) {
             $requestString = $request->getMethod() . ' ' . $request->getUri()->getPath() . ' HTTP/' . $request->getProtocolVersion();
             $statusCode = $response->getStatusCode();
 
@@ -514,7 +521,7 @@ class ProcessSlave
                 '$http_referer',
                 '$http_user_agent',
             ], [
-                $request->remoteAddress,
+                $remoteIp,
                 '-', //todo remote_user
                 $timeLocal,
                 $requestString,

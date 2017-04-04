@@ -2,11 +2,10 @@
 
 namespace PHPPM\Bridges;
 
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
+use Interop\Http\ServerMiddleware\DelegateInterface;
 use React\EventLoop\LoopInterface;
 
-interface BridgeInterface
+interface BridgeInterface extends DelegateInterface
 {
     /**
      * Bootstrap an application implementing the HttpKernelInterface.
@@ -18,12 +17,4 @@ interface BridgeInterface
      * @see http://stackphp.com
      */
     public function bootstrap($appBootstrap, $appenv, $debug, LoopInterface $loop);
-
-    /**
-     * Handle a request using a HttpKernelInterface implementing application.
-     *
-     * @param RequestInterface $request
-     * @return ResponseInterface
-     */
-    public function onRequest(RequestInterface $request);
 }
