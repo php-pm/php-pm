@@ -310,7 +310,7 @@ class ProcessSlave
             try {
                 $this->server->listen($port, $host);
                 break;
-            } catch (\React\Socket\ConnectionException $e) {
+            } catch (\RuntimeException $e) {
                 usleep(500);
             }
         }
