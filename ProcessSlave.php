@@ -324,7 +324,7 @@ class ProcessSlave
             try {
                 $this->server->listen($port, $host);
                 break;
-            } catch (\Exception $e) {
+            } catch (\RuntimeException $e) {
                 usleep(500);
             }
         }
