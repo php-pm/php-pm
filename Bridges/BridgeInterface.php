@@ -8,7 +8,7 @@ use React\EventLoop\LoopInterface;
 interface BridgeInterface extends DelegateInterface
 {
     /**
-     * Bootstrap an application implementing the HttpKernelInterface.
+     * Bootstrap an application
      *
      * @param string|null $appBootstrap The environment your application will use to bootstrap (if any)
      * @param string $appenv
