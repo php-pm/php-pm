@@ -1030,7 +1030,7 @@ class ProcessManager
             return;
         }
 
-        $bootstrapFailed = false;
+        $bootstrapFailed = 0;
 
         if (isset($this->slaves[$port])) {
             if ($this->slaves[$port]->getKeepClosed()) {
