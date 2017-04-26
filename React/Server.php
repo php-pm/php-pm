@@ -42,7 +42,13 @@ class Server extends EventEmitter implements ServerInterface
                 'Supported transports are: IPv4, IPv6 and unix:// .'
                 , 1433253311);
         }
-        $this->master = stream_socket_server($localSocket, $errno, $errstr);
+
+        for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
+            $this->master = @stream_socket_server($localSocket, $errno, $errstr);
+            if ($this->master) {
+                break;
+            }
+        }
         if (false === $this->master) {
             $message = "Could not bind to $localSocket . Error: [$errno] $errstr";
             throw new \RuntimeException($message, $errno);

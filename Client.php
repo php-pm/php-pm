@@ -40,7 +40,19 @@ class Client
             $this->connection->close();
             unset($this->connection);
         }
-        $client = stream_socket_client($this->getControllerSocket());
+
+        $socketUri = $this->getControllerSocket();
+        $client = false;
+        for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
+            $client = @stream_socket_client($socketUri, $errno, $errstr);
+            if ($client) {
+                break;
+            }
+        }
+        if (!$client) {
+            $message = "Could not bind to $socketUri. Error: [$errno] $errstr";
+            throw new \RuntimeException($message, $errno);
+        }
         $this->connection = new Connection($client, $this->loop);
         return $this->connection;
     }
