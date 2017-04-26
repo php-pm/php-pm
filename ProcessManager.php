@@ -1101,7 +1101,7 @@ EOF;
 
         $process = proc_open($commandline, $descriptorspec, $pipes);
 
-        $stderr = new ReadableResourceStream($pipes[2], $this->loop);
+        $stderr = new \React\Stream\Stream($pipes[2], $this->loop);
         $stderr->on(
             'data',
             function ($data) use ($port) {
