@@ -1059,8 +1059,7 @@ class ProcessManager
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
-            'static-directory' => $this->getStaticDirectory(),
-            'populate-server-var' => $this->isPopulateServer()
+            'static' => $this->isServingStatic()
         ];
 
         $config = var_export($config, true);
