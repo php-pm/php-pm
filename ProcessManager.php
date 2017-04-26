@@ -471,7 +471,7 @@ class ProcessManager
             $slave->connect();
 
             $start = microtime(true);
-            $stream = stream_socket_client($slave->getHost(), $errno, $errstr, $this->timeout);
+            $stream = @stream_socket_client($slave->getHost(), $errno, $errstr, $this->timeout);
             if (!$stream || !is_resource($stream)) {
                 //we failed to connect to the worker. Maybe because of timeouts or it is in a crashed state
                 //and is currently dieing.
