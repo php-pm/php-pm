@@ -239,7 +239,9 @@ class ProcessSlave
      */
     public function registerFile($path)
     {
-        $this->watchedFiles[] = $path;
+        if ($this->isDebug()) {
+            $this->watchedFiles[] = $path;
+        }
     }
 
     /**
@@ -248,6 +250,10 @@ class ProcessSlave
      */
     protected function sendCurrentFiles()
     {
+        if (!$this->isDebug()) {
+            return;
+        }
+
         $files = array_merge($this->watchedFiles, get_included_files());
         $flipped = array_flip($files);
 
@@ -324,9 +330,7 @@ class ProcessSlave
     {
         $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
 
-        if ($this->isDebug()) {
-            $this->sendCurrentFiles();
-        }
+        $this->sendCurrentFiles();
     }
 
     /**
@@ -366,9 +370,7 @@ class ProcessSlave
 
             $bridge->onRequest($request, $response);
 
-            if ($this->isDebug()) {
-                $this->sendCurrentFiles();
-            }
+            $this->sendCurrentFiles();
         } else {
             $response->writeHead('404');
             $response->end('No Bridge Defined.');
