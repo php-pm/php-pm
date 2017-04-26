@@ -4,10 +4,6 @@ declare(ticks = 1);
 namespace PHPPM;
 
 use React\Socket\Connection;
-use React\Stream\ReadableResourceStream;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Debug\Debug;
-use Symfony\Component\Process\ProcessUtils;
 
 class SlaveProxy
 {
@@ -131,7 +127,7 @@ class SlaveProxy
      */
     public function terminate($graceful = false)
     {
-        $this->read = false;
+        $this->ready = false;
         if (isset($this->stderr)) {
             $this->stderr->close();
             $this->stderr = null;
@@ -301,14 +297,6 @@ class SlaveProxy
      * @return bool
      */
     public function getDuringBootstrap()
-    {
-        return $this->duringBootstrap;
-    }
-
-    /**
-     * @param bool $duringBootstrap
-     */
-    public function setDuringBootstrap($duringBootstrap)
     {
         return $this->duringBootstrap;
     }
