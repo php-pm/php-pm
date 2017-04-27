@@ -447,7 +447,7 @@ class ProcessManager
 
         $start = microtime(true);
         $redirectionTries++;
-        $redirectRequest = function ($id) use (&$redirectRequest, &$incoming, &$incomingBuffer, &$redirectionActive, $start, &$redirectionTries, &$connectionOpen) {
+        $redirectRequest = function ($port) use (&$redirectRequest, &$incoming, &$incomingBuffer, &$redirectionActive, $start, &$redirectionTries, &$connectionOpen) {
             if (!$connectionOpen) {
                 //since the initial connection of a client and getting a free worker the client meanwhile closed the connection,
                 //so stop anything here.
@@ -467,7 +467,7 @@ class ProcessManager
                 );
             }
 
-            $slave =& $this->slaves[$id];
+            $slave = $this->slaves[$port];
             $slave->connect();
 
             $start = microtime(true);
@@ -691,7 +691,7 @@ class ProcessManager
                     }
 
                     $port = $this->getPort($conn);
-                    $slave =& $this->slaves[$port];
+                    $slave = $this->slaves[$port];
 
                     if ($this->output->isVeryVerbose()) {
                         $this->output->writeln(sprintf('Worker #%d closed after %d handled requests', $slave->getPort(), $slave->getRequests()));
@@ -880,7 +880,7 @@ class ProcessManager
                 );
             }
 
-            foreach ($this->slaves as &$slave) {
+            foreach ($this->slaves as $slave) {
                 $slave->seal();
             }
         } else {
@@ -998,7 +998,7 @@ class ProcessManager
 
         $this->output->writeln('Restart all worker');
 
-        foreach ($this->slaves as &$slave) {
+        foreach ($this->slaves as $slave) {
             //does not accept new connections
             $slave->setReady(false);
 
