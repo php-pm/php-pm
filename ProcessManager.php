@@ -530,7 +530,7 @@ class ProcessManager
 
                     $slave->disconnect(true);
                     $incoming->end();
-//!!
+
                     if ($slave->getRequestsHandled() >= $this->maxRequests) {
                         $slave->setReady(false);
                         $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $slave->getPort(), $this->maxRequests));
