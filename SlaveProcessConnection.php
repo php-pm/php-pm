@@ -5,7 +5,7 @@ namespace PHPPM;
 
 use React\Socket\Connection;
 
-class SlaveProxy
+class SlaveProcessConnection
 {
     /**
      * @var string

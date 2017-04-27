@@ -1045,7 +1045,7 @@ class ProcessManager
 
         $host = Utils::isWindows() ? 'tcp://127.0.0.1' : $this->getNewSlaveSocket($port);
 
-        $slave = new SlaveProxy($host, $port, $bootstrapFailed);
+        $slave = new SlaveProcessConnection($host, $port, $bootstrapFailed);
 
         $bridge = var_export($this->getBridge(), true);
         $bootstrap = var_export($this->getAppBootstrap(), true);
