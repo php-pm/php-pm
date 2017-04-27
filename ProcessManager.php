@@ -643,7 +643,7 @@ class ProcessManager
                 }
 
                 // we pick a slave that currently handles the fewest connections
-                if (null === $minConnections || $slave->getConnections() < $minConnections) {
+                if (null === $minConnections || $slave->getConnectionCount() < $minConnections) {
                     $minConnections = $slave->getConnections();
                     $minPort = $slave->getPort();
                 }

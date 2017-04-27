@@ -108,14 +108,16 @@ class SlaveProcessConnection
 
     public function connect()
     {
-        $this->setBusy();
         $this->connections++;
+        $this->busy = true;
     }
 
     public function disconnect($handled = false)
     {
-        $this->setBusy(false);
         $this->connections--;
+        if ($this->connections === 0) {
+            $this->busy = false;
+        }
 
         if ($handled) {
             $this->requests++;
@@ -183,17 +185,9 @@ class SlaveProcessConnection
     }
 
     /**
-     * @param bool $busy
-     */
-    public function setBusy($busy = true)
-    {
-        $this->busy = $busy;
-    }
-
-    /**
      * @return int $connections
      */
-    public function getConnections()
+    public function getConnectionCount()
     {
         return $this->connections;
     }
