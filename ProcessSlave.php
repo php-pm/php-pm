@@ -254,7 +254,9 @@ class ProcessSlave
      */
     public function registerFile($path)
     {
-        $this->watchedFiles[] = $path;
+        if ($this->isDebug()) {
+            $this->watchedFiles[] = $path;
+        }
     }
 
     /**
@@ -263,6 +265,10 @@ class ProcessSlave
      */
     protected function sendCurrentFiles()
     {
+        if (!$this->isDebug()) {
+            return;
+        }
+
         $files = array_merge($this->watchedFiles, get_included_files());
         $flipped = array_flip($files);
 
@@ -285,13 +291,16 @@ class ProcessSlave
         $this->errorLogger = BufferingLogger::create();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
-        while (true) {
-            try {
-                $client = stream_socket_client($this->config['controllerHost']);
+        $client = false;
+        for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
+            $client = @stream_socket_client($this->config['controllerHost'], $errno, $errstr);
+            if ($client) {
                 break;
-            } catch (\Exception $e) {
-                usleep(500);
             }
+        }
+        if (!$client) {
+            $message = "Could not bind to {$this->config['controllerHost']}. Error: [$errno] $errstr";
+            throw new \RuntimeException($message, $errno);
         }
         $this->controller = new DuplexResourceStream($client, $this->loop);
 
@@ -320,15 +329,7 @@ class ProcessSlave
         $port = $this->config['port'];
         $host = $this->config['host'];
 
-        while (true) {
-            try {
-                $this->server->listen($port, $host);
-                break;
-            } catch (\RuntimeException $e) {
-                usleep(500);
-            }
-        }
-
+        $this->server->listen($port, $host);
         $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
 
         $this->loop->run();
@@ -338,9 +339,7 @@ class ProcessSlave
     {
         $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
 
-        if ($this->isDebug()) {
-            $this->sendCurrentFiles();
-        }
+        $this->sendCurrentFiles();
     }
 
     /**
