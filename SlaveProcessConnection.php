@@ -136,7 +136,7 @@ class SlaveProcessConnection
         }
 
         if (is_resource($this->process)) {
-            proc_terminate($this->process, $graceful ? null : SIGKILL);
+            proc_terminate($this->process, $graceful ? SIGTERM : SIGKILL);
         }
 
         if ($this->pid) {
