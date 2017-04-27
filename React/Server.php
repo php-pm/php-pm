@@ -106,4 +106,14 @@ class Server extends EventEmitter implements ServerInterface
     {
         return new Connection($socket, $this->loop);
     }
+
+    public function pause()
+    {
+        // TODO: Implement pause() method.
+    }
+
+    public function resume()
+    {
+        // TODO: Implement resume() method.
+    }
 }

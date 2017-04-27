@@ -13,6 +13,7 @@ use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Http\Response;
 use React\Http\Server;
+use React\Promise\Promise;
 use React\Stream\DuplexResourceStream;
 use React\Stream\ReadableResourceStream;
 use Symfony\Component\Debug\ErrorHandler;
@@ -347,7 +348,7 @@ class ProcessSlave
      *
      * @param ServerRequestInterface $request
      *
-     * @return ResponseInterface
+     * @return ResponseInterface|Promise
      * @throws \Exception
      */
     public function onRequest(ServerRequestInterface $request)
@@ -382,10 +383,18 @@ class ProcessSlave
             $response = $catchLog($e);
         }
 
-        if ($this->isLogging()) {
-            $this->logResponse($request, $response, $logTime, $remoteIp);
-        }
-        return $response;
+        $promise = new Promise(function($resolve) use ($response) {
+            return $resolve($response);
+        });
+
+        $promise = $promise->then(function(ResponseInterface $response) use ($request, $logTime, $remoteIp) {
+            if ($this->isLogging()) {
+                $this->logResponse($request, $response, $logTime, $remoteIp);
+            }
+            return $response;
+        });
+
+        return $promise;
     }
 
     /**
