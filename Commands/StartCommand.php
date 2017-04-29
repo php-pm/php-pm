@@ -22,6 +22,7 @@ class StartCommand extends Command
         $this
             ->setName('start')
             ->setDescription('Starts the server')
+            ->addOption('factory', null, InputOption::VALUE_REQUIRED, 'Factory class to generate a ProcessManager instance.')
             ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your application.', './')
         ;
 
@@ -32,7 +33,13 @@ class StartCommand extends Command
     {
         $config = $this->initializeConfig($input, $output);
 
-        $handler = new ProcessManager($output, $config['port'], $config['host'], $config['workers']);
+        if (isset($config['factory'])) {
+            $factory = $config['factory'];
+            $handler = $factory::factory($output, $config['port'], $config['host'], $config['workers']);
+        }
+        else {
+            $handler = new ProcessManager($output, $config['port'], $config['host'], $config['workers']);
+        }
 
         $handler->setBridge($config['bridge']);
         $handler->setAppEnv($config['app-env']);
