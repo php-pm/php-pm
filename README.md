@@ -138,7 +138,7 @@ worker is stopped until you release the break point. All other workers are fully
 
 **Note for XDebug and PHPStorm**: Since php-pm uses at least two processes, there are two xdebug instances as well. PHPStorm is per default configured to only accept one connection at a time. You need to increase that. You won't get xdebug working with your application if you don't increase that count.
 
-![Xdebug and PHPStorm](https://dl.dropboxusercontent.com/u/54069263/ppm-github/xdebug-phpstorm.png)
+![Xdebug and PHPStorm](https://raw.githubusercontent.com/php-pm/assets/master/xdebug-phpstorm.png)
 
 In all workers the STDOUT is redirected to the connected client. So take care, `var_dump`, `echo` are not displayed on the console.
 STDERR is not redirected to the client, but to the console. So, for very simple debugging you could use `error_log('hi')` and you'll see it on the console.
@@ -154,7 +154,7 @@ Per default exceptions and errors are only displayed on the console, prettified 
 
 ### Command
 
-![ppm-help](https://dl.dropboxusercontent.com/u/54069263/ppm-github/help-screenshot.png)
+![ppm-help](https://raw.githubusercontent.com/php-pm/assets/master/help-screenshot.png)
 
 Start
 
@@ -168,7 +168,7 @@ cd ~/my/path/to/symfony/
 ./vendor/bin/ppm start
 ```
 
-![ppm-start](https://dl.dropboxusercontent.com/u/54069263/ppm-github/start-command.png)
+![ppm-start](https://raw.githubusercontent.com/php-pm/assets/master/start-command.png)
 
 
 #### Symfony
@@ -236,7 +236,7 @@ https://github.com/bestmomo/laravel5-example
 
 
 <p align="center">
-<img src="https://dl.dropboxusercontent.com/u/54069263/ppm-github/laravel.png" />
+<img src="https://raw.githubusercontent.com/php-pm/assets/master/laravel.png" />
 </p>
 
 ## Issues
