@@ -4,6 +4,7 @@ declare(ticks = 1);
 namespace PHPPM;
 
 use React\Socket\Connection;
+use React\Stream\ReadableResourceStream;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
@@ -97,9 +98,9 @@ class ProcessManager
     protected $logging = true;
 
     /**
-     * @var bool
+     * @var string
      */
-    protected $servingStatic = true;
+    protected $staticDirectory = '';
 
     /**
      * @var string
@@ -177,6 +178,13 @@ class ProcessManager
     protected $maxRequests = 2000;
 
     /**
+     * Flag controlling populating $_SERVER var for older applications (not using full request-response flow)
+     *
+     * @var bool
+     */
+    protected $populateServer = true;
+
+    /**
      * Timeout in seconds for master to worker connection.
      *
      * @var int
@@ -245,6 +253,22 @@ class ProcessManager
             }
         }
         exit;
+    }
+
+    /**
+     * @param bool $populateServer
+     */
+    public function setPopulateServer($populateServer)
+    {
+        $this->populateServer = $populateServer;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPopulateServer()
+    {
+        return $this->populateServer;
     }
 
     /**
@@ -336,19 +360,19 @@ class ProcessManager
     }
 
     /**
-     * @return boolean
+     * @return string
      */
-    public function isServingStatic()
+    public function getStaticDirectory()
     {
-        return $this->servingStatic;
+        return $this->staticDirectory;
     }
 
     /**
-     * @param boolean $servingStatic
+     * @param string $staticDirectory
      */
-    public function setServingStatic($servingStatic)
+    public function setStaticDirectory($staticDirectory)
     {
-        $this->servingStatic = $servingStatic;
+        $this->staticDirectory = $staticDirectory;
     }
 
     /**
@@ -516,7 +540,11 @@ class ProcessManager
 
             $start = microtime(true);
 
-            $headersToReplace = ['X-PHP-PM-Remote-IP' => parse_url($incoming->getRemoteAddress(), PHP_URL_HOST)];
+            $headersToReplace = [
+                'X-PHP-PM-Remote-IP' => trim(parse_url('tcp://' . $incoming->getRemoteAddress(), PHP_URL_HOST), '[]'),
+                'X-PHP-PM-Remote-Port' => trim(parse_url('tcp://' . $incoming->getRemoteAddress(), PHP_URL_PORT), '[]')
+            ];
+
             $headerRedirected = false;
 
             if ($this->isHeaderEnd($incomingBuffer)) {
@@ -1121,7 +1149,8 @@ class ProcessManager
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
-            'static' => $this->isServingStatic(),
+            'static-directory' => $this->getStaticDirectory(),
+            'populate-server-var' => $this->isPopulateServer()
         ];
 
         $config = var_export($config, true);
@@ -1163,7 +1192,7 @@ EOF;
         $this->slaves[$port] = $slave;
         $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
 
-        $stderr = new \React\Stream\Stream($pipes[2], $this->loop);
+        $stderr = new ReadableResourceStream($pipes[2], $this->loop);
         $stderr->on(
             'data',
             function ($data) use ($port) {

@@ -2,14 +2,13 @@
 
 namespace PHPPM\Bridges;
 
-use PHPPM\Bootstraps\BootstrapInterface;
-use PHPPM\React\HttpResponse;
+use Interop\Http\ServerMiddleware\DelegateInterface;
 use React\EventLoop\LoopInterface;
 
-interface BridgeInterface
+interface BridgeInterface extends DelegateInterface
 {
     /**
-     * Bootstrap an application implementing the HttpKernelInterface.
+     * Bootstrap an application
      *
      * @param string|null $appBootstrap The environment your application will use to bootstrap (if any)
      * @param string $appenv
@@ -18,19 +17,4 @@ interface BridgeInterface
      * @see http://stackphp.com
      */
     public function bootstrap($appBootstrap, $appenv, $debug, LoopInterface $loop);
-
-    /**
-     * Returns the repository which is used as root for the static file serving.
-     *
-     * @return string
-     */
-    public function getStaticDirectory();
-
-    /**
-     * Handle a request using a HttpKernelInterface implementing application.
-     *
-     * @param \React\Http\Request $request
-     * @param \PHPPM\React\HttpResponse $response
-     */
-    public function onRequest(\React\Http\Request $request, HttpResponse $response);
 }

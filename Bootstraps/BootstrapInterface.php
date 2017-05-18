@@ -8,5 +8,4 @@ namespace PHPPM\Bootstraps;
 interface BootstrapInterface
 {
     public function getApplication();
-    public function getStaticDirectory();
 }

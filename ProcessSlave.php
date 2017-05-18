@@ -3,11 +3,19 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
-use PHPPM\React\HttpResponse;
-use PHPPM\React\HttpServer;
+use Evenement\EventEmitterInterface;
+use MKraemer\ReactPCNTL\PCNTL;
+use PHPPM\Bridges\BridgeInterface;
 use PHPPM\Debug\BufferingLogger;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
-use React\Socket\Connection;
+use React\Http\Response;
+use React\Http\Server;
+use React\Promise\Promise;
+use React\Stream\DuplexResourceStream;
+use React\Stream\ReadableResourceStream;
 use Symfony\Component\Debug\ErrorHandler;
 
 class ProcessSlave
@@ -34,9 +42,9 @@ class ProcessSlave
     protected $loop;
 
     /**
-     * Connection to ProcessManager, master process.
+     * DuplexResourceStream to ProcessManager, master process.
      *
-     * @var \React\Socket\Connection
+     * @var DuplexResourceStream
      */
     protected $controller;
 
@@ -46,7 +54,7 @@ class ProcessSlave
     protected $bridgeName;
 
     /**
-     * @var Bridges\BridgeInterface
+     * @var BridgeInterface
      */
     protected $bridge;
 
@@ -91,7 +99,7 @@ class ProcessSlave
      *
      * 'port' => int (server port)
      * 'appenv' => string (App environment)
-     * 'static' => boolean (true) (If it should server static files)
+     * 'static-directory' => string (Static files root directory)
      * 'logging' => boolean (false) (If it should log all requests)
      * ...
      *
@@ -125,6 +133,14 @@ class ProcessSlave
     public function isLogging()
     {
         return $this->config['logging'];
+    }
+
+    /**
+     * @return boolean
+     */
+    public function isPopulateServer()
+    {
+        return $this->config['populate-server-var'];
     }
 
     /**
@@ -189,15 +205,15 @@ class ProcessSlave
     }
 
     /**
-     * @return boolean
+     * @return string
      */
-    protected function isServingStatic()
+    protected function getStaticDirectory()
     {
-        return $this->config['static'];
+        return $this->config['static-directory'];
     }
 
     /**
-     * @return Bridges\BridgeInterface
+     * @return BridgeInterface
      */
     protected function getBridge()
     {
@@ -271,7 +287,7 @@ class ProcessSlave
      */
     public function run()
     {
-        $this->loop = \React\EventLoop\Factory::create();
+        $this->loop = Factory::create();
 
         $this->errorLogger = BufferingLogger::create();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
@@ -287,9 +303,9 @@ class ProcessSlave
             $message = "Could not bind to {$this->config['controllerHost']}. Error: [$errno] $errstr";
             throw new \RuntimeException($message, $errno);
         }
-        $this->controller = new \React\Socket\Connection($client, $this->loop);
+        $this->controller = new DuplexResourceStream($client, $this->loop);
 
-        $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
+        $pcntl = new PCNTL($this->loop);
 
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
@@ -308,8 +324,7 @@ class ProcessSlave
 
         $this->server = new React\Server($this->loop); //our version for now, because of unix socket support
 
-        $http = new HttpServer($this->server);
-        $http->on('request', array($this, 'onRequest'));
+        new Server($this->server, [$this, 'onRequest']);
 
         //port is only used for tcp connection. If unix socket, 'host' contains the socket path
         $port = $this->config['port'];
@@ -321,7 +336,7 @@ class ProcessSlave
         $this->loop->run();
     }
 
-    public function commandBootstrap(array $data, Connection $conn)
+    public function commandBootstrap(array $data, DuplexResourceStream $conn)
     {
         $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
 
@@ -331,44 +346,82 @@ class ProcessSlave
     /**
      * Handles incoming requests and transforms a $request into a $response by reference.
      *
-     * @param \React\Http\Request $request
-     * @param HttpResponse        $response
+     * @param ServerRequestInterface $request
      *
+     * @return ResponseInterface|Promise
      * @throws \Exception
      */
-    public function onRequest(\React\Http\Request $request, HttpResponse $response)
+    public function onRequest(ServerRequestInterface $request)
     {
-        $this->prepareEnvironment($request);
-
-        if ($this->isLogging()) {
-            $this->setupResponseLogging($request, $response);
+        if ($this->isPopulateServer()) {
+            $this->prepareEnvironment($request);
         }
 
-        $this->handleRequest($request, $response);
+        $remoteIp = $request->getHeaderLine('X-PHP-PM-Remote-IP');
+        $remotePort = $request->getHeaderLine('X-PHP-PM-Remote-Port');
+
+        $request = $request->withoutHeader('X-PHP-PM-Remote-IP');
+        $request = $request->withoutHeader('X-PHP-PM-Remote-Port');
+
+        $request = $request->withAttribute('remote_address', $remoteIp);
+        $request = $request->withAttribute('remote_port', $remotePort);
+
+        $logTime = date('d/M/Y:H:i:s O');
+
+        $catchLog = function ($e) {
+            ppm_log((string) $e);
+            return new Response(500);
+        };
+
+        try {
+            $response = $this->handleRequest($request);
+        } catch (\Throwable $t) {
+            // PHP >= 7.0
+            $response = $catchLog($t);
+        } catch (\Exception $e) {
+            // PHP < 7.0
+            $response = $catchLog($e);
+        }
+
+        $promise = new Promise(function($resolve) use ($response) {
+            return $resolve($response);
+        });
+
+        $promise = $promise->then(function(ResponseInterface $response) use ($request, $logTime, $remoteIp) {
+            if ($this->isLogging()) {
+                $this->logResponse($request, $response, $logTime, $remoteIp);
+            }
+            return $response;
+        });
+
+        return $promise;
     }
 
     /**
      * Handle a redirected request from master.
      *
-     * @param \React\Http\Request $request
-     * @param HttpResponse $response
+     * @param ServerRequestInterface $request
+     * @return ResponseInterface
      */
-    protected function handleRequest(\React\Http\Request $request, HttpResponse $response)
+    protected function handleRequest(ServerRequestInterface $request)
     {
+        if ($this->getStaticDirectory()) {
+            $staticResponse = $this->serveStatic($request);
+            if ($staticResponse instanceof ResponseInterface) {
+                return $staticResponse;
+            }
+        }
+
         if ($bridge = $this->getBridge()) {
 
-            if ($this->isServingStatic()) {
-                if (true === $this->serveStatic($request, $response)) {
-                    return;
-                }
+            $response = $bridge->process($request);
+
+            if ($this->isDebug()) {
+                $this->sendCurrentFiles();
             }
-
-            $bridge->onRequest($request, $response);
-
-            $this->sendCurrentFiles();
         } else {
-            $response->writeHead('404');
-            $response->end('No Bridge Defined.');
+            $response = new Response(404);
+            $response->getBody()->write('No Bridge Defined.');
         }
 
         if (headers_sent()) {
@@ -381,85 +434,87 @@ class ProcessSlave
             );
             $this->shutdown();
         }
+        return $response;
     }
 
-    protected function prepareEnvironment(\React\Http\Request $request)
+    protected function prepareEnvironment(ServerRequestInterface $request)
     {
         $_SERVER = $this->baseServer;
         $_SERVER['REQUEST_METHOD'] = $request->getMethod();
         $_SERVER['REQUEST_TIME'] = (int)microtime(true);
         $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
-        $_SERVER['QUERY_STRING'] = http_build_query($request->getQuery());
 
-        foreach ($request->getHeaders() as $name => $value) {
-            $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
+        $_SERVER['QUERY_STRING'] = $request->getUri()->getQuery();
+
+        foreach ($request->getHeaders() as $name => $valueArr) {
+            $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $request->getHeaderLine($name);
         }
 
-        //We receive X-PHP-PM-Remote-IP from ProcessManager.
-        //This header is only used to proxy the remoteAddress from master -> slave.
+        //We receive X-PHP-PM-Remote-IP and X-PHP-PM-Remote-Port from ProcessManager.
+        //This headers is only used to proxy the remoteAddress and remotePort from master -> slave.
         $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_IP'];
         unset($_SERVER['HTTP_X_PHP_PM_REMOTE_IP']);
+        $_SERVER['REMOTE_PORT'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_PORT'];
+        unset($_SERVER['HTTP_X_PHP_PM_REMOTE_PORT']);
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-        $_SERVER['REQUEST_URI'] = $request->getPath();
+        $_SERVER['REQUEST_URI'] = $request->getUri()->getPath();
         $_SERVER['DOCUMENT_ROOT'] = isset($_ENV['DOCUMENT_ROOT']) ? $_ENV['DOCUMENT_ROOT'] : getcwd();
         $_SERVER['SCRIPT_NAME'] = isset($_ENV['SCRIPT_NAME']) ? $_ENV['SCRIPT_NAME'] : 'index.php';
         $_SERVER['SCRIPT_FILENAME'] = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/' . $_SERVER['SCRIPT_NAME'];
     }
 
     /**
-     * @param \React\Http\Request $request
-     * @param HttpResponse        $response
-     *
-     * @return bool returns true if successfully served
+     * @param ServerRequestInterface $request
+     * @return ResponseInterface|false returns ResponseInterface if successfully served, false otherwise
      */
-    protected function serveStatic(\React\Http\Request $request, HttpResponse $response)
+    protected function serveStatic(ServerRequestInterface $request)
     {
-        $filePath = $this->getBridge()->getStaticDirectory() . $request->getPath();
+        $filePath = $this->getStaticDirectory() . $request->getUri()->getPath();
 
-        if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
+        if (substr($filePath, -4) !== '.php' && is_file($filePath) && is_readable($filePath)) {
 
             $mTime = filemtime($filePath);
 
-            if (isset($request->getHeaders()['If-Modified-Since'])) {
-                $ifModifiedSince = $request->getHeaders()['If-Modified-Since'];
+            if ($request->hasHeader('If-Modified-Since')) {
+                $ifModifiedSince = $request->getHeaderLine('If-Modified-Since');
                 if ($ifModifiedSince && strtotime($ifModifiedSince) === $mTime) {
                     // Client's cache IS current, so we just respond '304 Not Modified'.
-                    $response->writeHead(304, [
+                    $response = new Response(304, [
                         'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
                     ]);
-                    $response->end();
-                    return true;
+                    return $response;
                 }
             }
 
             $expires = 3600; //1 h
-            $response->writeHead(200, [
+            $response = new Response(200, [
                 'Content-Type' => $this->mimeContentType($filePath),
                 'Content-Length' => filesize($filePath),
                 'Pragma' => 'public',
                 'Cache-Control' => 'max-age=' . $expires,
                 'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
                 'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
-            ]);
-            $response->end(file_get_contents($filePath));
+            ], new ReadableResourceStream(fopen($filePath, 'r'), $this->loop));
 
-            return true;
+            return $response;
         }
-
         return false;
     }
 
-    protected function setupResponseLogging(\React\Http\Request $request, HttpResponse $response)
+    /**
+     * @param ServerRequestInterface $request
+     * @param ResponseInterface $response
+     * @param string $timeLocal
+     * @param string $remoteIp
+     */
+    protected function logResponse(ServerRequestInterface $request, ResponseInterface $response, $timeLocal, $remoteIp)
     {
-        $timeLocal = date('d/M/Y:H:i:s O');
-
-        $response->on('end', function () use ($request, $response, $timeLocal) {
-
-            $requestString = $request->getMethod() . ' ' . $request->getPath() . ' HTTP/' . $request->getHttpVersion();
+        $logFunction = function($size) use ($request, $response, $timeLocal, $remoteIp) {
+            $requestString = $request->getMethod() . ' ' . $request->getUri()->getPath() . ' HTTP/' . $request->getProtocolVersion();
             $statusCode = $response->getStatusCode();
 
-            if ($response->getStatusCode() < 400) {
+            if ($statusCode < 400) {
                 $requestString = "<info>$requestString</info>";
                 $statusCode = "<info>$statusCode</info>";
             }
@@ -474,14 +529,14 @@ class ProcessSlave
                 '$http_referer',
                 '$http_user_agent',
             ], [
-                $_SERVER['REMOTE_ADDR'],
+                $remoteIp,
                 '-', //todo remote_user
                 $timeLocal,
                 $requestString,
                 $statusCode,
-                $response->getBytesSent(),
-                isset($request->getHeaders()['Referer']) ? $request->getHeaders()['Referer'] : '-',
-                isset($request->getHeaders()['User-Agent']) ? $request->getHeaders()['User-Agent'] : '-',
+                $size,
+                $request->hasHeader('Referer') ? $request->getHeaderLine('Referer') : '-',
+                $request->hasHeader('User-Agent') ? $request->getHeaderLine('User-Agent') : '-'
             ],
                 $this->logFormat);
 
@@ -489,9 +544,23 @@ class ProcessSlave
                 $message = "<error>$message</error>";
             }
 
-
             $this->sendMessage($this->controller, 'log', ['message' => $message]);
-        });
+        };
+
+        if ($response->getBody() instanceof EventEmitterInterface) {
+            /** @var EventEmitterInterface $body */
+            $body = $response->getBody();
+            $size = strlen(\RingCentral\Psr7\str($response));
+            $body->on('data', function($data) use (&$size) {
+                $size += strlen($data);
+            });
+            //using `close` event since `end` is not fired for files
+            $body->on('close', function() use (&$size, $logFunction) {
+                $logFunction($size);
+            });
+        } else {
+            $logFunction(strlen(\RingCentral\Psr7\str($response)));
+        }
     }
 
     /**
