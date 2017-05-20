@@ -2,7 +2,6 @@
 
 namespace PHPPM\Bridges;
 
-use PHPPM\Bootstraps\BootstrapInterface;
 use PHPPM\React\HttpResponse;
 use React\EventLoop\LoopInterface;
 
