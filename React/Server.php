@@ -28,7 +28,6 @@ class Server extends EventEmitter implements ServerInterface
 
     public function listen($port, $host = '127.0.0.1')
     {
-        $localSocket = '';
         if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             $localSocket = 'tcp://' . $host . ':' . $port;
         } elseif (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
@@ -43,6 +42,9 @@ class Server extends EventEmitter implements ServerInterface
                 , 1433253311);
         }
 
+        $errno = 0;
+        $errstr = '';
+
         for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
             $this->master = @stream_socket_server($localSocket, $errno, $errstr);
             if ($this->master) {
@@ -53,6 +55,9 @@ class Server extends EventEmitter implements ServerInterface
             $message = "Could not bind to $localSocket . Error: [$errno] $errstr";
             throw new \RuntimeException($message, $errno);
         }
+
+        unset($errno, $errstr);
+
         stream_set_blocking($this->master, 0);
         $this->loop->addReadStream($this->master, function ($master) {
             $newSocket = stream_socket_accept($master);
