@@ -10,11 +10,11 @@ use React\Socket\ConnectionInterface;
 
 /**
  * This overwrite the default React\Http\Server
- * 
+ *
  * Modifications:
  *  * Different RequestParser
  *  * Different Response object
- * 
+ *
  * @see \React\Http\Server
  */
 class HttpServer extends EventEmitter implements ServerInterface
@@ -54,7 +54,7 @@ class HttpServer extends EventEmitter implements ServerInterface
 
             $conn->on('data', array($parser, 'feed'));
 
-            $parser->on('expects_continue', function() use($conn) {
+            $parser->on('expects_continue', function () use ($conn) {
                 $conn->write("HTTP/1.1 100 Continue\r\n\r\n");
             });
         });

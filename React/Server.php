@@ -11,9 +11,9 @@ use React\Socket\ServerInterface;
  * Socket server.
  *
  * Overwrites React\Socket\Server
- * 
+ *
  * @see React\Socket\Server
- * 
+ *
  * Version of https://github.com/reactphp/socket/pull/17/
  */
 class Server extends EventEmitter implements ServerInterface
@@ -39,8 +39,7 @@ class Server extends EventEmitter implements ServerInterface
         } else {
             throw new \UnexpectedValueException(
                 '"' . $host . '" does not match to a set of supported transports. ' .
-                'Supported transports are: IPv4, IPv6 and unix:// .'
-                , 1433253311);
+                'Supported transports are: IPv4, IPv6 and unix:// .', 1433253311);
         }
 
         for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {

@@ -356,7 +356,6 @@ class ProcessSlave
     protected function handleRequest(\React\Http\Request $request, HttpResponse $response)
     {
         if ($bridge = $this->getBridge()) {
-
             if ($this->isServingStatic()) {
                 if (true === $this->serveStatic($request, $response)) {
                     return;
@@ -418,7 +417,6 @@ class ProcessSlave
         $filePath = $this->getBridge()->getStaticDirectory() . $request->getPath();
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
-
             $mTime = filemtime($filePath);
 
             if (isset($request->getHeaders()['If-Modified-Since'])) {
