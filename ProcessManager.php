@@ -234,14 +234,20 @@ class ProcessManager
             $this->loop->stop();
         }
 
-        foreach ($this->slaves as $slave) {
-            if (is_resource($slave['process'])) {
-                proc_terminate($slave['process']);
-            }
+        foreach ($this->slaves as $n=>$slave) {
+            // cannot pkill process or pid if Index
+            if ((!isset($slave['process'])) && (!isset($slave['pid']))) {
+                $this->output->writeln("<error>Slave {$n} does not have process or PID to terminate\n".
+                                        json_encode($slave)."</error>");
+            } else {
+                if (is_resource($slave['process'])) {
+                    proc_terminate($slave['process']);
+                }
 
-            if ($slave['pid']) {
-                //make sure its dead
-                posix_kill($slave['pid'], SIGKILL);
+                if ($slave['pid']) {
+                    //make sure its dead
+                    posix_kill($slave['pid'], SIGKILL);
+                }
             }
         }
         exit;
