@@ -20,7 +20,7 @@ class ProcessManager
     /**
      * $object_hash => port
      *
-     * @var string[]
+     * @var int[]
      */
     protected $ports = [];
 
