@@ -221,8 +221,8 @@ class ProcessManager
         $this->inShutdown = true;
 
         $this->output->writeln($graceful
-        	? '<info>Shutdown received, exiting.</info>'
-        	: '<error>Termination received, exiting.</error>'
+            ? '<info>Shutdown received, exiting.</info>'
+            : '<error>Termination received, exiting.</error>'
         );
 
         //this method is also called during startup when something crashed, so
@@ -466,7 +466,7 @@ class ProcessManager
         );
 
         $redirectionTries = 0;
-        $incoming->on('close', function () use (&$redirectionActive, &$redirectionTries, &$connectionOpen){
+        $incoming->on('close', function () use (&$redirectionActive, &$redirectionTries, &$connectionOpen) {
             $connectionOpen = false;
         });
 
@@ -568,7 +568,7 @@ class ProcessManager
                         $slave['ready'] = false;
                         $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $slave['port'], $this->maxRequests));
                         $connection->close();
-                    } else if ($slave['closeWhenFree']) {
+                    } elseif ($slave['closeWhenFree']) {
                         $connection->close();
                     }
                 }
@@ -620,7 +620,8 @@ class ProcessManager
      *
      * @return bool
      */
-    protected function isHeaderEnd($buffer) {
+    protected function isHeaderEnd($buffer)
+    {
         return false !== strpos($buffer, "\r\n\r\n");
     }
 
@@ -632,7 +633,8 @@ class ProcessManager
      *
      * @return string
      */
-    protected function replaceHeader($header, $headersToReplace) {
+    protected function replaceHeader($header, $headersToReplace)
+    {
         $result = $header;
 
         foreach ($headersToReplace as $key => $value) {
@@ -874,12 +876,11 @@ class ProcessManager
             $this->output->writeln(sprintf('Worker #%d ready.', $port));
         }
 
-        $readySlaves = array_filter($this->slaves, function($item){
+        $readySlaves = array_filter($this->slaves, function ($item) {
             return $item['ready'];
         });
 
         if (($this->emergencyMode || $this->waitForSlaves) && $this->slaveCount === count($readySlaves)) {
-
             if ($this->emergencyMode) {
                 $this->output->writeln("<info>Emergency survived. Workers up and running again.</info>");
             } else {
@@ -910,7 +911,6 @@ class ProcessManager
         $this->slaves[$port]['bootstrapFailed']++;
 
         if ($this->isDebug()) {
-
             $this->output->writeln('');
 
             if (!$this->emergencyMode) {
@@ -932,7 +932,7 @@ class ProcessManager
 
             foreach ($this->slaves as &$slave) {
                 $slave['keepClosed'] = true;
-                if(!empty($slave['connection'])) {
+                if (!empty($slave['connection'])) {
                     $slave['connection']->close();
                 }
             }

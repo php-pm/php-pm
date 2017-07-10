@@ -2,7 +2,8 @@
 
 namespace PHPPM\React;
 
-class HttpResponse extends \React\Http\Response {
+class HttpResponse extends \React\Http\Response
+{
 
     protected $statusCode = 0;
     protected $headers = [];
@@ -15,7 +16,8 @@ class HttpResponse extends \React\Http\Response {
         $this->statusCode = $status;
     }
 
-    public function write($data) {
+    public function write($data)
+    {
         $this->bytesSent += strlen($data);
         parent::write($data);
     }

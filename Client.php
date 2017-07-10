@@ -64,11 +64,11 @@ class Client
         $connection = $this->getConnection();
 
         $result = '';
-        $connection->on('data', function($data) use (&$result) {
+        $connection->on('data', function ($data) use (&$result) {
             $result .= $data;
         });
 
-        $connection->on('close', function() use ($callback, &$result) {
+        $connection->on('close', function () use ($callback, &$result) {
             $callback($result);
         });
 
@@ -77,7 +77,7 @@ class Client
 
     public function getStatus(callable $callback)
     {
-        $this->request('status', [], function($result) use ($callback) {
+        $this->request('status', [], function ($result) use ($callback) {
             $callback(json_decode($result, true));
         });
         $this->loop->run();
@@ -101,15 +101,14 @@ class Client
         } else {
             throw new \UnexpectedValueException(
                 '"' . $host . '" does not match to a set of supported transports. ' .
-                'Supported transports are: IPv4, IPv6 and unix:// .'
-                , 1433253311);
+                'Supported transports are: IPv4, IPv6 and unix:// .', 1433253311);
         }
         return $localSocket;
     }
 
     public function stopProcessManager(callable $callback)
     {
-        $this->request('stop', [], function($result) use ($callback) {
+        $this->request('stop', [], function ($result) use ($callback) {
             $callback(json_decode($result, true));
         });
         $this->loop->run();
