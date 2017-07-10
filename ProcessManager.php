@@ -657,8 +657,7 @@ class ProcessManager
      */
     protected function getNextSlave($cb)
     {
-        $that = $this;
-        $checkSlave = function () use ($cb, $that, &$checkSlave) {
+        $checkSlave = function () use ($cb, &$checkSlave) {
             $minConnections = null;
             $minPort = null;
 
