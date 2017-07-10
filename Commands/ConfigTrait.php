@@ -29,6 +29,7 @@ trait ConfigTrait
             ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
             ->addOption('cgi-path', null, InputOption::VALUE_OPTIONAL, 'Full path to the php-cgi executable', false)
             ->addOption('socket-path', null, InputOption::VALUE_OPTIONAL, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
+            ->addOption('pidfile', null, InputOption::VALUE_OPTIONAL, 'Path to a file where the pid of the master process is going to be stored', '.ppm/ppm.pid')
             ->addOption('config', 'c', InputOption::VALUE_OPTIONAL, 'Path to config file', '');
     }
 
@@ -95,6 +96,7 @@ trait ConfigTrait
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
         $config['concurrent-requests'] = (boolean)$this->optionOrConfigValue($input, 'concurrent-requests', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
+        $config['pidfile'] = $this->optionOrConfigValue($input, 'pidfile', $config);
 
         $config['cgi-path'] = $this->optionOrConfigValue($input, 'cgi-path', $config);
 

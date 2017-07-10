@@ -182,6 +182,10 @@ class ProcessManager
      * @var int
      */
     protected $timeout = 30;
+    /**
+     * Location of the file where we're going to store the PID of the master process
+     */
+    protected $pidfile;
 
     /**
      * Controller port
@@ -244,6 +248,8 @@ class ProcessManager
                 posix_kill($slave['pid'], SIGKILL);
             }
         }
+
+        unlink($this->pidfile);
         exit;
     }
 
@@ -351,6 +357,10 @@ class ProcessManager
         $this->servingStatic = $servingStatic;
     }
 
+    public function setPIDFile($pidfile)
+    {
+        $this->pidfile = $pidfile;
+    }
     /**
      * @return boolean
      */
@@ -409,7 +419,7 @@ class ProcessManager
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
 
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
-
+        $this->writePid();
         for ($i = 0; $i < $this->slaveCount; $i++) {
             $this->newInstance((self::CONTROLLER_PORT+1) + $i);
         }
@@ -424,6 +434,14 @@ class ProcessManager
     {
         $pid = pcntl_waitpid(-1, $status, WNOHANG);
     }
+
+    public function writePid()
+    {
+        $pid = getmypid();
+        file_put_contents($this->pidfile, $pid);
+    }
+
+
 
     /**
      * Handles incoming connections from $this->port. Basically redirects to a slave.

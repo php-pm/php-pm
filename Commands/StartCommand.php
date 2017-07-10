@@ -45,7 +45,7 @@ class StartCommand extends Command
         $handler->setSocketPath($config['socket-path']);
         $handler->setConcurrentRequestsPerWorker($config['concurrent-requests']);
         $handler->setServingStatic($config['static']);
-
+        $handler->setPIDFile($config['pidfile']);
         $handler->run();
     }
 }
