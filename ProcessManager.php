@@ -466,7 +466,7 @@ class ProcessManager
         );
 
         $redirectionTries = 0;
-        $incoming->on('close', function () use (&$redirectionActive, &$redirectionTries, &$connectionOpen){
+        $incoming->on('close', function () use (&$connectionOpen){
             $connectionOpen = false;
         });
 
