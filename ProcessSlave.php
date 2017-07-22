@@ -415,10 +415,15 @@ class ProcessSlave
      */
     protected function serveStatic(\React\Http\Request $request, HttpResponse $response)
     {
-        $filePath = $this->getBridge()->getStaticDirectory() . $request->getPath();
+        $path = $request->getPath();
+
+        if ($path === '/') {
+            $path = '/index.html';
+        }
+
+        $filePath = $this->getBridge()->getStaticDirectory() . $path;
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
-
             $mTime = filemtime($filePath);
 
             if (isset($request->getHeaders()['If-Modified-Since'])) {
