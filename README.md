@@ -209,9 +209,6 @@ For all Wordpress lovers out there: PPM is not going to work with Wordpress due 
 We highly doubt that Wordpress is ever going to be compatible because its architecture is written in a way that makes it
 currently impossible to serve multiple requests in one application process.
 
-Each worker starts its own HTTP Server which listens on port 5501, 5502, 5503 etc. Range is `5501 -> 5500+<workersCount>`.
-You can integrate those workers directly in a load balancer like NGINX or use http://127.0.0.1:8080 directly.
-
 ### Performance (requests/s)
 
 6x4GHz Intel i7, 16GB RAM. 10 concurrent, 1000 total request: `ab -c 10 -n 1000 http://127.0.0.1:8080/`
