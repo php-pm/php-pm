@@ -1,16 +1,33 @@
 <?php
-declare(ticks = 1);
 
 namespace PHPPM;
 
-use PHPPM\React\HttpResponse;
-use PHPPM\React\HttpServer;
+use Aerys\Bootable;
+use Aerys\Host;
+use Aerys\Middleware;
+use Aerys\Request;
+use Aerys\Response;
+use Aerys\Root;
+use Aerys\Server;
+use Aerys\ServerObserver;
+use function Amp\asyncCall;
+use function Amp\call;
+use Amp\Coroutine;
+use Amp\Deferred;
+use Amp\Loop;
+use Amp\Promise;
+use Amp\Socket\ClientSocket;
+use Amp\Socket\Socket;
+use Amp\Success;
+use Amp\Uri\Uri;
 use PHPPM\Debug\BufferingLogger;
-use React\EventLoop\LoopInterface;
-use React\Socket\Connection;
+use Psr\Log\LoggerInterface as PsrLogger;
+use Psr\Log\NullLogger;
 use Symfony\Component\Debug\ErrorHandler;
+use function Aerys\initServer;
+use function Amp\Socket\connect;
 
-class ProcessSlave
+class ProcessSlave implements Bootable, ServerObserver
 {
     use ProcessCommunicationTrait;
 
@@ -22,28 +39,28 @@ class ProcessSlave
     public static $slave;
 
     /**
-     * The HTTP Server.
+     * The HTTP server.
      *
-     * @var React\Server
+     * @var Server
      */
     protected $server;
 
     /**
-     * @var LoopInterface
-     */
-    protected $loop;
-
-    /**
      * Connection to ProcessManager, master process.
      *
-     * @var \React\Socket\Connection
+     * @var ClientSocket
      */
-    protected $controller;
+    protected $masterSocket;
 
     /**
      * @var string
      */
     protected $bridgeName;
+
+    /**
+     * @var Root
+     */
+    protected $staticRoot;
 
     /**
      * @var Bridges\BridgeInterface
@@ -84,14 +101,12 @@ class ProcessSlave
      */
     protected $baseServer;
 
-    protected $logFormat = '[$time_local] $remote_addr - $remote_user "$request" $status $bytes_sent "$http_referer"';
-
     /**
      * Contains some configuration options.
      *
      * 'port' => int (server port)
      * 'appenv' => string (App environment)
-     * 'static' => boolean (true) (If it should server static files)
+     * 'static' => boolean (true) (If it should serve static files)
      * 'logging' => boolean (false) (If it should log all requests)
      * ...
      *
@@ -99,7 +114,9 @@ class ProcessSlave
      */
     protected $config;
 
-    public function __construct($bridgeName = null, $appBootstrap, array $config = [])
+    private $bootstrappingDeferred;
+
+    public function __construct(string $bridgeName = null, $appBootstrap, array $config = [])
     {
         $this->config = $config;
         $this->appBootstrap = $appBootstrap;
@@ -109,6 +126,8 @@ class ProcessSlave
         if ($this->config['session_path']) {
             session_save_path($this->config['session_path']);
         }
+
+        $this->bootstrappingDeferred = new Deferred;
     }
 
     /**
@@ -139,7 +158,7 @@ class ProcessSlave
         if ($this->errorLogger && $logs = $this->errorLogger->cleanLogs()) {
             $messages = array_map(
                 function ($item) {
-                    //array($level, $message, $context);
+                    // array($level, $message, $context);
                     $message = $item[1];
                     $context = $item[2];
 
@@ -159,30 +178,25 @@ class ProcessSlave
                                 );
                         }
                     }
+
                     return $message;
                 },
                 $logs
             );
+
             error_log(implode(PHP_EOL, $messages));
         }
 
         $this->inShutdown = true;
 
-        if ($this->loop) {
-            $this->sendCurrentFiles();
-            $this->loop->tick();
+        Promise\wait($this->sendCurrentFiles());
+
+        if ($this->masterSocket) {
+            $this->masterSocket->close();
         }
 
-        if ($this->controller && $this->controller->isWritable()) {
-            $this->controller->close();
-        }
         if ($this->server) {
-            @$this->server->close();
-        }
-        if ($this->loop) {
-            $this->sendCurrentFiles();
-            $this->loop->tick();
-            @$this->loop->stop();
+            Promise\wait($this->server->stop());
         }
 
         exit;
@@ -223,12 +237,13 @@ class ProcessSlave
      *
      * @throws \Exception
      */
-    protected function bootstrap($appBootstrap, $appenv, $debug)
+    protected function bootstrap($appBootstrap, $appenv, $debug): Promise
     {
         if ($bridge = $this->getBridge()) {
-            $bridge->bootstrap($appBootstrap, $appenv, $debug, $this->loop);
-            $this->sendMessage($this->controller, 'ready');
+            $bridge->bootstrap($appBootstrap, $appenv, $debug);
         }
+
+        return new Success;
     }
 
     /**
@@ -247,23 +262,28 @@ class ProcessSlave
     /**
      * Sends to the master a snapshot of current known php files, so it can track those files and restart
      * slaves if necessary.
+     *
+     * @return Promise
      */
-    protected function sendCurrentFiles()
+    protected function sendCurrentFiles(): Promise
     {
         if (!$this->isDebug()) {
-            return;
+            return new Success;
         }
 
         $files = array_merge($this->watchedFiles, get_included_files());
         $flipped = array_flip($files);
 
-        //speedy way checking if two arrays are different.
-        if (!$this->lastSentFiles || array_diff_key($flipped, $this->lastSentFiles)) {
-            $this->lastSentFiles = $flipped;
-            $this->sendMessage($this->controller, 'files', ['files' => $files]);
+        $this->watchedFiles = [];
+
+        // speedy way checking if two arrays are different.
+        if ($this->lastSentFiles && !array_diff_key($flipped, $this->lastSentFiles)) {
+            return new Success;
         }
 
-        $this->watchedFiles = [];
+        $this->lastSentFiles = $flipped;
+
+        return $this->sendMessage($this->masterSocket, 'files', ['files' => $files]);
     }
 
     /**
@@ -271,311 +291,163 @@ class ProcessSlave
      */
     public function run()
     {
-        $this->loop = \React\EventLoop\Factory::create();
-
         $this->errorLogger = BufferingLogger::create();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
-        $client = false;
-        for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
-            $client = @stream_socket_client($this->config['controllerHost'], $errno, $errstr);
-            if ($client) {
-                break;
+        Loop::run(function () {
+            $this->masterSocket = yield connect($this->config['controllerHost']);
+
+            Loop::onSignal(SIGPIPE, function () { /* do nothing, PHP's CLI version ignores SIGPIPE, but php-cgi doesn't */ });
+            Loop::onSignal(SIGTERM, [$this, 'shutdown']);
+            Loop::onSignal(SIGINT, [$this, 'shutdown']);
+            register_shutdown_function([$this, 'shutdown']);
+
+            (new Coroutine($this->receiveProcessMessages($this->masterSocket)))->onResolve(function () {
+                $this->shutdown();
+            });
+
+            $host = (new Host)
+                ->name("localhost")
+                ->expose($this->config['host'], $this->config['port'])
+                ->use($this)
+                ->use(function (Request $request, Response $response) {
+                    $this->prepareEnvironment($request);
+
+                    return $this->handleRequest($request, $response);
+                });
+
+            if ($this->isLogging()) {
+                $host->use(new RequestLogger(function (string $message) {
+                    Promise\rethrow($this->sendMessage($this->masterSocket, 'log', ['message' => $message]));
+                }));
             }
-        }
-        if (!$client) {
-            $message = "Could not bind to {$this->config['controllerHost']}. Error: [$errno] $errstr";
-            throw new \RuntimeException($message, $errno);
-        }
-        $this->controller = new \React\Socket\Connection($client, $this->loop);
 
-        $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
+            $this->server = initServer(new NullLogger, [$host], [
+                'maxRequestsPerConnection' => 1,
+                'debug' => $this->config['debug'],
+            ]);
 
-        $pcntl->on(SIGTERM, [$this, 'shutdown']);
-        $pcntl->on(SIGINT, [$this, 'shutdown']);
-        register_shutdown_function([$this, 'shutdown']);
+            yield $this->sendMessage($this->masterSocket, 'register', [
+                'pid' => getmypid(),
+                'port' => $this->config['port']
+            ]);
 
-        $this->bindProcessMessage($this->controller);
-        $this->controller->on(
-            'close',
-            \Closure::bind(
-                function () {
-                    $this->shutdown();
-                },
-                $this
-            )
-        );
-
-        $this->server = new React\Server($this->loop); //our version for now, because of unix socket support
-
-        $http = new HttpServer($this->server);
-        $http->on('request', array($this, 'onRequest'));
-
-        //port is only used for tcp connection. If unix socket, 'host' contains the socket path
-        $port = $this->config['port'];
-        $host = $this->config['host'];
-
-        $this->server->listen($port, $host);
-        $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
-
-        $this->loop->run();
+            yield $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
+            yield $this->server->start();
+            yield $this->sendMessage($this->masterSocket, 'ready');
+        });
     }
 
-    public function commandBootstrap(array $data, Connection $conn)
-    {
-        $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
-
-        $this->sendCurrentFiles();
+    public function boot(Server $server, PsrLogger $logger) {
+        $server->attach($this);
     }
 
-    /**
-     * Handles incoming requests and transforms a $request into a $response by reference.
-     *
-     * @param \React\Http\Request $request
-     * @param HttpResponse        $response
-     *
-     * @throws \Exception
-     */
-    public function onRequest(\React\Http\Request $request, HttpResponse $response)
+    public function update(Server $server): Promise {
+        $this->staticRoot = $this->staticRoot ?? new Root($this->getBridge()->getStaticDirectory());
+
+        return $this->staticRoot->update($server);
+    }
+
+    public function commandBootstrap(Socket $socket, array $data)
     {
-        $this->prepareEnvironment($request);
-
-        if ($this->isLogging()) {
-            $this->setupResponseLogging($request, $response);
-        }
-
-        $this->handleRequest($request, $response);
+        $this->bootstrappingDeferred->resolve();
     }
 
     /**
      * Handle a redirected request from master.
      *
-     * @param \React\Http\Request $request
-     * @param HttpResponse $response
+     * @param Request $request
+     * @param Response $response
+     *
+     * @return \Generator
      */
-    protected function handleRequest(\React\Http\Request $request, HttpResponse $response)
+    protected function handleRequest(Request $request, Response $response)
     {
         if ($bridge = $this->getBridge()) {
-
             if ($this->isServingStatic()) {
-                if (true === $this->serveStatic($request, $response)) {
+                yield call(function () use ($request, $response) {
+                    return $this->serveStatic($request, $response);
+                });
+
+                if ($response->state() === Response::STARTED) {
                     return;
                 }
             }
 
-            $bridge->onRequest($request, $response);
-
-            $this->sendCurrentFiles();
+            yield call([$bridge, "onRequest"], $request, $response);
+            yield $this->sendCurrentFiles();
         } else {
-            $response->writeHead('404');
+            $response->setStatus(404);
             $response->end('No Bridge Defined.');
         }
 
         if (headers_sent()) {
-            //when a script sent headers the cgi process needs to die because the second request
-            //trying to send headers again will fail (headers already sent fatal). Its best to not even
-            //try to send headers because this break the whole approach of php-pm using php-cgi.
+            // when a script sent headers the cgi process needs to die because the second request
+            // trying to send headers again will fail (headers already sent fatal). It's best to not even
+            // try to send headers because this break the whole approach of php-pm using php-cgi.
+
             error_log(
                 'Headers have been sent, but not redirected to client. Force restart of a worker. ' .
                 'Make sure your application does not send headers on its own.'
             );
+
             $this->shutdown();
         }
     }
 
-    protected function prepareEnvironment(\React\Http\Request $request)
+    protected function prepareEnvironment(Request $request)
     {
+        $now = \microtime(true);
+        $uri = new Uri($request->getUri());
+
         $_SERVER = $this->baseServer;
         $_SERVER['REQUEST_METHOD'] = $request->getMethod();
-        $_SERVER['REQUEST_TIME'] = (int)microtime(true);
-        $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
-        $_SERVER['QUERY_STRING'] = http_build_query($request->getQuery());
+        $_SERVER['REQUEST_TIME'] = (int) $now;
+        $_SERVER['REQUEST_TIME_FLOAT'] = $now;
+        $_SERVER['QUERY_STRING'] = $uri->getQuery();
 
-        foreach ($request->getHeaders() as $name => $value) {
-            $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
+        foreach ($request->getAllHeaders() as $name => $values) {
+            $key = 'HTTP_' . \strtoupper(\str_replace('-', '_', $name));
+
+            // Ignore already present keys, mitigates attacks like HTTPoxy.
+            if (isset($_SERVER[$key])) {
+                continue;
+            }
+
+            $_SERVER[$key] = \implode(",", $values);
         }
 
-        //We receive X-PHP-PM-Remote-IP from ProcessManager.
-        //This header is only used to proxy the remoteAddress from master -> slave.
+        // We receive X-PHP-PM-Remote-IP from ProcessManager.
+        // This header is only used to proxy the remoteAddress from master -> slave.
         $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_IP'];
         unset($_SERVER['HTTP_X_PHP_PM_REMOTE_IP']);
 
-        $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-        $_SERVER['REQUEST_URI'] = $request->getPath();
-        $_SERVER['DOCUMENT_ROOT'] = isset($_ENV['DOCUMENT_ROOT']) ? $_ENV['DOCUMENT_ROOT'] : getcwd();
-        $_SERVER['SCRIPT_NAME'] = isset($_ENV['SCRIPT_NAME']) ? $_ENV['SCRIPT_NAME'] : 'index.php';
+        $_SERVER['SERVER_NAME'] = $_SERVER['HTTP_HOST'] ?? '';
+        $_SERVER['REQUEST_URI'] = $uri->getPath();
+        $_SERVER['DOCUMENT_ROOT'] = $_ENV['DOCUMENT_ROOT'] ?? getcwd();
+        $_SERVER['SCRIPT_NAME'] = $_ENV['SCRIPT_NAME'] ?? 'index.php';
         $_SERVER['SCRIPT_FILENAME'] = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/' . $_SERVER['SCRIPT_NAME'];
     }
 
     /**
-     * @param \React\Http\Request $request
-     * @param HttpResponse        $response
+     * @param Request  $request
+     * @param Response $response
      *
-     * @return bool returns true if successfully served
+     * @return Promise|\Generator|null
      */
-    protected function serveStatic(\React\Http\Request $request, HttpResponse $response)
+    protected function serveStatic(Request $request, Response $response)
     {
-        $path = $request->getPath();
+        $uri = new Uri($request->getUri());
+        $path = $uri->getPath();
 
         if ($path === '/') {
             $path = '/index.html';
         }
 
-        $filePath = $this->getBridge()->getStaticDirectory() . $path;
-
-        if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
-            $mTime = filemtime($filePath);
-
-            if (isset($request->getHeaders()['If-Modified-Since'])) {
-                $ifModifiedSince = $request->getHeaders()['If-Modified-Since'];
-                if ($ifModifiedSince && strtotime($ifModifiedSince) === $mTime) {
-                    // Client's cache IS current, so we just respond '304 Not Modified'.
-                    $response->writeHead(304, [
-                        'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
-                    ]);
-                    $response->end();
-                    return true;
-                }
-            }
-
-            $expires = 3600; //1 h
-            $response->writeHead(200, [
-                'Content-Type' => $this->mimeContentType($filePath),
-                'Content-Length' => filesize($filePath),
-                'Pragma' => 'public',
-                'Cache-Control' => 'max-age=' . $expires,
-                'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
-                'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
-            ]);
-            $response->end(file_get_contents($filePath));
-
-            return true;
+        if (substr($path, -4) === '.php') {
+            return null; // continue with other responders
         }
 
-        return false;
-    }
-
-    protected function setupResponseLogging(\React\Http\Request $request, HttpResponse $response)
-    {
-        $timeLocal = date('d/M/Y:H:i:s O');
-
-        $response->on('end', function () use ($request, $response, $timeLocal) {
-
-            $requestString = $request->getMethod() . ' ' . $request->getPath() . ' HTTP/' . $request->getHttpVersion();
-            $statusCode = $response->getStatusCode();
-
-            if ($response->getStatusCode() < 400) {
-                $requestString = "<info>$requestString</info>";
-                $statusCode = "<info>$statusCode</info>";
-            }
-
-            $message = str_replace([
-                '$remote_addr',
-                '$remote_user',
-                '$time_local',
-                '$request',
-                '$status',
-                '$bytes_sent',
-                '$http_referer',
-                '$http_user_agent',
-            ], [
-                $_SERVER['REMOTE_ADDR'],
-                '-', //todo remote_user
-                $timeLocal,
-                $requestString,
-                $statusCode,
-                $response->getBytesSent(),
-                isset($request->getHeaders()['Referer']) ? $request->getHeaders()['Referer'] : '-',
-                isset($request->getHeaders()['User-Agent']) ? $request->getHeaders()['User-Agent'] : '-',
-            ],
-                $this->logFormat);
-
-            if ($response->getStatusCode() >= 400) {
-                $message = "<error>$message</error>";
-            }
-
-
-            $this->sendMessage($this->controller, 'log', ['message' => $message]);
-        });
-    }
-
-    /**
-     * @param string $filename
-     *
-     * @return string
-     */
-    protected function mimeContentType($filename)
-    {
-        $mimeTypes = array(
-            'txt' => 'text/plain',
-            'htm' => 'text/html',
-            'html' => 'text/html',
-            'php' => 'text/html',
-            'css' => 'text/css',
-            'js' => 'application/javascript',
-            'ts' => 'application/javascript',
-            'json' => 'application/json',
-            'xml' => 'application/xml',
-            'swf' => 'application/x-shockwave-flash',
-            'flv' => 'video/x-flv',
-
-            // images
-            'png' => 'image/png',
-            'jpe' => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'jpg' => 'image/jpeg',
-            'gif' => 'image/gif',
-            'bmp' => 'image/bmp',
-            'ico' => 'image/vnd.microsoft.icon',
-            'tiff' => 'image/tiff',
-            'tif' => 'image/tiff',
-            'svg' => 'image/svg+xml',
-            'svgz' => 'image/svg+xml',
-
-            // archives
-            'zip' => 'application/zip',
-            'rar' => 'application/x-rar-compressed',
-            'exe' => 'application/x-msdownload',
-            'msi' => 'application/x-msdownload',
-            'cab' => 'application/vnd.ms-cab-compressed',
-
-            // audio/video
-            'mp3' => 'audio/mpeg',
-            'qt' => 'video/quicktime',
-            'mov' => 'video/quicktime',
-
-            // adobe
-            'pdf' => 'application/pdf',
-            'psd' => 'image/vnd.adobe.photoshop',
-            'ai' => 'application/postscript',
-            'eps' => 'application/postscript',
-            'ps' => 'application/postscript',
-
-            // ms office
-            'doc' => 'application/msword',
-            'rtf' => 'application/rtf',
-            'xls' => 'application/vnd.ms-excel',
-            'ppt' => 'application/vnd.ms-powerpoint',
-
-            // open office
-            'odt' => 'application/vnd.oasis.opendocument.text',
-            'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
-        );
-
-        $ext = strtolower(substr($filename, strrpos($filename, '.') + 1));
-        if (isset($mimeTypes[$ext])) {
-            return $mimeTypes[$ext];
-        } elseif (function_exists('finfo_open')) {
-            $finfo = finfo_open(FILEINFO_MIME);
-
-            //we need to suppress all stuff of this call due to https://bugs.php.net/bug.php?id=71615
-            $mimetype = @finfo_file($finfo, $filename);
-            finfo_close($finfo);
-            if ($mimetype) {
-                return $mimetype;
-            }
-        }
-
-        return 'application/octet-stream';
+        return ($this->staticRoot)($request, $response);
     }
 }

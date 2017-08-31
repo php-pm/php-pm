@@ -2,10 +2,12 @@
 
 namespace PHPPM;
 
-use React\Socket\Connection;
+use Amp\Promise;
+use Amp\Socket\ServerSocket;
+use Amp\Socket\Socket;
 
 /**
- * Little trait used in ProcessManager and ProcessSlave to have a simple json process communication.
+ * Little trait used in ProcessManager and ProcessSlave to have a simple JSON process communication.
  */
 trait ProcessCommunicationTrait
 {
@@ -19,120 +21,60 @@ trait ProcessCommunicationTrait
     /**
      * Parses a received message. Redirects to the appropriate `command*` method.
      *
-     * @param array $data
-     * @param Connection $conn
+     * @param Socket $socket Socket where this message has been received.
+     * @param string $data JSON encoded message.
      *
-     * @throws \Exception when invalid 'cmd' in $data.
+     * @throws \Exception If $data contains an invalid 'cmd' entry.
      */
-    public function processMessage($data, Connection $conn)
+    public function processMessage(Socket $socket, string $data)
     {
         $array = json_decode($data, true);
+        $method = 'command' . $array['cmd'];
 
-        $method = 'command' . ucfirst($array['cmd']);
-        if (is_callable(array($this, $method))) {
-            $this->$method($array, $conn);
-        } else {
+        if (!is_callable(array($this, $method))) {
             throw new \Exception(sprintf('Command %s not found. Got %s', $method, $data));
         }
+
+        $this->$method($socket, $array);
     }
 
     /**
-     * Binds data-listener to $conn and waits for incoming commands.
+     * Reads data from the socket and parses it.
      *
-     * @param Connection $conn
+     * @param Socket $socket Socket to read data from.
+     *
+     * @return \Generator
      */
-    protected function bindProcessMessage(Connection $conn)
+    protected function receiveProcessMessages(Socket $socket): \Generator
     {
         $buffer = '';
 
-        $conn->on(
-            'data',
-            \Closure::bind(
-                function ($data) use ($conn, &$buffer) {
-                    $buffer .= $data;
+        while (null !== $chunk = yield $socket->read()) {
+            $buffer .= $chunk;
 
-                    if (substr($buffer, -strlen(PHP_EOL)) === PHP_EOL) {
-                        foreach (explode(PHP_EOL, $buffer) as $message) {
-                            if ($message) {
-                                $this->processMessage($message, $conn);
-                            }
-                        }
+            while (false !== $eolPosition = \strpos($buffer, \PHP_EOL)) {
+                $message = substr($buffer, 0, $eolPosition);
+                $buffer = \substr($buffer, $eolPosition + \strlen(\PHP_EOL));
 
-                        $buffer = '';
-                    }
-                },
-                $this
-            )
-        );
+                $this->processMessage($socket, $message);
+            }
+        }
     }
 
     /**
-     * Sends a message through $conn.
+     * Sends a message on the specified socket.
      *
-     * @param Connection $conn
-     * @param string $command
-     * @param array $message
+     * @param Socket $socket Socket to send the message to.
+     * @param string $command Command to send.
+     * @param array  $message
+     *
+     * @return Promise Resolves once the write is complete.
      */
-    protected function sendMessage(Connection $conn, $command, array $message = [])
+    protected function sendMessage(Socket $socket, string $command, array $message = []): Promise
     {
         $message['cmd'] = $command;
-        $conn->write(json_encode($message) . PHP_EOL);
-    }
 
-    /**
-     *
-     * @param string $affix
-     * @param bool $removeOld
-     * @return string
-     */
-    protected function getSockFile($affix, $removeOld)
-    {
-        if (Utils::isWindows()) {
-            //we have no unix domain sockets support
-            return '127.0.0.1';
-        }
-        //since all commands set setcwd() we can make sure we are in the current application folder
-
-        if ('/' === substr($this->socketPath, 0, 1)) {
-            $run = $this->socketPath;
-        } else {
-            $run = getcwd() . '/' . $this->socketPath;
-        }
-
-        if ('/' !== substr($run, -1)) {
-            $run .= '/';
-        }
-
-        if (!is_dir($run) && !mkdir($run, 0777, true)) {
-            throw new \RuntimeException(sprintf('Could not create %s folder.', $run));
-        }
-
-        $sock = $run. $affix . '.sock';
-
-        if ($removeOld && file_exists($sock)) {
-            unlink($sock);
-        }
-
-        return 'unix://' . $sock;
-    }
-
-    /**
-     * @param int $port
-     *
-     * @return string
-     */
-    protected function getNewSlaveSocket($port)
-    {
-        return $this->getSockFile($port, true);
-    }
-
-    /**
-     * @param bool $removeOld
-     * @return string
-     */
-    protected function getNewControllerHost($removeOld = true)
-    {
-        return $this->getSockFile('controller', $removeOld);
+        return $socket->write(json_encode($message) . PHP_EOL);
     }
 
     /**

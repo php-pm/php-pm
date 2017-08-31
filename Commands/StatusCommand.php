@@ -43,9 +43,10 @@ class StatusCommand extends Command
     /**
      * @param array|string $status
      * @param int $indentLevel
+     *
      * @return string
      */
-    private function parseStatus($status, $indentLevel = 0)
+    private function parseStatus($status, $indentLevel = 0): string
     {
         if (is_array($status)) {
             $p = PHP_EOL;
@@ -55,7 +56,7 @@ class StatusCommand extends Command
         } else {
             $p = $status . PHP_EOL;
         }
+
         return $p;
     }
-
 }

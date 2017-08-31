@@ -1,9 +1,22 @@
 <?php
-declare(ticks = 1);
 
 namespace PHPPM;
 
-use React\Socket\Connection;
+use function Amp\asyncCall;
+use function Amp\asyncCoroutine;
+use Amp\ByteStream;
+use Amp\ByteStream\ResourceInputStream;
+use Amp\Coroutine;
+use Amp\Loop;
+use function Amp\Promise\rethrow;
+use Amp\Socket\ClientConnectContext;
+use function Amp\Socket\connect;
+use function Amp\Socket\listen;
+use Amp\Socket\Server;
+use Amp\Socket\ServerListenContext;
+use Amp\Socket\ServerSocket;
+use Amp\Socket\Socket;
+use Amp\Socket\SocketException;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
@@ -25,14 +38,9 @@ class ProcessManager
     protected $ports = [];
 
     /**
-     * @var \React\EventLoop\LibEventLoop|\React\EventLoop\StreamSelectLoop
+     * @var Server
      */
-    protected $loop;
-
-    /**
-     * @var React\Server
-     */
-    protected $controller;
+    protected $controllerSocket;
 
     /**
      * @var string
@@ -40,14 +48,9 @@ class ProcessManager
     protected $controllerHost;
 
     /**
-     * @var \React\Socket\Server
+     * @var Socket
      */
     protected $web;
-
-    /**
-     * @var \React\SocketClient\TcpConnector
-     */
-    protected $tcpConnector;
 
     /**
      * @var int
@@ -182,15 +185,11 @@ class ProcessManager
      * @var int
      */
     protected $timeout = 30;
+
     /**
      * Location of the file where we're going to store the PID of the master process
      */
     protected $pidfile;
-
-    /**
-     * Controller port
-     */
-    const CONTROLLER_PORT = 5500;
 
     /**
      * ProcessManager constructor.
@@ -200,12 +199,13 @@ class ProcessManager
      * @param string          $host
      * @param int             $slaveCount
      */
-    public function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
+    public function __construct(OutputInterface $output, int $port = 8080, string $host = '127.0.0.1', int $slaveCount = 8)
     {
         $this->output = $output;
-        $this->slaveCount = $slaveCount;
-        $this->host = $host;
         $this->port = $port;
+        $this->host = $host;
+        $this->slaveCount = $slaveCount;
+
         register_shutdown_function([$this, 'shutdown']);
     }
 
@@ -225,17 +225,13 @@ class ProcessManager
         	: '<error>Termination received, exiting.</error>'
         );
 
-        //this method is also called during startup when something crashed, so
-        //make sure we don't operate on nulls.
-        if ($this->controller) {
-            @$this->controller->close();
+        // this method is also called during startup when something crashed, so
+        // make sure we don't operate on nulls.
+        if ($this->controllerSocket) {
+            $this->controllerSocket->close();
         }
         if ($this->web) {
-            @$this->web->close();
-        }
-        if ($this->loop) {
-            $this->loop->tick();
-            $this->loop->stop();
+            $this->web->close();
         }
 
         foreach ($this->slaves as $slave) {
@@ -244,19 +240,20 @@ class ProcessManager
             }
 
             if ($slave['pid']) {
-                //make sure its dead
+                // make sure its dead
                 posix_kill($slave['pid'], SIGKILL);
             }
         }
 
-        unlink($this->pidfile);
+        @unlink($this->pidfile);
+
         exit;
     }
 
     /**
      * @param int $maxRequests
      */
-    public function setMaxRequests($maxRequests)
+    public function setMaxRequests(int $maxRequests)
     {
         $this->maxRequests = $maxRequests;
     }
@@ -264,7 +261,7 @@ class ProcessManager
     /**
      * @param string $phpCgiExecutable
      */
-    public function setPhpCgiExecutable($phpCgiExecutable)
+    public function setPhpCgiExecutable(string $phpCgiExecutable)
     {
         $this->phpCgiExecutable = $phpCgiExecutable;
     }
@@ -272,7 +269,7 @@ class ProcessManager
     /**
      * @param boolean $concurrentRequestsPerWorker
      */
-    public function setConcurrentRequestsPerWorker($concurrentRequestsPerWorker)
+    public function setConcurrentRequestsPerWorker(bool $concurrentRequestsPerWorker)
     {
         $this->concurrentRequestsPerWorker = $concurrentRequestsPerWorker;
     }
@@ -280,7 +277,7 @@ class ProcessManager
     /**
      * @param string $bridge
      */
-    public function setBridge($bridge)
+    public function setBridge(string $bridge)
     {
         $this->bridge = $bridge;
     }
@@ -296,7 +293,7 @@ class ProcessManager
     /**
      * @param string $appBootstrap
      */
-    public function setAppBootstrap($appBootstrap)
+    public function setAppBootstrap(string $appBootstrap)
     {
         $this->appBootstrap = $appBootstrap;
     }
@@ -312,7 +309,7 @@ class ProcessManager
     /**
      * @param string|null $appenv
      */
-    public function setAppEnv($appenv)
+    public function setAppEnv(string $appenv = null)
     {
         $this->appenv = $appenv;
     }
@@ -336,7 +333,7 @@ class ProcessManager
     /**
      * @param boolean $logging
      */
-    public function setLogging($logging)
+    public function setLogging(bool $logging)
     {
         $this->logging = $logging;
     }
@@ -352,12 +349,12 @@ class ProcessManager
     /**
      * @param boolean $servingStatic
      */
-    public function setServingStatic($servingStatic)
+    public function setServingStatic(bool $servingStatic)
     {
         $this->servingStatic = $servingStatic;
     }
 
-    public function setPIDFile($pidfile)
+    public function setPIDFile(string $pidfile)
     {
         $this->pidfile = $pidfile;
     }
@@ -372,7 +369,7 @@ class ProcessManager
     /**
      * @param boolean $debug
      */
-    public function setDebug($debug)
+    public function setDebug(bool $debug)
     {
         $this->debug = $debug;
     }
@@ -384,47 +381,69 @@ class ProcessManager
     {
         Debug::enable();
 
-        //make whatever is necessary to disable all stuff that could buffer output
+        // make whatever is necessary to disable all stuff that could buffer output
         ini_set('zlib.output_compression', 0);
         ini_set('output_buffering', 0);
         ini_set('implicit_flush', 1);
         ob_implicit_flush(1);
 
-        $this->loop = \React\EventLoop\Factory::create();
-        $this->controller = new React\Server($this->loop);
-        $this->controller->on('connection', array($this, 'onSlaveConnection'));
+        $this->controllerSocket = listen('tcp://127.0.0.1:0');
+        $this->controllerHost = $this->controllerSocket->getAddress();
 
-        $this->controllerHost = $this->getNewControllerHost();
-        $this->controller->listen(self::CONTROLLER_PORT, $this->controllerHost);
+        asyncCall(function () {
+            while (null !== $client = yield $this->controllerSocket->accept()) {
+                $this->onSlaveConnection($client);
+            }
+        });
 
-        $this->web = new \React\Socket\Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
-        $this->web->on('connection', array($this, 'onWeb'));
+        $this->web = listen($this->host . ":" . $this->port);
 
-        $this->tcpConnector = new \React\SocketClient\TcpConnector($this->loop);
+        asyncCall(function () {
+            while (null !== $client = yield $this->web->accept()) {
+                $this->onWeb($client);
+            }
+        });
 
-        $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
-
-        $pcntl->on(SIGTERM, [$this, 'shutdown']);
-        $pcntl->on(SIGINT, [$this, 'shutdown']);
-        $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
-        $pcntl->on(SIGUSR1, [$this, 'restartWorker']);
+        Loop::onSignal(SIGTERM, [$this, 'shutdown']);
+        Loop::onSignal(SIGINT, [$this, 'shutdown']);
+        Loop::onSignal(SIGCHLD, [$this, 'handleSigchld']);
+        Loop::onSignal(SIGUSR1, [$this, 'restartWorker']);
 
         if ($this->isDebug()) {
-            $this->loop->addPeriodicTimer(0.5, function () {
+            Loop::repeat(500, function () {
                 $this->checkChangedFiles();
             });
         }
 
         $this->isRunning = true;
-        $loopClass = (new \ReflectionClass($this->loop))->getShortName();
+        $loopClass = (new \ReflectionClass(Loop::get()))->getShortName();
 
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
         $this->writePid();
+
         for ($i = 0; $i < $this->slaveCount; $i++) {
-            $this->newInstance((self::CONTROLLER_PORT+1) + $i);
+            // We bind a dynamic port per slave here, because Aerys doesn't support dynamic host ports. Note that we
+            // only bind these ports, but do not listen on them, so that no clients are in the socket's accept queue.
+            $context = \stream_context_create([
+                'socket' => [
+                    'so_reuseport' => true,
+                ],
+            ]);
+
+            $uri = 'tcp://127.0.0.1:0';
+            $server = @\stream_socket_server($uri, $errno, $errstr, STREAM_SERVER_BIND, $context);
+
+            if (!$server || $errno) {
+                throw new SocketException(\sprintf("Could not create server %s: [Error: #%d] %s", $uri, $errno, $errstr));
+            }
+
+            $socketAddr = \stream_socket_get_name($server, false);
+            $socketPort = \explode(':', $socketAddr)[1];
+
+            $this->newInstance($socketPort);
         }
 
-        $this->loop->run();
+        Loop::run();
     }
 
     /**
@@ -441,55 +460,23 @@ class ProcessManager
         file_put_contents($this->pidfile, $pid);
     }
 
-
-
     /**
      * Handles incoming connections from $this->port. Basically redirects to a slave.
      *
-     * @param Connection $incoming incoming connection from react
+     * @param Socket $incoming incoming connection from react
      */
-    public function onWeb(Connection $incoming)
+    public function onWeb(Socket $incoming)
     {
-        //preload sent data from $incoming to $buffer, otherwise it would be lost,
-        //since getNextSlave is async.
-        $redirectionActive = false;
-        $connectionOpen = true;
-
-        $incomingBuffer = '';
-        $incoming->on(
-            'data',
-            function ($data) use (&$redirectionActive, &$incomingBuffer) {
-                if (!$redirectionActive) {
-                    $incomingBuffer .= $data;
-                }
-            }
-        );
-
-        $redirectionTries = 0;
-        $incoming->on('close', function () use (&$connectionOpen){
-            $connectionOpen = false;
-        });
-
+        $redirectionTries = 1;
         $start = microtime(true);
-        $redirectionTries++;
-        $redirectRequest = function ($id) use (&$redirectRequest, &$incoming, &$incomingBuffer, &$redirectionActive, $start, &$redirectionTries, &$connectionOpen) {
-            if (!$connectionOpen) {
-                //since the initial connection of a client and getting a free worker the client meanwhile closed the connection,
-                //so stop anything here.
-                return;
-            }
 
-            if (!is_resource($incoming->stream)) {
-                //Firefox closes somehow a connection directly after opening, at this state we need to check
-                //whether the connection is still alive, to keep going. This check prevents the server from crashing
-                return;
-            }
-
+        $redirectRequest = function ($id) use (&$redirectRequest, &$incoming, $start, &$redirectionTries) {
             $took = microtime(true) - $start;
+
             if ($this->output->isVeryVerbose() && $took > 1) {
-                    $this->output->writeln(
-                        sprintf('<info>took abnormal %f seconds for choosing next free worker</info>', $took)
-                    );
+                $this->output->writeln(
+                    sprintf('<info>took abnormal %f seconds for choosing next free worker</info>', $took)
+                );
             }
 
             $slave =& $this->slaves[$id];
@@ -497,13 +484,20 @@ class ProcessManager
             $slave['connections']++;
 
             $start = microtime(true);
-            $stream = @stream_socket_client($slave['host'], $errno, $errstr, $this->timeout);
-            if (!$stream || !is_resource($stream)) {
-                //we failed to connect to the worker. Maybe because of timeouts or it is in a crashed state
-                //and is currently dieing.
-                //since we don't know whether the worker is only very busy or dieing we just
-                //set it back to available worker list. If it is really dying it will be
-                //removed from the available worker list by itself during connection:close event.
+
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln('Redirecting request to slave ' . $slave['port']);
+            }
+
+            try {
+                /** @var Socket $slaveSocket */
+                $slaveSocket = yield connect($slave['host'], (new ClientConnectContext())->withConnectTimeout($this->timeout));
+            } catch (SocketException $e) {
+                // we failed to connect to the worker. Maybe because of timeouts or it is in a crashed state
+                // and is currently dieing.
+                // since we don't know whether the worker is only very busy or dieing we just
+                // set it back to available worker list. If it is really dying it will be
+                // removed from the available worker list by itself during connection:close event.
                 $slave['busy'] = false;
                 $slave['connections']--;
 
@@ -511,21 +505,21 @@ class ProcessManager
                     $this->output->writeln(
                         sprintf(
                             '<error>Connection to worker %d failed. Try #%d, took %fs. ' .
-                            'Try increasing your timeout of %d. Error message: [%d] %s</error>',
-                            $id, $redirectionTries, microtime(true) - $start, $this->timeout, $errno, $errstr
+                            'Try increasing your timeout of %d. Error message: %s</error>',
+                            $id, $redirectionTries, microtime(true) - $start, $this->timeout, $e->getMessage()
                         )
                     );
                 }
 
-                //Try next free client. It's important to do this here due to $incomingBuffer.
+                // Try next free client. It's important to do this here due to $incomingBuffer.
                 $redirectionTries++;
                 $this->getNextSlave($redirectRequest);
+
                 return;
             }
 
-            $connection = new \React\Socket\Connection($stream, $this->loop);
-
             $took = microtime(true) - $start;
+
             if ($this->output->isVeryVerbose() && $took > 1) {
                 $this->output->writeln(
                     sprintf('<info>took abnormal %f seconds for connecting to :%d</info>', $took, $slave['port'])
@@ -533,121 +527,61 @@ class ProcessManager
             }
 
             $start = microtime(true);
+            $buffer = "";
 
-            $headersToReplace = ['X-PHP-PM-Remote-IP' => parse_url($incoming->getRemoteAddress(), PHP_URL_HOST)];
-            $headerRedirected = false;
+            while (false === strpos($buffer, "\r\n\r\n")) {
+                $chunk = yield $incoming->read();
 
-            if ($this->isHeaderEnd($incomingBuffer)) {
-                $incomingBuffer = $this->replaceHeader($incomingBuffer, $headersToReplace);
-                $headerRedirected = true;
-                $connection->write($incomingBuffer);
+                if ($chunk === null) { // socket closed
+                    return;
+                }
+
+                $buffer .= $chunk;
             }
 
-            $redirectionActive = true;
+            $position = strpos($buffer, "\r\n\r\n");
+            $head = substr($buffer, 0, $position + 4);
+            $body = substr($buffer, $position + 4);
 
-            $connection->on(
-                'close',
-                function () use ($incoming, &$slave, $start) {
+            // Rewrite port in host header to make Aerys' VHost matching happy
+            $hostHeaderRegex = "(\r\n(Host): ([^:]+)(?::" . $this->port . ")?\r\n)i";
+            $head = \preg_replace($hostHeaderRegex, "\r\n\\1: \\2:" . $slave['port'] . "\r\n", $head);
 
-                    $took = microtime(true) - $start;
-                    if ($this->output->isVeryVerbose() && $took > 1) {
-                        $this->output->writeln(
-                            sprintf('<info>took abnormal %f seconds for handling a connection</info>', $took)
-                        );
-                    }
+            $head = str_replace("\r\n\r\n", "\r\nx-php-pm-remote-ip: " . parse_url($incoming->getRemoteAddress(), PHP_URL_HOST) . "\r\n\r\n", $head);
+            $buffer = $head . $body;
 
-                    $slave['busy'] = false;
-                    $slave['connections']--;
-                    $slave['requests']++;
-                    $incoming->end();
+            yield $slaveSocket->write($buffer);
 
-                    /** @var Connection $connection */
-                    $connection = $slave['connection'];
+            rethrow(ByteStream\pipe($incoming, $slaveSocket));
+            yield ByteStream\pipe($slaveSocket, $incoming);
 
-                    if ($slave['requests'] >= $this->maxRequests) {
-                        $slave['ready'] = false;
-                        $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $slave['port'], $this->maxRequests));
-                        $connection->close();
-                    } else if ($slave['closeWhenFree']) {
-                        $connection->close();
-                    }
-                }
-            );
+            $took = microtime(true) - $start;
 
-            $connection->on(
-                'data',
-                function ($buffer) use ($incoming) {
-                    $incoming->write($buffer);
-                }
-            );
+            if ($this->output->isVeryVerbose() && $took > 1) {
+                $this->output->writeln(
+                    sprintf('<info>took abnormal %f seconds for handling a connection</info>', $took)
+                );
+            }
 
-            $incoming->on(
-                'data',
-                function ($buffer) use ($connection, &$incomingBuffer, $headersToReplace, &$headerRedirected) {
+            $slave['busy'] = false;
+            $slave['connections']--;
+            $slave['requests']++;
 
-                    if (!$headerRedirected) {
-                        $incomingBuffer .= $buffer;
-                        if ($this->isHeaderEnd($incomingBuffer)) {
-                            $incomingBuffer = $this->replaceHeader($incomingBuffer, $headersToReplace);
-                            $headerRedirected = true;
-                            $connection->write($incomingBuffer);
-                        } else {
-                            //head has not completely received yet, wait
-                        }
-                    } else {
-                        //incomingBuffer has already been redirected, so redirect now buffer per buffer
-                        $connection->write($buffer);
-                    }
-                }
-            );
+            $incoming->close();
 
-            $incoming->on(
-                'close',
-                function () use ($connection) {
-                    $connection->close();
-                }
-            );
+            /** @var Socket $socket */
+            $socket = $slave['connection'];
+
+            if ($slave['requests'] >= $this->maxRequests) {
+                $slave['ready'] = false;
+                $this->output->writeln(sprintf('Restart worker %d because it reached maxRequests of %d', $slave['port'], $this->maxRequests));
+                $socket->close();
+            } else if ($slave['closeWhenFree']) {
+                $socket->close();
+            }
         };
 
-        $this->getNextSlave($redirectRequest);
-    }
-
-
-    /**
-     * Checks whether the end of the header is in $buffer.
-     *
-     * @param string $buffer
-     *
-     * @return bool
-     */
-    protected function isHeaderEnd($buffer) {
-        return false !== strpos($buffer, "\r\n\r\n");
-    }
-
-    /**
-     * Replaces or injects header
-     *
-     * @param string   $header
-     * @param string[] $headersToReplace
-     *
-     * @return string
-     */
-    protected function replaceHeader($header, $headersToReplace) {
-        $result = $header;
-
-        foreach ($headersToReplace as $key => $value) {
-            if (false !== $headerPosition = stripos($result, $key . ':')) {
-                //check how long the header is
-                $length = strpos(substr($header, $headerPosition), "\r\n");
-                $result = substr_replace($result, "$key: $value", $headerPosition, $length);
-            } else {
-                //$key is not in header yet, add it at the end
-                $end = strpos($result, "\r\n\r\n");
-                $result = substr_replace($result, "\r\n$key: $value", $end, 0);
-            }
-        }
-
-        return $result;
+        $this->getNextSlave(asyncCoroutine($redirectRequest));
     }
 
     /**
@@ -667,12 +601,12 @@ class ProcessManager
                 }
 
                 if (!$this->concurrentRequestsPerWorker && $slave['busy']) {
-                    //we skip workers that are busy, means worker that are currently handle a connection
-                    //this makes it more robust since most applications are not made to handle
-                    //several request at the same time - even when one request is streaming. Would lead
-                    //to strange effects&crashes in high traffic sites if not considered.
-                    //maybe in the future this can be set application specific.
-                    //Rule of thumb: The application may not operate on globals, statics or same file paths to get this working.
+                    // we skip workers that are busy, means worker that are currently handle a connection
+                    // this makes it more robust since most applications are not made to handle
+                    // several request at the same time - even when one request is streaming. Would lead
+                    // to strange effects&crashes in high traffic sites if not considered.
+                    // maybe in the future this can be set application specific.
+                    // Rule of thumb: The application may not operate on globals, statics or same file paths to get this working.
                     continue;
                 }
 
@@ -690,7 +624,9 @@ class ProcessManager
 
                 return;
             }
-            $this->loop->futureTick($checkSlave);
+
+            // TODO: Replace with more efficient solution that doesn't burn the CPU
+            Loop::defer($checkSlave);
         };
 
         $checkSlave();
@@ -699,76 +635,68 @@ class ProcessManager
     /**
      * Handles data communication from slave -> master
      *
-     * @param Connection $conn
+     * @param ServerSocket $socket
      */
-    public function onSlaveConnection(Connection $conn)
+    public function onSlaveConnection(ServerSocket $socket)
     {
-        $this->bindProcessMessage($conn);
+        $promise = new Coroutine($this->receiveProcessMessages($socket));
+        $promise->onResolve(function (\Throwable $error = null) use ($socket) {
+            if ($this->inShutdown) {
+                return;
+            }
 
-        $conn->on(
-            'close',
-            \Closure::bind(
-                function () use ($conn) {
-                    if ($this->inShutdown) {
-                        return;
-                    }
+            if ($error) {
+                $this->output->writeln('<error>' . $error->getMessage() . '</error>');
+            }
 
-                    if (!$this->isConnectionRegistered($conn)) {
-                        // this connection is not registered, so it died during the ProcessSlave constructor.
-                        $this->output->writeln(
-                            '<error>Worker permanently closed during PHP-PM bootstrap. Not so cool. ' .
-                            'Not your fault, please create a ticket at github.com/php-pm/php-pm with' .
-                            'the output of `ppm start -vv`.</error>'
-                        );
+            if (!$this->isConnectionRegistered($socket)) {
+                // this connection is not registered, so it died during the ProcessSlave constructor.
+                $this->output->writeln(
+                    '<error>Worker permanently closed during PHP-PM bootstrap. Not so cool. ' .
+                    'Not your fault, please create a ticket at github.com/php-pm/php-pm with ' .
+                    'the output of `ppm start -vv`.</error>'
+                );
 
-                        return;
-                    }
+                return;
+            }
 
-                    $port = $this->getPort($conn);
-                    $slave =& $this->slaves[$port];
+            $port = $this->getPort($socket);
+            $slave =& $this->slaves[$port];
 
-                    if ($this->output->isVeryVerbose()) {
-                        $this->output->writeln(sprintf('Worker #%d closed after %d handled requests', $slave['port'], $slave['requests']));
-                    }
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(sprintf('Worker %d closed after %d handled requests', $slave['port'], $slave['requests']));
+            }
 
-                    $slave['ready'] = false;
-                    if (isset($slave['stderr'])) {
-                        $slave['stderr']->close();
-                    }
+            $slave['ready'] = false;
+            if (isset($slave['stderr'])) {
+                $slave['stderr']->close();
+            }
 
-                    if (is_resource($slave['process'])) {
-                        proc_terminate($slave['process'], SIGKILL);
-                    }
+            if (is_resource($slave['process'])) {
+                proc_terminate($slave['process'], SIGKILL);
+            }
 
-                    posix_kill($slave['pid'], SIGKILL); //make sure its really dead
+            posix_kill($slave['pid'], SIGKILL); // make sure its really dead
 
-                    if ($slave['duringBootstrap']) {
-                        $this->bootstrapFailed($conn);
-                    }
+            if ($slave['duringBootstrap']) {
+                $this->bootstrapFailed($socket);
+            }
 
-                    $this->newInstance($slave['port']);
-                },
-                $this
-            )
-        );
+            $this->newInstance($slave['port']);
+        });
+
+        \Amp\Promise\rethrow($promise);
     }
 
     /**
      * A slave sent a `status` command.
      *
-     * @param array      $data
-     * @param Connection $conn
+     * @param Socket $socket
+     * @param array  $data
      */
-    protected function commandStatus(array $data, Connection $conn)
+    protected function commandStatus(Socket $socket, array $data)
     {
-        //remove nasty info about worker's bootstrap fail
-        $conn->removeAllListeners('close');
-        if ($this->output->isVeryVerbose()) {
-            $conn->on('close', function () {
-                $this->output->writeln('Status command requested');
-            });
-        }
-        $conn->end(json_encode([
+        $socket->end(json_encode([
             'slave_count' => $this->slaveCount,
             'handled_requests' => $this->handledRequests,
             'handled_requests_per_worker' => array_column($this->slaves, 'requests', 'port')
@@ -778,94 +706,87 @@ class ProcessManager
     /**
      * A slave sent a `stop` command.
      *
-     * @param array      $data
-     * @param Connection $conn
+     * @param Socket $socket
+     * @param array  $data
      */
-    protected function commandStop(array $data, Connection $conn)
+    protected function commandStop(Socket $socket, array $data)
     {
-        if ($this->output->isVeryVerbose()) {
-            $conn->on('close', function () {
-                $this->output->writeln('Stop command requested');
-            });
-        }
-
-        $conn->end(json_encode([]));
-
+        $socket->end(json_encode([]));
         $this->shutdown(true);
     }
 
     /**
      * A slave sent a `register` command.
      *
-     * @param array      $data
-     * @param Connection $conn
+     * @param Socket $socket
+     * @param array  $data
      */
-    protected function commandRegister(array $data, Connection $conn)
+    protected function commandRegister(Socket $socket, array $data)
     {
-        $pid = (int)$data['pid'];
-        $port = (int)$data['port'];
+        $pid = (int) $data['pid'];
+        $port = (int) $data['port'];
 
         if (!isset($this->slaves[$port]) || !$this->slaves[$port]['waitForRegister']) {
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln(sprintf(
                     '<error>Worker #%d wanted to register on master which was not expected.</error>',
-                    $port));
+                    $port
+                ));
             }
-            $conn->close();
+
+            $socket->close();
+
             return;
         }
 
-        $this->ports[spl_object_hash($conn)] = $port;
+        $this->ports[spl_object_hash($socket)] = $port;
 
         if ($this->output->isVeryVerbose()) {
             $this->output->writeln(sprintf('Worker #%d registered. Waiting for application bootstrap ... ', $port));
         }
 
         $this->slaves[$port]['pid'] = $pid;
-        $this->slaves[$port]['connection'] = $conn;
+        $this->slaves[$port]['connection'] = $socket;
         $this->slaves[$port]['ready'] = false;
         $this->slaves[$port]['waitForRegister'] = false;
         $this->slaves[$port]['duringBootstrap'] = true;
 
-        $this->sendMessage($conn, 'bootstrap');
+        $this->sendMessage($socket, 'bootstrap');
     }
 
     /**
-     * @param Connection $conn
+     * @param Socket $socket
      *
      * @return null|int
      */
-    protected function getPort(Connection $conn)
+    protected function getPort(Socket $socket)
     {
-        $id = spl_object_hash($conn);
-
-        return $this->ports[$id];
+        return $this->ports[spl_object_hash($socket)];
     }
 
     /**
      * Whether the given connection is registered.
      *
-     * @param Connection $conn
+     * @param Socket $socket
      *
      * @return bool
      */
-    protected function isConnectionRegistered(Connection $conn)
+    protected function isConnectionRegistered(Socket $socket): bool
     {
-        $id = spl_object_hash($conn);
-
-        return isset($this->ports[$id]);
+        return isset($this->ports[\spl_object_hash($socket)]);
     }
 
     /**
-     * A slave sent a `ready` commands which basically says that the slave bootstrapped successfully the
-     * application and is ready to accept connections.
+     * A slave sent a `ready` commands which basically says that the slave bootstrapped the application successfully and
+     * is ready to accept connections.
      *
-     * @param array      $data
-     * @param Connection $conn
+     * @param Socket $socket
+     * @param array $data
      */
-    protected function commandReady(array $data, Connection $conn)
+    protected function commandReady(Socket $socket, array $data)
     {
-        $port = $this->getPort($conn);
+        $port = $this->getPort($socket);
+
         $this->slaves[$port]['ready'] = true;
         $this->slaves[$port]['bootstrapFailed'] = 0;
         $this->slaves[$port]['duringBootstrap'] = false;
@@ -874,20 +795,18 @@ class ProcessManager
             $this->output->writeln(sprintf('Worker #%d ready.', $port));
         }
 
-        $readySlaves = array_filter($this->slaves, function($item){
+        $readySlaves = array_filter($this->slaves, function ($item) {
             return $item['ready'];
         });
 
         if (($this->emergencyMode || $this->waitForSlaves) && $this->slaveCount === count($readySlaves)) {
-
             if ($this->emergencyMode) {
                 $this->output->writeln("<info>Emergency survived. Workers up and running again.</info>");
             } else {
                 $this->output->writeln(
                     sprintf(
-                        "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
+                        "<info>%d workers up and ready. Application is ready at http://%s:%s/</info>",
                         $this->slaveCount,
-                        self::CONTROLLER_PORT+1,
                         $this->host,
                         $this->port
                     )
@@ -902,15 +821,14 @@ class ProcessManager
     /**
      * Handles failed application bootstraps.
      *
-     * @param Connection $conn
+     * @param Socket $socket
      */
-    protected function bootstrapFailed(Connection $conn)
+    protected function bootstrapFailed(Socket $socket)
     {
-        $port = $this->getPort($conn);
+        $port = $this->getPort($socket);
         $this->slaves[$port]['bootstrapFailed']++;
 
         if ($this->isDebug()) {
-
             $this->output->writeln('');
 
             if (!$this->emergencyMode) {
@@ -944,29 +862,30 @@ class ProcessManager
     /**
      * Prints logs.
      *
-     * @Todo, integrate Monolog.
+     * @todo, integrate Monolog.
      *
-     * @param array      $data
-     * @param Connection $conn
+     * @param Socket $socket
+     * @param array  $data
      */
-    protected function commandLog(array $data, Connection $conn)
+    protected function commandLog(Socket $socket, array $data)
     {
         $this->output->writeln($data['message']);
     }
 
     /**
-     * @param array      $data
-     * @param Connection $conn
+     * @param Socket $socket
+     * @param array  $data
      */
-    protected function commandFiles(array $data, Connection $conn)
+    protected function commandFiles(Socket $socket, array $data)
     {
-        if (!$this->isConnectionRegistered($conn)) {
+        if (!$this->isConnectionRegistered($socket)) {
             return;
         }
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(sprintf('Received %d files from %d', count($data['files']), $this->getPort($conn)));
+            $this->output->writeln(sprintf('Received %d files from %d', count($data['files']), $this->getPort($socket)));
         }
+
         $this->filesToTrack = array_unique(array_merge($this->filesToTrack, $data['files']));
     }
 
@@ -981,30 +900,30 @@ class ProcessManager
      *
      * @return bool
      */
-    protected function checkChangedFiles($restartWorkers = true)
+    protected function checkChangedFiles($restartWorkers = true): bool
     {
         if ($this->inReload) {
             return false;
         }
 
-        clearstatcache();
+        \clearstatcache();
 
         $reload = false;
         $filePath = '';
-        $start = microtime(true);
+        $start = \microtime(true);
 
         foreach ($this->filesToTrack as $idx => $filePath) {
-            if (!file_exists($filePath)) {
+            if (!\file_exists($filePath)) {
                 continue;
             }
 
-            $currentFileMTime = filemtime($filePath);
+            $currentFileMTime = \filemtime($filePath);
 
             if (isset($this->filesLastMTime[$filePath])) {
                 if ($this->filesLastMTime[$filePath] !== $currentFileMTime) {
                     $this->filesLastMTime[$filePath] = $currentFileMTime;
 
-                    $md5 = md5_file($filePath);
+                    $md5 = \md5_file($filePath);
                     if (!isset($this->filesLastMd5[$filePath]) || $md5 !== $this->filesLastMd5[$filePath]) {
                         $this->filesLastMd5[$filePath] = $md5;
                         $reload = true;
@@ -1012,7 +931,7 @@ class ProcessManager
                         //since chances are high that this file will change again we
                         //move this file to the beginning of the array, so next check is way faster.
                         unset($this->filesToTrack[$idx]);
-                        array_unshift($this->filesToTrack, $filePath);
+                        \array_unshift($this->filesToTrack, $filePath);
                         break;
                     }
                 }
@@ -1023,12 +942,12 @@ class ProcessManager
 
         if ($reload && $restartWorkers) {
             $this->output->writeln(
-                sprintf(
+                \sprintf(
                     "<info>[%s] File changed %s (detection %f, %d). Reload workers.</info>",
-                    date('d/M/Y:H:i:s O'),
+                    \date('d/M/Y:H:i:s O'),
                     $filePath,
-                    microtime(true) - $start,
-                    count($this->filesToTrack)
+                    \microtime(true) - $start,
+                    \count($this->filesToTrack)
                 )
             );
 
@@ -1052,22 +971,22 @@ class ProcessManager
         $this->output->writeln('Restart all worker');
 
         foreach ($this->slaves as &$slave) {
-            $slave['ready'] = false; //does not accept new connections
+            $slave['ready'] = false; // does not accept new connections
             $slave['keepClosed'] = false;
 
-            //important to not get 'bootstrap failed' exception, when the bootstrap changes files.
+            // important to not get 'bootstrap failed' exception, when the bootstrap changes files.
             $slave['duringBootstrap'] = false;
 
             $slave['bootstrapFailed'] = 0;
 
-            /** @var Connection $connection */
-            $connection = $slave['connection'];
+            /** @var Socket $socket */
+            $socket = $slave['connection'];
 
-            if ($connection && $connection->isWritable()) {
+            if ($socket) {
                 if ($slave['busy']) {
                     $slave['closeWhenFree'] = true;
                 } else {
-                    $connection->close();
+                    $socket->close();
                 }
             } else {
                 $this->newInstance($slave['port']);
@@ -1080,13 +999,13 @@ class ProcessManager
     /**
      * Creates a new ProcessSlave instance.
      *
-     * @param integer $port
+     * @param int $port Port to listen on for HTTP requests.
      */
-    protected function newInstance($port)
+    protected function newInstance(int $port)
     {
         if ($this->inShutdown) {
-            //when we are in the shutdown phase, we close all connections
-            //as a result it actually tries to reconnect the slave, but we forbid it in this phase.
+            // when we are in the shutdown phase, we close all connections
+            // as a result it actually tries to reconnect the slave, but we forbid it in this phase.
             return;
         }
 
@@ -1103,10 +1022,8 @@ class ProcessManager
         }
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(sprintf("Start new worker #%d", $port));
+            $this->output->writeln(sprintf("Start new worker %d", $port));
         }
-
-        $host = Utils::isWindows() ? 'tcp://127.0.0.1' : $this->getNewSlaveSocket($port);
 
         $slave = [
             'ready' => false,
@@ -1123,17 +1040,17 @@ class ProcessManager
             'requests' => 0,
             'connections' => 0,
             'connection' => null,
-            'host' => $host
+            'host' => 'tcp://127.0.0.1:' . $port
         ];
 
         $bridge = var_export($this->getBridge(), true);
         $bootstrap = var_export($this->getAppBootstrap(), true);
         $config = [
             'port' => $slave['port'],
-            'host' => $slave['host'],
+            'host' => '127.0.0.1',
 
             'session_path' => session_save_path(),
-            'controllerHost' => Utils::isWindows() ? 'tcp://127.0.0.1' : $this->controllerHost,
+            'controllerHost' => $this->controllerHost,
 
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
@@ -1149,13 +1066,13 @@ class ProcessManager
 
 set_time_limit(0);
 
-require_once file_exists($dir . '/vendor/autoload.php')
+require_once file_exists($dir . '/../../vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
 
 require_once $dir . '/functions.php';
 
-//global for all global functions
+// global for all global functions
 \PHPPM\ProcessSlave::\$slave = new \PHPPM\ProcessSlave($bridge, $bootstrap, $config);
 \PHPPM\ProcessSlave::\$slave->run();
 EOF;
@@ -1166,31 +1083,32 @@ EOF;
         file_put_contents($file, $script);
         register_shutdown_function('unlink', $file);
 
-        //we can not use -q since this disables basically all header support
-        //but since this is necessary at least in Symfony we can not use it.
-        //e.g. headers_sent() returns always true, although wrong.
+        // we can not use -q since this disables basically all header support
+        // but since this is necessary at least in Symfony we can not use it.
+        // e.g. headers_sent() returns always true, although wrong.
         $commandline .= ' -C ' . ProcessUtils::escapeArgument($file);
 
-        $descriptorspec = [
-            ['pipe', 'r'], //stdin
-            ['pipe', 'w'], //stdout
-            ['pipe', 'w'], //stderr
+        $descriptors = [
+            ['pipe', 'r'], // stdin
+            ['pipe', 'w'], // stdout
+            ['pipe', 'w'], // stderr
         ];
 
         $this->slaves[$port] = $slave;
-        $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
+        $this->slaves[$port]['process'] = proc_open($commandline, $descriptors, $pipes);
 
-        $stderr = new \React\Stream\Stream($pipes[2], $this->loop);
-        $stderr->on(
-            'data',
-            function ($data) use ($port) {
+        $stderr = new ResourceInputStream($pipes[2]);
+
+        asyncCall(function () use ($stderr, $port) {
+            while (null !== $chunk = yield $stderr->read()) {
                 if ($this->lastWorkerErrorPrintBy !== $port) {
                     $this->output->writeln("<info>--- Worker $port stderr ---</info>");
                     $this->lastWorkerErrorPrintBy = $port;
                 }
-                $this->output->write("<error>$data</error>");
+                $this->output->write("<error>$chunk</error>");
             }
-        );
+        });
+
         $this->slaves[$port]['stderr'] = $stderr;
     }
 }

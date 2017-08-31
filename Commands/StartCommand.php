@@ -32,13 +32,13 @@ class StartCommand extends Command
     {
         $config = $this->initializeConfig($input, $output);
 
-        $class = isset($config['processmanager']) ? $config['processmanager'] : ProcessManager::class;
+        $class = $config['processmanager'] ?? ProcessManager::class;
         $handler = new $class($output, $config['port'], $config['host'], $config['workers']);
 
         $handler->setBridge($config['bridge']);
         $handler->setAppEnv($config['app-env']);
-        $handler->setDebug((boolean)$config['debug']);
-        $handler->setLogging((boolean)$config['logging']);
+        $handler->setDebug((bool) $config['debug']);
+        $handler->setLogging((bool) $config['logging']);
         $handler->setAppBootstrap($config['bootstrap']);
         $handler->setMaxRequests($config['max-requests']);
         $handler->setPhpCgiExecutable($config['cgi-path']);
