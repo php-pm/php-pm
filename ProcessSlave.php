@@ -369,7 +369,7 @@ class ProcessSlave implements Bootable, ServerObserver
                     return $this->serveStatic($request, $response);
                 });
 
-                if ($response->state() === Response::STARTED) {
+                if ($response->state() !== Response::NONE) {
                     return;
                 }
             }
