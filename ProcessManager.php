@@ -552,8 +552,13 @@ class ProcessManager
 
             yield $slaveSocket->write($buffer);
 
-            rethrow(ByteStream\pipe($incoming, $slaveSocket));
-            yield ByteStream\pipe($slaveSocket, $incoming);
+            ByteStream\pipe($incoming, $slaveSocket);
+
+            try {
+                yield ByteStream\pipe($slaveSocket, $incoming);
+            } catch (ByteStream\StreamException $e) {
+                // ignore, peer closed
+            }
 
             $took = microtime(true) - $start;
 
