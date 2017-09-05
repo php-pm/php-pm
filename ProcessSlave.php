@@ -420,8 +420,19 @@ class ProcessSlave
         if ($path === '/') {
             $path = '/index.html';
         }
+        else {
+            $path = str_replace("\\", '/', $path);
+        }
 
-        $filePath = $this->getBridge()->getStaticDirectory() . $path;
+        $basePath = realpath($this->getBridge()->getStaticDirectory());
+        $filePath = realpath($basePath . $path);
+
+        // prevent access outside basePath
+        if (strpos($basePath, $filePath) !== 0) { 
+            $response->writeHead(403);
+            $response->end();
+            return true;
+        }
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
             $mTime = filemtime($filePath);
