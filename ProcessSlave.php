@@ -73,6 +73,13 @@ class ProcessSlave
     protected $inShutdown = false;
 
     /**
+     * Real base path for static files
+     *
+     * @var string
+     */
+    protected $staticBasePath;
+
+    /**
      * @var BufferingLogger
      */
     protected $errorLogger;
@@ -424,11 +431,13 @@ class ProcessSlave
             $path = str_replace("\\", '/', $path);
         }
 
-        $basePath = realpath($this->getBridge()->getStaticDirectory());
-        $filePath = realpath($basePath . $path);
+        if (!isset($this->staticBasePath)) {
+            $this->staticBasePath = realpath($this->getBridge()->getStaticDirectory());
+        }
+        $filePath = realpath($this->staticBasePath . $path);
 
-        // prevent access outside basePath
-        if (strpos($basePath, $filePath) !== 0) { 
+        // prevent access outside base path
+        if (strpos($this->staticBasePath, $filePath) !== 0) { 
             $response->writeHead(403);
             $response->end();
             return true;
