@@ -8,6 +8,7 @@ use Amp\ByteStream;
 use Amp\ByteStream\ResourceInputStream;
 use Amp\Coroutine;
 use Amp\Loop;
+use function Amp\Promise\first;
 use function Amp\Promise\rethrow;
 use Amp\Socket\ClientConnectContext;
 use function Amp\Socket\connect;
@@ -533,7 +534,7 @@ class ProcessManager
                 $chunk = yield $incoming->read();
 
                 if ($chunk === null) { // socket closed
-                    return;
+                    goto shutdown;
                 }
 
                 $buffer .= $chunk;
@@ -552,13 +553,16 @@ class ProcessManager
 
             yield $slaveSocket->write($buffer);
 
-            ByteStream\pipe($incoming, $slaveSocket);
-
             try {
-                yield ByteStream\pipe($slaveSocket, $incoming);
+                yield first([
+                    ByteStream\pipe($incoming, $slaveSocket),
+                    ByteStream\pipe($slaveSocket, $incoming),
+                ]);
             } catch (ByteStream\StreamException $e) {
                 // ignore, peer closed
             }
+
+            shutdown:
 
             $took = microtime(true) - $start;
 
