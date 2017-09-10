@@ -1058,6 +1058,8 @@ class ProcessManager
             'port' => $slave['port'],
             'host' => '127.0.0.1',
 
+            'originalPort' => $this->port, // required for host header rewrite
+
             'session_path' => session_save_path(),
             'controllerHost' => $this->controllerHost,
 

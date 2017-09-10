@@ -4,6 +4,7 @@ namespace PHPPM;
 
 use Aerys\Bootable;
 use Aerys\Host;
+use Aerys\InternalRequest;
 use Aerys\Middleware;
 use Aerys\Request;
 use Aerys\Response;
@@ -310,6 +311,19 @@ class ProcessSlave implements Bootable, ServerObserver
                 ->name("localhost")
                 ->expose($this->config['host'], $this->config['port'])
                 ->use($this)
+                ->use(new class ($this->config['originalPort']) implements Middleware {
+                    private $port;
+
+                    public function __construct(int $port) {
+                        $this->port = $port;
+                    }
+
+                    public function do(InternalRequest $ireq) {
+                        $hostHeader = $ireq->headers["host"][0] ?? "";
+                        $host = \parse_url("http://" . $hostHeader, \PHP_URL_HOST);
+                        $ireq->headers["host"] = [$host . ":" . $this->port];
+                    }
+                })
                 ->use(function (Request $request, Response $response) {
                     $this->prepareEnvironment($request);
 
