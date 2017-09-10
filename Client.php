@@ -2,9 +2,12 @@
 
 namespace PHPPM;
 
-use React\EventLoop\Factory;
-use React\EventLoop\LoopInterface;
-use React\Socket\Connection;
+use Amp\ByteStream\Message;
+use Amp\Promise;
+use Amp\Socket\Socket;
+use Amp\Success;
+use function Amp\call;
+use function Amp\Socket\connect;
 
 class Client
 {
@@ -16,71 +19,58 @@ class Client
     protected $controllerPort;
 
     /**
-     * @var LoopInterface
+     * @var Socket
      */
-    protected $loop;
+    protected $socket;
 
     /**
-     * @var Connection
+     * @var Promise
      */
-    protected $connection;
+    protected $socketPromise;
 
     public function __construct($controllerPort = ProcessManager::CONTROLLER_PORT)
     {
         $this->controllerPort = $controllerPort;
-        $this->loop = Factory::create();
     }
 
-    /**
-     * @return Connection
-     */
-    protected function getConnection()
+    protected function getSocket(): Promise
     {
-        if ($this->connection) {
-            $this->connection->close();
-            unset($this->connection);
+        if ($this->socket) {
+            return new Success($this->socket);
+        }
+
+        if ($this->socketPromise) {
+            return $this->socketPromise;
         }
 
         $socketUri = $this->getControllerSocket();
-        $client = false;
-        for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
-            $client = @stream_socket_client($socketUri, $errno, $errstr);
-            if ($client) {
-                break;
-            }
-        }
-        if (!$client) {
-            $message = "Could not bind to $socketUri. Error: [$errno] $errstr";
-            throw new \RuntimeException($message, $errno);
-        }
-        $this->connection = new Connection($client, $this->loop);
-        return $this->connection;
+        $socketPromise = $this->socketPromise = connect($socketUri);
+        $socketPromise->onResolve(function () {
+            $this->socketPromise = null;
+        });
+
+        return $socketPromise;
     }
 
-    protected function request($command, $options, $callback)
+    protected function request($command, $options): Promise
     {
-        $data['cmd'] = $command;
-        $data['options'] = $options;
-        $connection = $this->getConnection();
+        return call(function () use ($command, $options) {
+            /** @var Socket $socket */
+            $socket = yield $this->getSocket();
 
-        $result = '';
-        $connection->on('data', function($data) use (&$result) {
-            $result .= $data;
+            $data['cmd'] = $command;
+            $data['options'] = $options;
+
+            yield $socket->write(json_encode($data) . PHP_EOL);
+
+            return new Message($socket); // auto-buffer and resolve with buffered string
         });
-
-        $connection->on('close', function() use ($callback, &$result) {
-            $callback($result);
-        });
-
-        $connection->write(json_encode($data) . PHP_EOL);
     }
 
     public function getStatus(callable $callback)
     {
-        $this->request('status', [], function($result) use ($callback) {
-            $callback(json_decode($result, true));
-        });
-        $this->loop->run();
+        $result = Promise\wait($this->request('status', []));
+        $callback(json_decode($result, true));
     }
 
     /**
@@ -90,7 +80,7 @@ class Client
     {
         $host = $this->getNewControllerHost(false);
         $port = $this->controllerPort;
-        $localSocket = '';
+
         if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             $localSocket = 'tcp://' . $host . ':' . $port;
         } elseif (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
@@ -104,14 +94,13 @@ class Client
                 'Supported transports are: IPv4, IPv6 and unix:// .'
                 , 1433253311);
         }
+
         return $localSocket;
     }
 
     public function stopProcessManager(callable $callback)
     {
-        $this->request('stop', [], function($result) use ($callback) {
-            $callback(json_decode($result, true));
-        });
-        $this->loop->run();
+        $result = Promise\wait($this->request('stop', []));
+        $callback(json_decode($result, true));
     }
 }

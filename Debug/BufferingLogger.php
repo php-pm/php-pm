@@ -27,6 +27,7 @@
 namespace PHPPM\Debug;
 
 use Psr\Log\AbstractLogger;
+use Symfony\Component\Debug\BufferingLogger as SymfonyBufferingLogger;
 
 /**
  * A buffering logger that stacks logs for later.
@@ -47,8 +48,8 @@ class BufferingLogger extends AbstractLogger
      */
     public static function create()
     {
-        if (class_exists('\Symfony\Component\Debug\BufferingLogger')) {
-            return new \Symfony\Component\Debug\BufferingLogger();
+        if (class_exists(SymfonyBufferingLogger::class)) {
+            return new SymfonyBufferingLogger();
         }
 
         return new static();

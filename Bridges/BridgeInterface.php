@@ -2,34 +2,36 @@
 
 namespace PHPPM\Bridges;
 
-use PHPPM\React\HttpResponse;
-use React\EventLoop\LoopInterface;
+use Aerys\Request;
+use Aerys\Response;
+use Amp\Promise;
 
-interface BridgeInterface
-{
+interface BridgeInterface {
     /**
      * Bootstrap an application implementing the HttpKernelInterface.
      *
      * @param string|null $appBootstrap The environment your application will use to bootstrap (if any)
-     * @param string $appenv
-     * @param boolean $debug If debug is enabled
-     * @param LoopInterface $loop
+     * @param string      $appenv
+     * @param boolean     $debug If debug is enabled
+     *
      * @see http://stackphp.com
      */
-    public function bootstrap($appBootstrap, $appenv, $debug, LoopInterface $loop);
+    public function bootstrap($appBootstrap, $appenv, $debug);
 
     /**
      * Returns the repository which is used as root for the static file serving.
      *
      * @return string
      */
-    public function getStaticDirectory();
+    public function getStaticDirectory(): string;
 
     /**
      * Handle a request using a HttpKernelInterface implementing application.
      *
-     * @param \React\Http\Request $request
-     * @param \PHPPM\React\HttpResponse $response
+     * @param Request  $request
+     * @param Response $response
+     *
+     * @return Promise
      */
-    public function onRequest(\React\Http\Request $request, HttpResponse $response);
+    public function onRequest(Request $request, Response $response): Promise;
 }

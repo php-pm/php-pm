@@ -16,7 +16,7 @@ trait ConfigTrait
     protected function configurePPMOptions(Command $command)
     {
         $command
-            ->addOption('bridge', null, InputOption::VALUE_OPTIONAL, 'The bridge we use to convert a ReactPHP-Request to your target framework.', 'HttpKernel')
+            ->addOption('bridge', null, InputOption::VALUE_OPTIONAL, 'The bridge we use to convert a Aerys-Request to your target framework.', 'HttpKernel')
             ->addOption('host', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer host. Default is 127.0.0.1', '127.0.0.1')
             ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080', 8080)
             ->addOption('workers', null, InputOption::VALUE_OPTIONAL, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', 8)
