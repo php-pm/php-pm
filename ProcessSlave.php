@@ -73,6 +73,13 @@ class ProcessSlave
     protected $inShutdown = false;
 
     /**
+     * Real base path for static files
+     *
+     * @var string
+     */
+    protected $staticBasePath;
+
+    /**
      * @var BufferingLogger
      */
     protected $errorLogger;
@@ -420,8 +427,21 @@ class ProcessSlave
         if ($path === '/') {
             $path = '/index.html';
         }
+        else {
+            $path = str_replace("\\", '/', $path);
+        }
 
-        $filePath = $this->getBridge()->getStaticDirectory() . $path;
+        if (!isset($this->staticBasePath)) {
+            $this->staticBasePath = realpath($this->getBridge()->getStaticDirectory());
+        }
+        $filePath = realpath($this->staticBasePath . $path);
+
+        // prevent access outside base path
+        if (strpos($this->staticBasePath, $filePath) !== 0) { 
+            $response->writeHead(403);
+            $response->end();
+            return true;
+        }
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
             $mTime = filemtime($filePath);
