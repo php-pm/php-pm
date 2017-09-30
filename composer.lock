@@ -34,7 +34,7 @@
                     "Evenement": "src"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "notification-url": "http://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -411,23 +411,30 @@
         },
         {
             "name": "react/dns",
-            "version": "v0.4.4",
+            "version": "v0.4.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/dns.git",
-                "reference": "e3064994379cb4d1e0ee3f5b850b6e8748efae3b"
+                "reference": "8558bba4f2784aa997670d15fc6f7461a8eb4e53"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/dns/zipball/e3064994379cb4d1e0ee3f5b850b6e8748efae3b",
-                "reference": "e3064994379cb4d1e0ee3f5b850b6e8748efae3b",
+                "url": "https://api.github.com/repos/reactphp/dns/zipball/8558bba4f2784aa997670d15fc6f7461a8eb4e53",
+                "reference": "8558bba4f2784aa997670d15fc6f7461a8eb4e53",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.0",
                 "react/cache": "~0.4.0|~0.3.0",
-                "react/promise": "~2.1|~1.2",
-                "react/socket": "^0.5 || ^0.4.4"
+                "react/event-loop": "^1.0 || ^0.5 || ^0.4 || ^0.3.5",
+                "react/promise": "^2.1 || ^1.2.1",
+                "react/promise-timer": "^1.2",
+                "react/socket": "^1.0 || ^0.8 || ^0.7 || ^0.6 || ^0.5 || ^0.4.4",
+                "react/stream": "^1.0 || ^0.7 || ^0.6 || ^0.5 || ^0.4.5"
+            },
+            "require-dev": {
+                "clue/block-react": "^1.2",
+                "phpunit/phpunit": "^5.0 || ^4.8.10"
             },
             "type": "library",
             "autoload": {
@@ -439,12 +446,14 @@
             "license": [
                 "MIT"
             ],
-            "description": "Async DNS resolver.",
+            "description": "Async DNS resolver for ReactPHP",
             "keywords": [
+                "async",
                 "dns",
-                "dns-resolver"
+                "dns-resolver",
+                "reactphp"
             ],
-            "time": "2017-02-13T09:58:13+00:00"
+            "time": "2017-08-25T08:22:48+00:00"
         },
         {
             "name": "react/event-loop",
@@ -505,14 +514,18 @@
                 "shasum": ""
             },
             "require": {
-                "evenement/evenement": "^2.0 || ^1.0",
+                "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
                 "php": ">=5.3.0",
-                "react/socket": "^0.5",
-                "react/stream": "^0.4.4",
+                "react/promise": "^2.3 || ^1.2.1",
+                "react/promise-stream": "^0.1.1",
+                "react/socket": "^1.0 || ^0.8 || ^0.7 || ^0.6 || ^0.5",
+                "react/stream": "^1.0 || ^0.7 || ^0.6 || ^0.5 || ^0.4.6",
                 "ringcentral/psr7": "^1.2"
             },
             "require-dev": {
-                "phpunit/phpunit": "^4.8.10||^5.0"
+                "clue/block-react": "^1.1",
+                "phpunit/phpunit": "^4.8.10||^5.0",
+                "react/socket": "^1.0 || ^0.8 || ^0.7"
             },
             "type": "library",
             "autoload": {
@@ -579,23 +592,82 @@
             "time": "2016-12-22T14:09:01+00:00"
         },
         {
-            "name": "react/promise-timer",
-            "version": "v1.1.1",
+            "name": "react/promise-stream",
+            "version": "v0.1.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/reactphp/promise-timer.git",
-                "reference": "ddedc67bfd7f579fc83e66ff67e3564b179297dd"
+                "url": "https://github.com/reactphp/promise-stream.git",
+                "reference": "45eaf9f20247fb1113b714b39d7b9e4bde733b60"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/promise-timer/zipball/ddedc67bfd7f579fc83e66ff67e3564b179297dd",
-                "reference": "ddedc67bfd7f579fc83e66ff67e3564b179297dd",
+                "url": "https://api.github.com/repos/reactphp/promise-stream/zipball/45eaf9f20247fb1113b714b39d7b9e4bde733b60",
+                "reference": "45eaf9f20247fb1113b714b39d7b9e4bde733b60",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3",
-                "react/event-loop": "~0.4.0|~0.3.0",
+                "react/promise": "^2.1 || ^1.2",
+                "react/stream": "^1.0 || ^0.7 || ^0.6 || ^0.5 || ^0.4 || ^0.3"
+            },
+            "require-dev": {
+                "clue/block-react": "^1.0",
+                "phpunit/phpunit": "^4.8",
+                "react/event-loop": "^1.0 || ^0.5 || ^0.4 || ^0.3",
+                "react/promise-timer": "^1.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "React\\Promise\\Stream\\": "src/"
+                },
+                "files": [
+                    "src/functions_include.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Christian Lück",
+                    "email": "christian@lueck.tv"
+                }
+            ],
+            "description": "The missing link between Promise-land and Stream-land for React PHP",
+            "homepage": "https://github.com/reactphp/promise-stream",
+            "keywords": [
+                "Buffer",
+                "async",
+                "promise",
+                "reactphp",
+                "stream",
+                "unwrap"
+            ],
+            "time": "2017-05-15T19:37:05+00:00"
+        },
+        {
+            "name": "react/promise-timer",
+            "version": "v1.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/reactphp/promise-timer.git",
+                "reference": "3bc527fbd1201a193ab41c19b9a770d71a3514af"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/reactphp/promise-timer/zipball/3bc527fbd1201a193ab41c19b9a770d71a3514af",
+                "reference": "3bc527fbd1201a193ab41c19b9a770d71a3514af",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3",
+                "react/event-loop": "^1.0 || ^0.5 || ^0.4 || ^0.3.5",
                 "react/promise": "~2.1|~1.2"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^5.0 || ^4.8"
             },
             "type": "library",
             "autoload": {
@@ -626,33 +698,35 @@
                 "timeout",
                 "timer"
             ],
-            "time": "2016-12-27T08:12:19+00:00"
+            "time": "2017-08-08T16:30:19+00:00"
         },
         {
             "name": "react/socket",
-            "version": "v0.5.0",
+            "version": "v0.8.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/socket.git",
-                "reference": "691dbf6cb3aa9ae67ef25d29c32e853d5d34fa99"
+                "reference": "ee817e348abcf35c55b448a5cd3ef4eec88379e9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/socket/zipball/691dbf6cb3aa9ae67ef25d29c32e853d5d34fa99",
-                "reference": "691dbf6cb3aa9ae67ef25d29c32e853d5d34fa99",
+                "url": "https://api.github.com/repos/reactphp/socket/zipball/ee817e348abcf35c55b448a5cd3ef4eec88379e9",
+                "reference": "ee817e348abcf35c55b448a5cd3ef4eec88379e9",
                 "shasum": ""
             },
             "require": {
-                "evenement/evenement": "~2.0|~1.0",
+                "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
                 "php": ">=5.3.0",
-                "react/event-loop": "0.4.*|0.3.*",
-                "react/promise": "^2.0 || ^1.1",
-                "react/stream": "^0.4.5"
+                "react/dns": "^0.4.11",
+                "react/event-loop": "^1.0 || ^0.5 || ^0.4 || ^0.3.5",
+                "react/promise": "^2.1 || ^1.2",
+                "react/promise-timer": "~1.0",
+                "react/stream": "^1.0 || ^0.7 || ^0.6 || ^0.5 || ^0.4.5"
             },
             "require-dev": {
                 "clue/block-react": "^1.1",
                 "phpunit/phpunit": "~4.8",
-                "react/socket-client": "^0.5.1"
+                "react/stream": "^1.0 || ^0.7 || ^0.6"
             },
             "type": "library",
             "autoload": {
@@ -664,52 +738,15 @@
             "license": [
                 "MIT"
             ],
-            "description": "Async, streaming plaintext TCP/IP and secure TLS socket server for React PHP",
+            "description": "Async, streaming plaintext TCP/IP and secure TLS socket server and client connections for ReactPHP",
             "keywords": [
-                "Socket"
+                "Connection",
+                "Socket",
+                "async",
+                "reactphp",
+                "stream"
             ],
-            "time": "2017-02-14T06:49:09+00:00"
-        },
-        {
-            "name": "react/socket-client",
-            "version": "v0.5.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/reactphp/socket-client.git",
-                "reference": "5570838d436f056695e9a5eaf01dd5f80386dd26"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/socket-client/zipball/5570838d436f056695e9a5eaf01dd5f80386dd26",
-                "reference": "5570838d436f056695e9a5eaf01dd5f80386dd26",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.0",
-                "react/dns": "0.4.*|0.3.*",
-                "react/event-loop": "0.4.*|0.3.*",
-                "react/promise": "^2.1 || ^1.2",
-                "react/promise-timer": "~1.0",
-                "react/stream": "^0.4.5"
-            },
-            "require-dev": {
-                "clue/block-react": "^1.1"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "React\\SocketClient\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Async connector to open TCP/IP and SSL/TLS based connections.",
-            "keywords": [
-                "Socket"
-            ],
-            "time": "2016-12-24T11:19:15+00:00"
+            "time": "2017-08-25T09:08:33+00:00"
         },
         {
             "name": "react/stream",
@@ -1147,12 +1184,12 @@
             "version": "0.9.8",
             "source": {
                 "type": "git",
-                "url": "https://github.com/padraic/mockery.git",
+                "url": "https://github.com/mockery/mockery.git",
                 "reference": "1e5e2ffdc4d71d7358ed58a6fdd30a4a0c506855"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/padraic/mockery/zipball/1e5e2ffdc4d71d7358ed58a6fdd30a4a0c506855",
+                "url": "https://api.github.com/repos/mockery/mockery/zipball/1e5e2ffdc4d71d7358ed58a6fdd30a4a0c506855",
                 "reference": "1e5e2ffdc4d71d7358ed58a6fdd30a4a0c506855",
                 "shasum": ""
             },
@@ -1842,6 +1879,47 @@
                 "xunit"
             ],
             "time": "2016-12-08T20:27:08+00:00"
+        },
+        {
+            "name": "react/socket-client",
+            "version": "v0.5.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/reactphp/socket-client.git",
+                "reference": "5570838d436f056695e9a5eaf01dd5f80386dd26"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/reactphp/socket-client/zipball/5570838d436f056695e9a5eaf01dd5f80386dd26",
+                "reference": "5570838d436f056695e9a5eaf01dd5f80386dd26",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0",
+                "react/dns": "0.4.*|0.3.*",
+                "react/event-loop": "0.4.*|0.3.*",
+                "react/promise": "^2.1 || ^1.2",
+                "react/promise-timer": "~1.0",
+                "react/stream": "^0.4.5"
+            },
+            "require-dev": {
+                "clue/block-react": "^1.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "React\\SocketClient\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Async connector to open TCP/IP and SSL/TLS based connections.",
+            "keywords": [
+                "Socket"
+            ],
+            "time": "2016-12-24T11:19:15+00:00"
         },
         {
             "name": "sebastian/code-unit-reverse-lookup",
