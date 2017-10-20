@@ -436,8 +436,12 @@ class ProcessSlave
         }
         $filePath = realpath($this->staticBasePath . $path);
 
+        if (false === $filePath) {
+            return false;
+        }
+
         // prevent access outside base path
-        if (strpos($filePath, $this->staticBasePath) !== 0) { 
+        if (strpos($filePath, $this->staticBasePath) !== 0) {
             $response->writeHead(403);
             $response->end();
             return true;
