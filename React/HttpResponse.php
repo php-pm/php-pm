@@ -39,7 +39,7 @@ class HttpResponse extends \React\Http\Response {
     /**
      * @param array $headers
      */
-    public function setHeaders($headers)
+    public function setHeaders(array $headers)
     {
         $this->headers = $headers;
     }
