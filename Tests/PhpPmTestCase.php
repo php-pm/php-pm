@@ -2,7 +2,9 @@
 
 namespace PHPPM\Tests;
 
-class PhpPmTestCase extends \PHPUnit_Framework_TestCase
+use PHPUnit\Framework\TestCase;
+
+class PhpPmTestCase extends TestCase
 {
     protected function getProcessManagerMethod($method)
     {
@@ -13,4 +15,3 @@ class PhpPmTestCase extends \PHPUnit_Framework_TestCase
         }, $mock);
     }
 }
-
