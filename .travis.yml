@@ -10,6 +10,12 @@ install:
   - composer install
 
 script:
+  # check with lock file  
+  - ./vendor/bin/phpunit
+
+  # check without lock file  
+  - rm composer.lock && rm -rf vendor
+  - composer install
   - ./vendor/bin/phpunit
 
 matrix:
@@ -21,7 +27,6 @@ matrix:
 # cache vendors
 cache:
   directories:
-    - vendor
     - $HOME/.composer/cache
 
 # This triggers builds to run on the new TravisCI infrastructure.
