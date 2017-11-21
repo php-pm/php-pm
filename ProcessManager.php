@@ -6,6 +6,7 @@ namespace PHPPM;
 use React\Socket\Server;
 use React\Socket\Connection;
 use React\Socket\ConnectionInterface;
+use React\Socket\ServerInterface;
 use React\Stream\ReadableResourceStream;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
@@ -33,7 +34,7 @@ class ProcessManager
     protected $loop;
 
     /**
-     * @var React\Server
+     * @var ServerInterface
      */
     protected $controller;
 
@@ -1183,6 +1184,10 @@ require_once file_exists($dir . '/vendor/autoload.php')
     : $dir . '/../../autoload.php';
 
 require_once $dir . '/functions.php';
+
+if(!pcntl_enabled()){
+    throw new \RuntimeException('Some of required pcntl functions are disabled. Please enable them.');
+}
 
 //global for all global functions
 \PHPPM\ProcessSlave::\$slave = new \PHPPM\ProcessSlave($bridge, $bootstrap, $config);
