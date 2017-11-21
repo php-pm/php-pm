@@ -2,7 +2,7 @@
 
 namespace PHPPM;
 
-use React\Socket\Connection;
+use React\Stream\DuplexStreamInterface;
 
 /**
  * Little trait used in ProcessManager and ProcessSlave to have a simple json process communication.
@@ -20,11 +20,11 @@ trait ProcessCommunicationTrait
      * Parses a received message. Redirects to the appropriate `command*` method.
      *
      * @param array $data
-     * @param Connection $conn
+     * @param DuplexStreamInterface $conn
      *
      * @throws \Exception when invalid 'cmd' in $data.
      */
-    public function processMessage($data, Connection $conn)
+    public function processMessage($data, DuplexStreamInterface $conn)
     {
         $array = json_decode($data, true);
 
@@ -39,9 +39,9 @@ trait ProcessCommunicationTrait
     /**
      * Binds data-listener to $conn and waits for incoming commands.
      *
-     * @param Connection $conn
+     * @param DuplexStreamInterface $conn
      */
-    protected function bindProcessMessage(Connection $conn)
+    protected function bindProcessMessage(DuplexStreamInterface $conn)
     {
         $buffer = '';
 
@@ -69,11 +69,11 @@ trait ProcessCommunicationTrait
     /**
      * Sends a message through $conn.
      *
-     * @param Connection $conn
+     * @param DuplexStreamInterface $conn
      * @param string $command
      * @param array $message
      */
-    protected function sendMessage(Connection $conn, $command, array $message = [])
+    protected function sendMessage(DuplexStreamInterface $conn, $command, array $message = [])
     {
         $message['cmd'] = $command;
         $conn->write(json_encode($message) . PHP_EOL);
