@@ -17,6 +17,7 @@ use React\Http\MiddlewareRunner;
 use React\Http\Middleware\RequestBodyBufferMiddleware;
 use React\Http\Middleware\RequestBodyParserMiddleware;
 use React\Promise\Promise;
+use React\Socket\ServerInterface;
 use React\Stream\DuplexResourceStream;
 use React\Stream\DuplexStreamInterface;
 use React\Stream\ReadableResourceStream;
@@ -36,7 +37,7 @@ class ProcessSlave
     /**
      * The HTTP Server.
      *
-     * @var React\Server
+     * @var ServerInterface
      */
     protected $server;
 

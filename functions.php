@@ -28,3 +28,20 @@ function ppm_log($expression, $_ = null)
     call_user_func_array('var_dump', func_get_args());
     file_put_contents('php://stderr', ob_get_clean() . PHP_EOL, FILE_APPEND);
 }
+
+function pcntl_enabled()
+{
+    if (!function_exists('pcntl_signal')) {
+        return false;
+    }
+
+    $requiredFunctions = array('pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_fork');
+    $disabled = explode(',', ini_get('disable_functions'));
+    foreach ($requiredFunctions as $function) {
+        if (in_array($function, $disabled)) {
+            return false;
+        }
+    }
+
+    return true;
+}
