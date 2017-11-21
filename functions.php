@@ -29,12 +29,21 @@ function ppm_log($expression, $_ = null)
     file_put_contents('php://stderr', ob_get_clean() . PHP_EOL, FILE_APPEND);
 }
 
+/**
+ * Checks that all required pcntl functions are available, so not fatal errors would be cause in runtime
+ *
+ * @return bool
+ */
 function pcntl_enabled()
 {
     $requiredFunctions = array('pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_fork', 'pcntl_waitpid');
-    $disabled = explode(',', ini_get('disable_functions'));
+    $disabledFunctions = explode(',', (string) ini_get('disable_functions'));
+    $disabledFunctions = array_map(function ($item) {
+        return trim($item);
+    }, $disabledFunctions);
+
     foreach ($requiredFunctions as $function) {
-        if (in_array($function, $disabled)) {
+        if (in_array($function, $disabledFunctions)) {
             return false;
         }
     }
