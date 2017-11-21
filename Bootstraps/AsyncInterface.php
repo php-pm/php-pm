@@ -2,7 +2,6 @@
 
 namespace PHPPM\Bootstraps;
 
-
 use React\EventLoop\LoopInterface;
 
 interface AsyncInterface

@@ -3,7 +3,10 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use React\Socket\Server;
 use React\Socket\Connection;
+use React\Socket\ConnectionInterface;
+use React\Stream\ReadableResourceStream;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
@@ -97,9 +100,9 @@ class ProcessManager
     protected $logging = true;
 
     /**
-     * @var bool
+     * @var string
      */
-    protected $servingStatic = true;
+    protected $staticDirectory = '';
 
     /**
      * @var string
@@ -177,6 +180,13 @@ class ProcessManager
     protected $maxRequests = 2000;
 
     /**
+     * Flag controlling populating $_SERVER var for older applications (not using full request-response flow)
+     *
+     * @var bool
+     */
+    protected $populateServer = true;
+
+    /**
      * Timeout in seconds for master to worker connection.
      *
      * @var int
@@ -251,6 +261,22 @@ class ProcessManager
 
         unlink($this->pidfile);
         exit;
+    }
+
+    /**
+     * @param bool $populateServer
+     */
+    public function setPopulateServer($populateServer)
+    {
+        $this->populateServer = $populateServer;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPopulateServer()
+    {
+        return $this->populateServer;
     }
 
     /**
@@ -342,19 +368,19 @@ class ProcessManager
     }
 
     /**
-     * @return boolean
+     * @return string
      */
-    public function isServingStatic()
+    public function getStaticDirectory()
     {
-        return $this->servingStatic;
+        return $this->staticDirectory;
     }
 
     /**
-     * @param boolean $servingStatic
+     * @param string $staticDirectory
      */
-    public function setServingStatic($servingStatic)
+    public function setStaticDirectory($staticDirectory)
     {
-        $this->servingStatic = $servingStatic;
+        $this->staticDirectory = $staticDirectory;
     }
 
     public function setPIDFile($pidfile)
@@ -391,13 +417,11 @@ class ProcessManager
         ob_implicit_flush(1);
 
         $this->loop = \React\EventLoop\Factory::create();
-        $this->controller = new React\Server($this->loop);
+        $this->controllerHost = $this->getNewControllerHost();
+        $this->controller = SocketFactory::getServer($this->controllerHost, self::CONTROLLER_PORT, $this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
-        $this->controllerHost = $this->getNewControllerHost();
-        $this->controller->listen(self::CONTROLLER_PORT, $this->controllerHost);
-
-        $this->web = new \React\Socket\Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
+        $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
         $this->web->on('connection', array($this, 'onWeb'));
 
         $this->tcpConnector = new \React\Socket\TcpConnector($this->loop);
@@ -534,7 +558,11 @@ class ProcessManager
 
             $start = microtime(true);
 
-            $headersToReplace = ['X-PHP-PM-Remote-IP' => parse_url($incoming->getRemoteAddress(), PHP_URL_HOST)];
+            $headersToReplace = [
+                'X-PHP-PM-Remote-IP' => trim(parse_url($incoming->getRemoteAddress(), PHP_URL_HOST), '[]'),
+                'X-PHP-PM-Remote-Port' => trim(parse_url($incoming->getRemoteAddress(), PHP_URL_PORT), '[]')
+            ];
+
             $headerRedirected = false;
 
             if ($this->isHeaderEnd($incomingBuffer)) {
@@ -561,7 +589,7 @@ class ProcessManager
                     $slave['requests']++;
                     $incoming->end();
 
-                    /** @var Connection $connection */
+                    /** @var ConnectionInterface $connection */
                     $connection = $slave['connection'];
 
                     if ($slave['requests'] >= $this->maxRequests) {
@@ -699,9 +727,9 @@ class ProcessManager
     /**
      * Handles data communication from slave -> master
      *
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    public function onSlaveConnection(Connection $conn)
+    public function onSlaveConnection(ConnectionInterface $conn)
     {
         $this->bindProcessMessage($conn);
 
@@ -757,9 +785,9 @@ class ProcessManager
      * A slave sent a `status` command.
      *
      * @param array      $data
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    protected function commandStatus(array $data, Connection $conn)
+    protected function commandStatus(array $data, ConnectionInterface $conn)
     {
         //remove nasty info about worker's bootstrap fail
         $conn->removeAllListeners('close');
@@ -779,9 +807,9 @@ class ProcessManager
      * A slave sent a `stop` command.
      *
      * @param array      $data
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    protected function commandStop(array $data, Connection $conn)
+    protected function commandStop(array $data, ConnectionInterface $conn)
     {
         if ($this->output->isVeryVerbose()) {
             $conn->on('close', function () {
@@ -798,9 +826,9 @@ class ProcessManager
      * A slave sent a `register` command.
      *
      * @param array      $data
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    protected function commandRegister(array $data, Connection $conn)
+    protected function commandRegister(array $data, ConnectionInterface $conn)
     {
         $pid = (int)$data['pid'];
         $port = (int)$data['port'];
@@ -831,11 +859,11 @@ class ProcessManager
     }
 
     /**
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      *
      * @return null|int
      */
-    protected function getPort(Connection $conn)
+    protected function getPort(ConnectionInterface $conn)
     {
         $id = spl_object_hash($conn);
 
@@ -845,11 +873,11 @@ class ProcessManager
     /**
      * Whether the given connection is registered.
      *
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      *
      * @return bool
      */
-    protected function isConnectionRegistered(Connection $conn)
+    protected function isConnectionRegistered(ConnectionInterface $conn)
     {
         $id = spl_object_hash($conn);
 
@@ -861,9 +889,9 @@ class ProcessManager
      * application and is ready to accept connections.
      *
      * @param array      $data
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    protected function commandReady(array $data, Connection $conn)
+    protected function commandReady(array $data, ConnectionInterface $conn)
     {
         $port = $this->getPort($conn);
         $this->slaves[$port]['ready'] = true;
@@ -902,9 +930,9 @@ class ProcessManager
     /**
      * Handles failed application bootstraps.
      *
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    protected function bootstrapFailed(Connection $conn)
+    protected function bootstrapFailed(ConnectionInterface $conn)
     {
         $port = $this->getPort($conn);
         $this->slaves[$port]['bootstrapFailed']++;
@@ -947,18 +975,18 @@ class ProcessManager
      * @Todo, integrate Monolog.
      *
      * @param array      $data
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    protected function commandLog(array $data, Connection $conn)
+    protected function commandLog(array $data, ConnectionInterface $conn)
     {
         $this->output->writeln($data['message']);
     }
 
     /**
      * @param array      $data
-     * @param Connection $conn
+     * @param ConnectionInterface $conn
      */
-    protected function commandFiles(array $data, Connection $conn)
+    protected function commandFiles(array $data, ConnectionInterface $conn)
     {
         if (!$this->isConnectionRegistered($conn)) {
             return;
@@ -1060,7 +1088,7 @@ class ProcessManager
 
             $slave['bootstrapFailed'] = 0;
 
-            /** @var Connection $connection */
+            /** @var ConnectionInterface $connection */
             $connection = $slave['connection'];
 
             if ($connection && $connection->isWritable()) {
@@ -1138,7 +1166,8 @@ class ProcessManager
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
-            'static' => $this->isServingStatic(),
+            'static-directory' => $this->getStaticDirectory(),
+            'populate-server-var' => $this->isPopulateServer()
         ];
 
         $config = var_export($config, true);
@@ -1180,7 +1209,7 @@ EOF;
         $this->slaves[$port] = $slave;
         $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
 
-        $stderr = new \React\Stream\Stream($pipes[2], $this->loop);
+        $stderr = new ReadableResourceStream($pipes[2], $this->loop);
         $stderr->on(
             'data',
             function ($data) use ($port) {
