@@ -505,9 +505,7 @@ class ProcessSlave
 
         // prevent access outside base path
         if (strpos($filePath, $this->staticBasePath) !== 0) {
-            $response->writeHead(403);
-            $response->end();
-            return true;
+            return new Response(403);
         }
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
