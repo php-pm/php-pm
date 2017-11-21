@@ -31,11 +31,7 @@ function ppm_log($expression, $_ = null)
 
 function pcntl_enabled()
 {
-    if (!function_exists('pcntl_signal')) {
-        return false;
-    }
-
-    $requiredFunctions = array('pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_fork');
+    $requiredFunctions = array('pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_fork', 'pcntl_waitpid');
     $disabled = explode(',', ini_get('disable_functions'));
     foreach ($requiredFunctions as $function) {
         if (in_array($function, $disabled)) {
