@@ -4,17 +4,12 @@ namespace PHPPM;
 
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
-use React\Stream\DuplexResourceStream;
-use React\Stream\DuplexStreamInterface;
+use React\Socket\UnixConnector;
+use React\Socket\ConnectionInterface;
 
 class Client
 {
     use ProcessCommunicationTrait;
-
-    /**
-     * @var int
-     */
-    protected $controllerPort;
 
     /**
      * @var LoopInterface
@@ -22,18 +17,17 @@ class Client
     protected $loop;
 
     /**
-     * @var DuplexStreamInterface
+     * @var ConnectionInterface
      */
     protected $connection;
 
-    public function __construct($controllerPort = ProcessManager::CONTROLLER_PORT)
+    public function __construct()
     {
-        $this->controllerPort = $controllerPort;
         $this->loop = Factory::create();
     }
 
     /**
-     * @return DuplexStreamInterface
+     * @return ConnectionInterface
      */
     protected function getConnection()
     {
@@ -42,39 +36,37 @@ class Client
             unset($this->connection);
         }
 
-        $socketUri = $this->getControllerSocket();
-        $client = false;
-        for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
-            $client = @stream_socket_client($socketUri, $errno, $errstr);
-            if ($client) {
-                break;
-            }
-        }
-        if (!$client) {
-            $message = "Could not bind to $socketUri. Error: [$errno] $errstr";
-            throw new \RuntimeException($message, $errno);
-        }
+        $connector = new Connector($this->loop);
+        $unixSocket = $this->getNewControllerHost(false);
 
-        $this->connection = new DuplexResourceStream($client, $this->loop);
-        return $this->connection;
+        return $connector->connect($unixSocket)->done(
+            function($connection) {
+                $this->connection = $connection;
+                return $this->connection;
+            }
+        );
     }
 
     protected function request($command, $options, $callback)
     {
         $data['cmd'] = $command;
         $data['options'] = $options;
-        $connection = $this->getConnection();
 
-        $result = '';
-        $connection->on('data', function($data) use (&$result) {
-            $result .= $data;
-        });
+        $this->getConnection()->done(
+            function($connection) use ($data) {
+                $result = '';
 
-        $connection->on('close', function() use ($callback, &$result) {
-            $callback($result);
-        });
+                $connection->on('data', function($data) use (&$result) {
+                    $result .= $data;
+                });
 
-        $connection->write(json_encode($data) . PHP_EOL);
+                $connection->on('close', function() use ($callback, &$result) {
+                    $callback($result);
+                });
+
+                $connection->write(json_encode($data) . PHP_EOL);
+            }
+        );
     }
 
     public function getStatus(callable $callback)
@@ -83,30 +75,6 @@ class Client
             $callback(json_decode($result, true));
         });
         $this->loop->run();
-    }
-
-    /**
-     * @return string
-     */
-    protected function getControllerSocket()
-    {
-        $host = $this->getNewControllerHost(false);
-        $port = $this->controllerPort;
-        $localSocket = '';
-        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-            $localSocket = 'tcp://' . $host . ':' . $port;
-        } elseif (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-            // enclose IPv6 addresses in square brackets before appending port
-            $localSocket = 'tcp://[' . $host . ']:' . $port;
-        } elseif (preg_match('#^unix://#', $host)) {
-            $localSocket = $host;
-        } else {
-            throw new \UnexpectedValueException(
-                '"' . $host . '" does not match to a set of supported transports. ' .
-                'Supported transports are: IPv4, IPv6 and unix:// .'
-                , 1433253311);
-        }
-        return $localSocket;
     }
 
     public function stopProcessManager(callable $callback)
