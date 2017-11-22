@@ -419,7 +419,7 @@ class ProcessManager
 
         $this->loop = \React\EventLoop\Factory::create();
         $this->controllerHost = $this->getNewControllerHost();
-        $this->controller = SocketFactory::getServer($this->controllerHost, self::CONTROLLER_PORT, $this->loop);
+        $this->controller = new Server(sprintf('%s:%d', $this->controllerHost, self::CONTROLLER_PORT), $this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);

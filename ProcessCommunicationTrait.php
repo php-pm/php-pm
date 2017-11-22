@@ -87,10 +87,6 @@ trait ProcessCommunicationTrait
      */
     protected function getSockFile($affix, $removeOld)
     {
-        if (Utils::isWindows()) {
-            //we have no unix domain sockets support
-            return '127.0.0.1';
-        }
         //since all commands set setcwd() we can make sure we are in the current application folder
 
         if ('/' === substr($this->socketPath, 0, 1)) {
