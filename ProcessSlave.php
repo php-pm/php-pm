@@ -341,7 +341,7 @@ class ProcessSlave
         $port = $this->config['port'];
         $host = $this->config['host'];
 
-        $this->server = SocketServer(sprintf('%s:%d', $host, $port), $this->loop);
+        $this->server = new SocketServer(sprintf('%s:%d', $host, $port), $this->loop);
 
         $middlewares = new MiddlewareRunner([
             new RequestBodyBufferMiddleware(16 * 1024 * 1024), // 16 MiB
