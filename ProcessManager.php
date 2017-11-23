@@ -4,6 +4,7 @@ declare(ticks = 1);
 namespace PHPPM;
 
 use React\Socket\Server;
+use React\Socket\UnixServer;
 use React\Socket\Connection;
 use React\Socket\ConnectionInterface;
 use React\Socket\ServerInterface;
@@ -419,7 +420,7 @@ class ProcessManager
 
         $this->loop = \React\EventLoop\Factory::create();
         $this->controllerHost = $this->getNewControllerHost();
-        $this->controller = new Server(sprintf('%s:%d', $this->controllerHost, self::CONTROLLER_PORT), $this->loop);
+        $this->controller = new UnixServer($this->controllerHost, $this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
