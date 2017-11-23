@@ -82,10 +82,10 @@ trait ProcessCommunicationTrait
     /**
      *
      * @param string $affix
-     * @param bool $removeOld
+     * @param bool $overwrite
      * @return string
      */
-    protected function getSockFile($affix, $removeOld)
+    protected function getSockFile($affix, $overwrite)
     {
         //since all commands set setcwd() we can make sure we are in the current application folder
 
@@ -105,7 +105,7 @@ trait ProcessCommunicationTrait
 
         $sock = $run. $affix . '.sock';
 
-        if ($removeOld && file_exists($sock)) {
+        if ($overwrite && file_exists($sock)) {
             unlink($sock);
         }
 
@@ -117,18 +117,18 @@ trait ProcessCommunicationTrait
      *
      * @return string
      */
-    protected function getNewSlaveSocket($port)
+    protected function getSlaveSocketPath($port)
     {
         return $this->getSockFile($port, true);
     }
 
     /**
-     * @param bool $removeOld
+     * @param bool $overwrite
      * @return string
      */
-    protected function getNewControllerHost($removeOld = true)
+    protected function getControllerSocketPath($overwrite = true)
     {
-        return $this->getSockFile('controller', $removeOld);
+        return $this->getSockFile('controller', $overwrite);
     }
 
     /**

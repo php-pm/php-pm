@@ -414,7 +414,7 @@ class ProcessManager
         ob_implicit_flush(1);
 
         $this->loop = \React\EventLoop\Factory::create();
-        $this->controllerHost = $this->getNewControllerHost();
+        $this->controllerHost = $this->getControllerSocketPath();
         $this->controller = new UnixServer($this->controllerHost, $this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
@@ -1128,7 +1128,7 @@ class ProcessManager
             $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
-        $host = $this->getNewSlaveSocket($port);
+        $host = $this->getSlaveSocketPath($port);
 
         $slave = [
             'ready' => false,

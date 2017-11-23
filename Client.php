@@ -36,8 +36,8 @@ class Client
             unset($this->connection);
         }
 
-        $connector = new Connector($this->loop);
-        $unixSocket = $this->getNewControllerHost(false);
+        $connector = new UnixConnector($this->loop);
+        $unixSocket = $this->getControllerSocketPath(false);
 
         return $connector->connect($unixSocket)->done(
             function($connection) {
