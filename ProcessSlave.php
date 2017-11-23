@@ -18,7 +18,7 @@ use React\Http\Middleware\RequestBodyBufferMiddleware;
 use React\Http\Middleware\RequestBodyParserMiddleware;
 use React\Promise\Promise;
 use React\Socket\ServerInterface;
-use React\Socket\Server as SocketServer;
+use React\Socket\UnixServer;
 use React\Stream\DuplexResourceStream;
 use React\Stream\DuplexStreamInterface;
 use React\Stream\ReadableResourceStream;
@@ -341,7 +341,7 @@ class ProcessSlave
         $port = $this->config['port'];
         $host = $this->config['host'];
 
-        $this->server = new SocketServer(sprintf('%s:%d', $host, $port), $this->loop);
+        $this->server = new UnixServer($host, $this->loop);
 
         $middlewares = new MiddlewareRunner([
             new RequestBodyBufferMiddleware(16 * 1024 * 1024), // 16 MiB
