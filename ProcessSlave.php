@@ -12,7 +12,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Http\Response;
-use React\Http\Server as HttpServer;
+use React\Http\StreamingServer as HttpServer;
 use React\Http\MiddlewareRunner;
 use React\Http\Middleware\RequestBodyBufferMiddleware;
 use React\Http\Middleware\RequestBodyParserMiddleware;
