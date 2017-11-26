@@ -39,15 +39,7 @@ class Client
         $connector = new UnixConnector($this->loop);
         $unixSocket = $this->getControllerSocketPath(false);
 
-        return $connector->connect($unixSocket)->then(
-            function($connection) {
-                $this->connection = $connection;
-                return $this->connection;
-            },
-            function($error) {
-                throw $error;
-            }
-        );
+        return $connector->connect($unixSocket);
     }
 
     protected function request($command, $options, $callback)
@@ -57,6 +49,7 @@ class Client
 
         $this->getConnection()->done(
             function($connection) use ($data, $callback) {
+                $this->connection = $connection;
                 $result = '';
 
                 $connection->on('data', function($data) use (&$result) {
