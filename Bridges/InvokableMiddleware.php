@@ -3,7 +3,6 @@
 namespace PHPPM\Bridges;
 
 use Psr\Http\Message\ServerRequestInterface;
-use RingCentral\Psr7;
 
 class InvokableMiddleware implements BridgeInterface
 {

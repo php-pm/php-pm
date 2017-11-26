@@ -4,7 +4,6 @@ namespace PHPPM\Bridges;
 
 use Interop\Http\Server\RequestHandlerInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use RingCentral\Psr7;
 
 class Psr15Middleware implements BridgeInterface
 {
@@ -27,7 +26,6 @@ class Psr15Middleware implements BridgeInterface
      */
     public function handle(ServerRequestInterface $request)
     {
-        $middleware = $this->middleware;
-        return $middleware->handle($request);
+        return $this->middleware->handle($request);
     }
 }
