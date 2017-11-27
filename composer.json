@@ -11,7 +11,7 @@
         "react/stream": "^0.7.1",
         "react/http": "dev-master",
         "react/socket": "^0.8.6",
-        "mkraemer/react-pcntl": "^2.0",
+        "mkraemer/react-pcntl": "^2.0|^3.0",
         "monolog/monolog": "^1.3",
         "paragonie/random_compat": "^2.0",
         "http-interop/http-middleware": "^0.5",
