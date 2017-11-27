@@ -18,9 +18,9 @@ use React\Http\Middleware\RequestBodyBufferMiddleware;
 use React\Http\Middleware\RequestBodyParserMiddleware;
 use React\Promise\Promise;
 use React\Socket\ServerInterface;
+use React\Socket\ConnectionInterface;
 use React\Socket\UnixServer;
-use React\Stream\DuplexResourceStream;
-use React\Stream\DuplexStreamInterface;
+use React\Socket\UnixConnector;
 use React\Stream\ReadableResourceStream;
 use Symfony\Component\Debug\ErrorHandler;
 
@@ -48,9 +48,9 @@ class ProcessSlave
     protected $loop;
 
     /**
-     * DuplexStreamInterface to ProcessManager master process
+     * ProcessManager master process connection
      *
-     * @var DuplexStreamInterface
+     * @var ConnectionInterface
      */
     protected $controller;
 
@@ -305,59 +305,50 @@ class ProcessSlave
         $this->errorLogger = BufferingLogger::create();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
-        $client = false;
-        for ($attempts = 10; $attempts; --$attempts, usleep(mt_rand(500, 1000))) {
-            $client = @stream_socket_client($this->config['controllerHost'], $errno, $errstr);
-            if ($client) {
-                break;
+        $connector = new UnixConnector($this->loop);
+        $connector->connect($this->config['controllerHost'])->done(
+            function($controller) {
+                $this->controller = $controller;
+
+                $pcntl = new PCNTL($this->loop);
+                $pcntl->on(SIGTERM, [$this, 'shutdown']);
+                $pcntl->on(SIGINT, [$this, 'shutdown']);
+                register_shutdown_function([$this, 'shutdown']);
+
+                $this->bindProcessMessage($this->controller);
+                $this->controller->on(
+                    'close',
+                    \Closure::bind(
+                        function () {
+                            $this->shutdown();
+                        },
+                        $this
+                    )
+                );
+
+                // port is only used for tcp connection. If unix socket, 'host' contains the socket path
+                $port = $this->config['port'];
+                $host = $this->config['host'];
+
+                $this->server = new UnixServer($host, $this->loop);
+
+                $middlewares = new MiddlewareRunner([
+                    new RequestBodyBufferMiddleware(16 * 1024 * 1024), // 16 MiB
+                    new RequestBodyParserMiddleware(),
+                    [$this, 'onRequest']
+                ]);
+
+                $httpServer = new HttpServer($middlewares);
+                $httpServer->listen($this->server);
+
+                $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
             }
-        }
-
-        if (!$client) {
-            $message = "Could not bind to {$this->config['controllerHost']}. Error: [$errno] $errstr";
-            throw new \RuntimeException($message, $errno);
-        }
-
-        $this->controller = new DuplexResourceStream($client, $this->loop);
-
-        $pcntl = new PCNTL($this->loop);
-
-        $pcntl->on(SIGTERM, [$this, 'shutdown']);
-        $pcntl->on(SIGINT, [$this, 'shutdown']);
-        register_shutdown_function([$this, 'shutdown']);
-
-        $this->bindProcessMessage($this->controller);
-        $this->controller->on(
-            'close',
-            \Closure::bind(
-                function () {
-                    $this->shutdown();
-                },
-                $this
-            )
         );
-
-        // port is only used for tcp connection. If unix socket, 'host' contains the socket path
-        $port = $this->config['port'];
-        $host = $this->config['host'];
-
-        $this->server = new UnixServer($host, $this->loop);
-
-        $middlewares = new MiddlewareRunner([
-            new RequestBodyBufferMiddleware(16 * 1024 * 1024), // 16 MiB
-            new RequestBodyParserMiddleware(),
-            [$this, 'onRequest']
-        ]);
-
-        $httpServer = new HttpServer($middlewares);
-        $httpServer->listen($this->server);
-
-        $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
 
         $this->loop->run();
     }
 
-    public function commandBootstrap(array $data, DuplexStreamInterface $conn)
+    public function commandBootstrap(array $data, ConnectionInterface $conn)
     {
         $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
 

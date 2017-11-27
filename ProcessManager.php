@@ -6,8 +6,8 @@ namespace PHPPM;
 use React\Socket\Server;
 use React\Socket\UnixServer;
 use React\Socket\Connection;
-use React\Socket\ConnectionInterface;
 use React\Socket\ServerInterface;
+use React\Socket\ConnectionInterface;
 use React\Stream\ReadableResourceStream;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
@@ -35,24 +35,19 @@ class ProcessManager
     protected $loop;
 
     /**
-     * @var ServerInterface
-     */
-    protected $controller;
-
-    /**
      * @var string
      */
     protected $controllerHost;
 
     /**
-     * @var \React\Socket\Server
+     * @var ServerInterface
      */
-    protected $web;
+    protected $controller;
 
     /**
-     * @var \React\Socket\TcpConnector
+     * @var ServerInterface
      */
-    protected $tcpConnector;
+    protected $web;
 
     /**
      * @var int
@@ -419,17 +414,14 @@ class ProcessManager
         ob_implicit_flush(1);
 
         $this->loop = \React\EventLoop\Factory::create();
-        $this->controllerHost = $this->getNewControllerHost();
+        $this->controllerHost = $this->getControllerSocketPath();
         $this->controller = new UnixServer($this->controllerHost, $this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
         $this->web->on('connection', array($this, 'onWeb'));
 
-        $this->tcpConnector = new \React\Socket\TcpConnector($this->loop);
-
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
-
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
         $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
@@ -447,7 +439,7 @@ class ProcessManager
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
         $this->writePid();
         for ($i = 0; $i < $this->slaveCount; $i++) {
-            $this->newInstance((self::CONTROLLER_PORT+1) + $i);
+            $this->newSlaveInstance((self::CONTROLLER_PORT+1) + $i);
         }
 
         $this->loop->run();
@@ -474,7 +466,7 @@ class ProcessManager
      *
      * @param Connection $incoming incoming connection from react
      */
-    public function onWeb(Connection $incoming)
+    public function onWeb(ConnectionInterface $incoming)
     {
         //preload sent data from $incoming to $buffer, otherwise it would be lost,
         //since getNextSlave is async.
@@ -776,7 +768,7 @@ class ProcessManager
                         $this->bootstrapFailed($conn);
                     }
 
-                    $this->newInstance($slave['port']);
+                    $this->newSlaveInstance($slave['port']);
                 },
                 $this
             )
@@ -1100,7 +1092,7 @@ class ProcessManager
                     $connection->close();
                 }
             } else {
-                $this->newInstance($slave['port']);
+                $this->newSlaveInstance($slave['port']);
             }
         };
 
@@ -1112,7 +1104,7 @@ class ProcessManager
      *
      * @param integer $port
      */
-    protected function newInstance($port)
+    protected function newSlaveInstance($port)
     {
         if ($this->inShutdown) {
             //when we are in the shutdown phase, we close all connections
@@ -1136,7 +1128,7 @@ class ProcessManager
             $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
-        $host = Utils::isWindows() ? 'tcp://127.0.0.1' : $this->getNewSlaveSocket($port);
+        $host = $this->getSlaveSocketPath($port);
 
         $slave = [
             'ready' => false,
@@ -1163,7 +1155,7 @@ class ProcessManager
             'host' => $slave['host'],
 
             'session_path' => session_save_path(),
-            'controllerHost' => Utils::isWindows() ? 'tcp://127.0.0.1' : $this->controllerHost,
+            'controllerHost' => $this->controllerHost,
 
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
