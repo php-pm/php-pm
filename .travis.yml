@@ -20,11 +20,12 @@ script:
 
   # integration test
   - composer require php-pm/httpkernel-adapter:dev-master
-  - bin/ppm start --workers=1 --bridge=StaticBridge --max-requests=1 -v&
+  - mkdir web && echo Hello > web/index.html
+  - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v&
   - bin/ppm status
-  - curl -v http://127.0.0.1:8080
+  - curl -v -f http://127.0.0.1:8080
   - bin/ppm status
-  - curl -v http://127.0.0.1:8080
+  - curl -v -f http://127.0.0.1:8080
   - bin/ppm status
 
 matrix:
