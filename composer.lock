@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "6a7c45e8eff24b4625e4e9632f8f1b2d",
+    "content-hash": "52241855fce203ffd693b8c8a6048d91",
     "packages": [
         {
             "name": "evenement/evenement",
@@ -106,25 +106,26 @@
         },
         {
             "name": "mkraemer/react-pcntl",
-            "version": "v2.2.0",
+            "version": "v3.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mkraemer/react-pcntl.git",
-                "reference": "b410b6e52965714d44395ac14646a01bd362e5c6"
+                "reference": "39d6af793c3a61edbde70c130b2b7dca9f316789"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mkraemer/react-pcntl/zipball/b410b6e52965714d44395ac14646a01bd362e5c6",
-                "reference": "b410b6e52965714d44395ac14646a01bd362e5c6",
+                "url": "https://api.github.com/repos/mkraemer/react-pcntl/zipball/39d6af793c3a61edbde70c130b2b7dca9f316789",
+                "reference": "39d6af793c3a61edbde70c130b2b7dca9f316789",
                 "shasum": ""
             },
             "require": {
-                "evenement/evenement": "2.0.*",
+                "evenement/evenement": "^3.0 || ^2.0",
                 "ext-pcntl": "*",
                 "php": ">=5.4",
                 "react/event-loop": "0.4.*"
             },
             "require-dev": {
+                "phpunit/phpunit": "^4.8",
                 "satooshi/php-coveralls": "^1.0"
             },
             "type": "library",
@@ -148,7 +149,7 @@
                 "pcntl",
                 "react"
             ],
-            "time": "2016-11-16T14:20:20+00:00"
+            "time": "2017-07-24T19:56:32+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -2521,7 +2522,8 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=5.6.0"
+        "php": ">=5.6.0",
+        "ext-pcntl": "*"
     },
     "platform-dev": [],
     "platform-overrides": {
