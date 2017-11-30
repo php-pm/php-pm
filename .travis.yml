@@ -22,7 +22,7 @@ script:
   - composer require php-pm/httpkernel-adapter:dev-master
   - mkdir web && echo Hello > web/index.html
   - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v&
-  - while [ ! -f .ppm/run/controller.sock ]; do sleep 1; done
+  - while [ ! -f .ppm/run/controller.sock ]; do ls .ppm/run; sleep 1; done
   - bin/ppm status
   - curl -v -f http://127.0.0.1:8080
   - bin/ppm status
