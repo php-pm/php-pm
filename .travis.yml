@@ -18,10 +18,18 @@ script:
   - composer install
   - ./vendor/bin/phpunit
 
-matrix:
-  allow_failures:
-    - php: nightly
+  # integration test
+  - composer require php-pm/httpkernel-adapter:dev-master
+  - mkdir web && echo Hello > web/index.html
+  - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v&
+  - sleep 5
+  - bin/ppm status
+  - curl -v -f http://127.0.0.1:8080
+  - bin/ppm status
+  - curl -v -f http://127.0.0.1:8080
+  - bin/ppm status
 
+matrix:
   fast_finish: true
 
 # cache vendors
