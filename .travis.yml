@@ -29,9 +29,6 @@ script:
   - bin/ppm status
 
 matrix:
-  allow_failures:
-    - php: nightly
-
   fast_finish: true
 
 # cache vendors
