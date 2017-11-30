@@ -124,8 +124,6 @@ To get the maximum performance you should usually use `--app-env=prod` with disa
 debug `--debug=0`. Also make sure xdebug is disabled. Try with different amount of workers.
 Usually a 10% over your cpu core count is good. Example: If you have 8 real cores (excl. hyper-threading) use `--workers=9`.
 
-If your applications supports it, try enabled concurrent requests per worker: `--concurrent-requests=1`.
-
 To get even more performance (for static file serving or for rather fast applications) try a different event loop (see https://github.com/reactphp/event-loop).
 
 #### Debugging
