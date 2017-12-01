@@ -1206,8 +1206,8 @@ EOF;
         }
 
         $pid = $slave['pid'];
-        if (is_int($slavePid)) {
-            posix_kill($slavePid, SIGKILL); //make sure its really dead
+        if (is_int($pid)) {
+            posix_kill($pid, SIGKILL); //make sure its really dead
         }
     }
 }
