@@ -30,7 +30,7 @@ class ProcessManager
     protected $ports = [];
 
     /**
-     * @var \React\EventLoop\LibEventLoop|\React\EventLoop\StreamSelectLoop
+     * @var \React\EventLoop\LoopInterface
      */
     protected $loop;
 
@@ -189,6 +189,7 @@ class ProcessManager
      * @var int
      */
     protected $timeout = 30;
+
     /**
      * Location of the file where we're going to store the PID of the master process
      */
@@ -505,9 +506,9 @@ class ProcessManager
 
             $took = microtime(true) - $start;
             if ($this->output->isVeryVerbose() && $took > 1) {
-                    $this->output->writeln(
-                        sprintf('<info>took abnormal %f seconds for choosing next free worker</info>', $took)
-                    );
+                $this->output->writeln(
+                    sprintf('<info>took abnormal %f seconds for choosing next free worker</info>', $took)
+                );
             }
 
             $slave =& $this->slaves[$id];
