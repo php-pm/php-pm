@@ -145,15 +145,6 @@ class ProcessManager
     protected $emergencyMode = false;
 
     /**
-     * If a worker is allowed to handle more than one request at the same time.
-     * This can lead to issues when the application does not support it
-     * (like when they operate on globals at the same time)
-     *
-     * @var bool
-     */
-    protected $concurrentRequestsPerWorker = false;
-
-    /**
      * @var null|int
      */
     protected $lastWorkerErrorPrintBy;
@@ -291,14 +282,6 @@ class ProcessManager
     public function setPhpCgiExecutable($phpCgiExecutable)
     {
         $this->phpCgiExecutable = $phpCgiExecutable;
-    }
-
-    /**
-     * @param boolean $concurrentRequestsPerWorker
-     */
-    public function setConcurrentRequestsPerWorker($concurrentRequestsPerWorker)
-    {
-        $this->concurrentRequestsPerWorker = $concurrentRequestsPerWorker;
     }
 
     /**
@@ -689,13 +672,13 @@ class ProcessManager
                     continue;
                 }
 
-                if (!$this->concurrentRequestsPerWorker && $slave['busy']) {
-                    //we skip workers that are busy, means worker that are currently handle a connection
-                    //this makes it more robust since most applications are not made to handle
-                    //several request at the same time - even when one request is streaming. Would lead
-                    //to strange effects&crashes in high traffic sites if not considered.
-                    //maybe in the future this can be set application specific.
-                    //Rule of thumb: The application may not operate on globals, statics or same file paths to get this working.
+                if ($slave['busy']) {
+                    // we skip workers that are busy, means worker that are 
+                    // currently handling a connection. This makes it more robust 
+                    // since most applications are not desinged to handle
+                    // several request at the same time.
+                    // Rule of thumb: The application may not operate on globals,
+                    // statics or same file paths to get this working.
                     continue;
                 }
 
