@@ -19,7 +19,6 @@ script:
   - ./vendor/bin/phpunit
 
   # integration test
-  - composer require php-pm/httpkernel-adapter:dev-master
   - mkdir web && echo Hello > web/index.html
   - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v&
   - sleep 5
