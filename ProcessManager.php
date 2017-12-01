@@ -9,6 +9,7 @@ use React\Socket\Connection;
 use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
 use React\Stream\ReadableResourceStream;
+use React\ChildProcess\Process;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
@@ -58,13 +59,6 @@ class ProcessManager
      * @var bool
      */
     protected $waitForSlaves = true;
-
-    /**
-     * Whether the server is up and thus creates new slaves when they die or not.
-     *
-     * @var bool
-     */
-    protected $isRunning = false;
 
     /**
      * @var int
@@ -246,14 +240,7 @@ class ProcessManager
         }
 
         foreach ($this->slaves as $slave) {
-            if (is_resource($slave['process'])) {
-                proc_terminate($slave['process']);
-            }
-
-            if ($slave['pid']) {
-                //make sure its dead
-                posix_kill($slave['pid'], SIGKILL);
-            }
+            $this->terminateSlave($slave);
         }
 
         unlink($this->pidfile);
@@ -433,7 +420,6 @@ class ProcessManager
             });
         }
 
-        $this->isRunning = true;
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
 
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
@@ -754,15 +740,7 @@ class ProcessManager
                     }
 
                     $slave['ready'] = false;
-                    if (isset($slave['stderr'])) {
-                        $slave['stderr']->close();
-                    }
-
-                    if (is_resource($slave['process'])) {
-                        proc_terminate($slave['process'], SIGKILL);
-                    }
-
-                    posix_kill($slave['pid'], SIGKILL); //make sure its really dead
+                    $this->terminateSlave($slave);
 
                     if ($slave['duringBootstrap']) {
                         $this->bootstrapFailed($conn);
@@ -1198,17 +1176,13 @@ EOF;
         //e.g. headers_sent() returns always true, although wrong.
         $commandline .= ' -C ' . ProcessUtils::escapeArgument($file);
 
-        $descriptorspec = [
-            ['pipe', 'r'], //stdin
-            ['pipe', 'w'], //stdout
-            ['pipe', 'w'], //stderr
-        ];
+        $process = new Process($commandline);
 
+        $slave['process'] = $process;
         $this->slaves[$port] = $slave;
-        $this->slaves[$port]['process'] = proc_open($commandline, $descriptorspec, $pipes);
 
-        $stderr = new ReadableResourceStream($pipes[2], $this->loop);
-        $stderr->on(
+        $process->start($this->loop);
+        $process->stderr->on(
             'data',
             function ($data) use ($port) {
                 if ($this->lastWorkerErrorPrintBy !== $port) {
@@ -1218,6 +1192,22 @@ EOF;
                 $this->output->write("<error>$data</error>");
             }
         );
-        $this->slaves[$port]['stderr'] = $stderr;
+    }
+
+    /**
+     * @param array $slave
+     */
+    private function terminateSlave($slave)
+    {
+        /** @var Process */
+        $process = $slave['process'];
+        if ($process instanceof Process && $process->isRunning()) {
+            $process->terminate();
+        }
+
+        $pid = $slave['pid'];
+        if (is_int($slavePid)) {
+            posix_kill($slavePid, SIGKILL); //make sure its really dead
+        }
     }
 }

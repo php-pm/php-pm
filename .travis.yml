@@ -28,6 +28,7 @@ script:
   - bin/ppm status
   - curl -v -f http://127.0.0.1:8080
   - bin/ppm status
+  - bin/ppm stop
 
 matrix:
   fast_finish: true
