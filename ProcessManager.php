@@ -1200,7 +1200,7 @@ EOF;
     {
         /** @var Process */
         $process = $slave['process'];
-        if ($process instanceof Process && $process->isRunning()) {
+        if ($process->isRunning()) {
             $process->terminate();
         }
 
