@@ -8,7 +8,6 @@ use React\Socket\UnixServer;
 use React\Socket\Connection;
 use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
-use React\Stream\ReadableResourceStream;
 use React\ChildProcess\Process;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
