@@ -316,15 +316,7 @@ class ProcessSlave
                 register_shutdown_function([$this, 'shutdown']);
 
                 $this->bindProcessMessage($this->controller);
-                $this->controller->on(
-                    'close',
-                    \Closure::bind(
-                        function () {
-                            $this->shutdown();
-                        },
-                        $this
-                    )
-                );
+                $this->controller->on('close', [$this, 'shutdown']);
 
                 // port is only used for tcp connection. If unix socket, 'host' contains the socket path
                 $port = $this->config['port'];
@@ -427,7 +419,7 @@ class ProcessSlave
         if ($bridge = $this->getBridge()) {
             $response = $bridge->handle($request);
             $this->sendCurrentFiles();
-        } 
+        }
         else {
             $response = new Response(404, [], 'No Bridge defined');
         }
