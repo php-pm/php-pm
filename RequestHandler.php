@@ -116,7 +116,6 @@ class RequestHandler
         });
 
         $this->slave['busy'] = true;
-        $this->slave['connections']++;
 
         $connector = new UnixConnector($this->loop);
         $connector = new TimeoutConnector($connector, $this->timeout, $this->loop);
@@ -155,7 +154,6 @@ class RequestHandler
             $this->incoming->end();
 
             $this->slave['busy'] = false;
-            $this->slave['connections']--;
             $this->slave['requests']++;
 
             /** @var ConnectionInterface $connection */
@@ -185,7 +183,6 @@ class RequestHandler
      */
     public function slaveConnectFailed(\Exception $e) {
         $this->slave['busy'] = false;
-        $this->slave['connections']--;
 
         if ($this->output->isVeryVerbose()) {
             $this->output->writeln(

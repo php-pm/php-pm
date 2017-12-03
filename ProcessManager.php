@@ -450,19 +450,13 @@ class ProcessManager
      */
     public function &getNextSlave()
     {
-        $minConnections = null;
         $available = null;
 
         foreach ($this->slaves as &$slave) {
-            // Skip workers that are not ready of currently handling a connection
-            if (!$slave['ready'] || $slave['busy']) {
-                continue;
-            }
-
-            // we pick a slave that currently handles the fewest connections
-            if (null === $minConnections || $slave['connections'] < $minConnections) {
-                $minConnections = $slave['connections'];
+            // return only available workers not currently handling a connection
+            if ($slave['ready'] && !$slave['busy']) {
                 $available =& $slave;
+                break;
             }
         }
 
@@ -879,7 +873,6 @@ class ProcessManager
 
             'busy' => false,
             'requests' => 0,
-            'connections' => 0,
             'connection' => null,
             'host' => $host
         ];
