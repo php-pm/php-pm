@@ -43,6 +43,11 @@ class RequestHandler
         $this->timeout = $processManager->timeout;
     }
 
+    /**
+     * Handle incoming client connection
+     *
+     * @param ConnectionInterface $incoming
+     */
     public function handle(ConnectionInterface $incoming)
     {
         $this->incoming = $incoming;
@@ -59,6 +64,8 @@ class RequestHandler
     /**
      * Buffer incoming data until slave connection is available
      * and headers have been received
+     *
+     * @param string $data
      */
     public function handleData($data)
     {
@@ -99,6 +106,8 @@ class RequestHandler
 
     /**
      * Slave available handler
+     *
+     * @param array $slave available slave instance
      */
     public function slaveAvailable(&$slave)
     {
@@ -146,29 +155,37 @@ class RequestHandler
         $this->incoming->on('close', [$this->connection, 'close']);
 
         // update slave availability
-        $this->connection->on('close', function () {
-            $this->verboseTimer(function($took) {
-                return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave['port'], $took);
-            });
+        $this->connection->on('close', [$this, 'slaveClosed']);
 
-            $this->incoming->end();
+        // relay data to client
+        $this->connection->pipe($this->incoming);
+    }
 
-            $this->slave['busy'] = false;
-            $this->slave['requests']++;
-
-            /** @var ConnectionInterface $connection */
-            $connection = $this->slave['connection'];
-
-            if ($this->slave['requests'] >= $this->maxRequests) {
-                $this->slave['ready'] = false;
-                $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $this->slave['port'], $this->maxRequests));
-                $connection->close();
-            } elseif ($this->slave['closeWhenFree']) {
-                $connection->close();
-            }
+    /**
+     * Handle slave disconnected
+     *
+     * Typically called after slave has finished handling request
+     */
+    public function slaveClosed() {
+        $this->verboseTimer(function($took) {
+            return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave['port'], $took);
         });
 
-        $this->connection->pipe($this->incoming);
+        $this->incoming->end();
+
+        $this->slave['busy'] = false;
+        $this->slave['requests']++;
+
+        /** @var ConnectionInterface $connection */
+        $connection = $this->slave['connection'];
+
+        if ($this->slave['requests'] >= $this->maxRequests) {
+            $this->slave['ready'] = false;
+            $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $this->slave['port'], $this->maxRequests));
+            $connection->close();
+        } elseif ($this->slave['closeWhenFree']) {
+            $connection->close();
+        }
     }
 
     /**
@@ -184,30 +201,31 @@ class RequestHandler
     public function slaveConnectFailed(\Exception $e) {
         $this->slave['busy'] = false;
 
-        if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(
-                sprintf(
-                    '<error>Connection to worker %d failed. Try #%d, took %.3fs. ' .
-                    'Try increasing your timeout of %d. Error message: [%d] %s</error>',
-                    $this->slave['port'], $this->redirectionTries, microtime(true) - $this->start, $this->timeout, $e->getMessage(), $e->getCode()
-                )
+        $this->verboseTimer(function($took) {
+            return sprintf(
+                '<error>Connection to worker %d failed. Try #%d, took %.3fs. ' .
+                'Try increasing your timeout of %d. Error message: [%d] %s</error>',
+                $this->slave['port'], $this->redirectionTries, $took, $this->timeout, $e->getMessage(), $e->getCode()
             );
-        }
+        }, true);
 
         // should not get any more access to this slave instance
         unset($this->slave);
 
         // Try next free client
-        $this->processManager->getNextSlave([$this, 'slaveAvailable']);
+        $this->getNextSlave([$this, 'slaveAvailable']);
     }
 
     /**
-     * Section timer
+     * Section timer. Measure execution time hand output if verbose mode.
+     *
+     * @param callable $callback
+     * @param bool $always Invoke callback regardless of execution time
      */
-    protected function verboseTimer($callback)
+    protected function verboseTimer($callback, $always = false)
     {
         $took = microtime(true) - $this->start;
-        if ($this->output->isVeryVerbose() && $took > 1) {
+        if ($this->output->isVeryVerbose() && ($always || $took > 1)) {
             $message = $callback($took);
             $this->output->writeln($message);
         }
