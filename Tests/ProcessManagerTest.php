@@ -38,14 +38,14 @@ class ProcessManagerTest extends PhpPmTestCase
 
     /**
      * @dataProvider provideReplaceHeader
-     * 
+     *
      * @param string $originHeader
      * @param string $expectedNewHeader
      * @param array $replaceHeaders
      */
     public function testReplaceHeader($originHeader, $expectedNewHeader, array $replaceHeaders)
     {
-        $replaceHeader = $this->getProcessManagerMethod('replaceHeader');
+        $replaceHeader = $this->getRequestHandlerMethod('replaceHeader');
         $replacedHeader = $replaceHeader($originHeader, $replaceHeaders);
         $this->assertEquals($expectedNewHeader, $replacedHeader);
     }
@@ -64,13 +64,13 @@ class ProcessManagerTest extends PhpPmTestCase
 
     /**
      * @dataProvider provideIsHeaderEnd
-     * 
+     *
      * @param string $header
      * @param boolean $isEnd
      */
     public function testIsHeaderEnd($header, $isEnd)
     {
-        $isHeaderEnd = $this->getProcessManagerMethod('isHeaderEnd');
+        $isHeaderEnd = $this->getRequestHandlerMethod('isHeaderEnd');
         $this->assertEquals($isHeaderEnd($header), $isEnd);
     }
 }

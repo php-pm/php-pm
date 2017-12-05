@@ -2,7 +2,7 @@
 
 namespace PHPPM;
 
-use React\Stream\DuplexStreamInterface;
+use React\Socket\ConnectionInterface;
 
 /**
  * Little trait used in ProcessManager and ProcessSlave to have a simple json process communication.
@@ -19,12 +19,12 @@ trait ProcessCommunicationTrait
     /**
      * Parses a received message. Redirects to the appropriate `command*` method.
      *
+     * @param ConnectionInterface $conn
      * @param array $data
-     * @param DuplexStreamInterface $conn
      *
      * @throws \Exception when invalid 'cmd' in $data.
      */
-    public function processMessage($data, DuplexStreamInterface $conn)
+    public function processMessage(ConnectionInterface $conn, $data)
     {
         $array = json_decode($data, true);
 
@@ -39,41 +39,35 @@ trait ProcessCommunicationTrait
     /**
      * Binds data-listener to $conn and waits for incoming commands.
      *
-     * @param DuplexStreamInterface $conn
+     * @param ConnectionInterface $conn
      */
-    protected function bindProcessMessage(DuplexStreamInterface $conn)
+    protected function bindProcessMessage(ConnectionInterface $conn)
     {
         $buffer = '';
 
-        $conn->on(
-            'data',
-            \Closure::bind(
-                function ($data) use ($conn, &$buffer) {
-                    $buffer .= $data;
+        $conn->on('data', function ($data) use ($conn, &$buffer) {
+            $buffer .= $data;
 
-                    if (substr($buffer, -strlen(PHP_EOL)) === PHP_EOL) {
-                        foreach (explode(PHP_EOL, $buffer) as $message) {
-                            if ($message) {
-                                $this->processMessage($message, $conn);
-                            }
-                        }
-
-                        $buffer = '';
+            if (substr($buffer, -strlen(PHP_EOL)) === PHP_EOL) {
+                foreach (explode(PHP_EOL, $buffer) as $message) {
+                    if ($message) {
+                        $this->processMessage($conn, $message);
                     }
-                },
-                $this
-            )
-        );
+                }
+
+                $buffer = '';
+            }
+        });
     }
 
     /**
      * Sends a message through $conn.
      *
-     * @param DuplexStreamInterface $conn
+     * @param ConnectionInterface $conn
      * @param string $command
      * @param array $message
      */
-    protected function sendMessage(DuplexStreamInterface $conn, $command, array $message = [])
+    protected function sendMessage(ConnectionInterface $conn, $command, array $message = [])
     {
         $message['cmd'] = $command;
         $conn->write(json_encode($message) . PHP_EOL);
