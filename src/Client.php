@@ -16,30 +16,9 @@ class Client
      */
     protected $loop;
 
-    /**
-     * @var ConnectionInterface
-     */
-    protected $connection;
-
     public function __construct()
     {
         $this->loop = Factory::create();
-    }
-
-    /**
-     * @return ConnectionInterface
-     */
-    protected function getConnection()
-    {
-        if ($this->connection) {
-            $this->connection->close();
-            unset($this->connection);
-        }
-
-        $connector = new UnixConnector($this->loop);
-        $unixSocket = $this->getControllerSocketPath(false);
-
-        return $connector->connect($unixSocket);
     }
 
     protected function request($command, $options, $callback)
@@ -47,9 +26,11 @@ class Client
         $data['cmd'] = $command;
         $data['options'] = $options;
 
-        $this->getConnection()->done(
+        $connector = new UnixConnector($this->loop);
+        $unixSocket = $this->getControllerSocketPath(false);
+
+        $connector->connect($unixSocket)->done(
             function($connection) use ($data, $callback) {
-                $this->connection = $connection;
                 $result = '';
 
                 $connection->on('data', function($data) use (&$result) {
