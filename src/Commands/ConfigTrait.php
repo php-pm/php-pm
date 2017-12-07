@@ -16,21 +16,21 @@ trait ConfigTrait
     protected function configurePPMOptions(Command $command)
     {
         $command
-            ->addOption('bridge', null, InputOption::VALUE_OPTIONAL, 'The bridge we use to convert a ReactPHP-Request to your target framework.', 'HttpKernel')
-            ->addOption('host', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer host. Default is 127.0.0.1', '127.0.0.1')
-            ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080', 8080)
-            ->addOption('workers', null, InputOption::VALUE_OPTIONAL, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', 8)
-            ->addOption('app-env', null, InputOption::VALUE_OPTIONAL, 'The environment that your application will use to bootstrap (if any)', 'dev')
-            ->addOption('debug', null, InputOption::VALUE_OPTIONAL, 'Enable/Disable debugging so that your application is more verbose, enables also hot-code reloading. 1|0', 1)
-            ->addOption('logging', null, InputOption::VALUE_OPTIONAL, 'Enable/Disable http logging to stdout. 1|0', 1)
-            ->addOption('static-directory', null, InputOption::VALUE_OPTIONAL, 'Static files root directory, if not provided static files will not be served', '')
-            ->addOption('max-requests', null, InputOption::VALUE_OPTIONAL, 'Max requests per worker until it will be restarted', 1000)
-            ->addOption('populate-server-var', null, InputOption::VALUE_OPTIONAL, 'If a worker application uses $_SERVER var it needs to be populated by request data 1|0', 1)
-            ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
-            ->addOption('cgi-path', null, InputOption::VALUE_OPTIONAL, 'Full path to the php-cgi executable', false)
-            ->addOption('socket-path', null, InputOption::VALUE_OPTIONAL, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
-            ->addOption('pidfile', null, InputOption::VALUE_OPTIONAL, 'Path to a file where the pid of the master process is going to be stored', '.ppm/ppm.pid')
-            ->addOption('config', 'c', InputOption::VALUE_OPTIONAL, 'Path to config file', '');
+            ->addOption('bridge', null, InputOption::VALUE_REQUIRED, 'Bridge for converting React Psr7 requests to target framework.', 'HttpKernel')
+            ->addOption('host', null, InputOption::VALUE_REQUIRED, 'Load-Balancer host. Default is 127.0.0.1', '127.0.0.1')
+            ->addOption('port', null, InputOption::VALUE_REQUIRED, 'Load-Balancer port. Default is 8080', 8080)
+            ->addOption('workers', null, InputOption::VALUE_REQUIRED, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', 8)
+            ->addOption('app-env', null, InputOption::VALUE_REQUIRED, 'The environment that your application will use to bootstrap (if any)', 'dev')
+            ->addOption('debug', null, InputOption::VALUE_REQUIRED, 'Enable/Disable debugging so that your application is more verbose, enables also hot-code reloading. 1|0', 0)
+            ->addOption('logging', null, InputOption::VALUE_REQUIRED, 'Enable/Disable http logging to stdout. 1|0', 1)
+            ->addOption('static-directory', null, InputOption::VALUE_REQUIRED, 'Static files root directory, if not provided static files will not be served', '')
+            ->addOption('max-requests', null, InputOption::VALUE_REQUIRED, 'Max requests per worker until it will be restarted', 1000)
+            ->addOption('populate-server-var', null, InputOption::VALUE_REQUIRED, 'If a worker application uses $_SERVER var it needs to be populated by request data 1|0', 1)
+            ->addOption('bootstrap', null, InputOption::VALUE_REQUIRED, 'Class responsible for bootstrapping the application', 'PHPPM\Bootstraps\Symfony')
+            ->addOption('cgi-path', null, InputOption::VALUE_REQUIRED, 'Full path to the php-cgi executable', false)
+            ->addOption('socket-path', null, InputOption::VALUE_REQUIRED, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
+            ->addOption('pidfile', null, InputOption::VALUE_REQUIRED, 'Path to a file where the pid of the master process is going to be stored', '.ppm/ppm.pid')
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Path to config file', '');
     }
 
     protected function renderConfig(OutputInterface $output, array $config)
