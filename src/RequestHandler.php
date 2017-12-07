@@ -92,9 +92,12 @@ class RequestHandler
      */
     public function getNextSlave()
     {
-        $slave =& $this->processManager->getNextSlave();
+        $available = SlavePool::getInstance()->getByStatus(Slave::READY);
 
-        if ($slave) {
+        if (count($available)) {
+            // pick random slave
+            $slave = $available[array_rand($available)];
+
             // slave available -> connect
             $this->slaveAvailable($slave);
         }
@@ -109,7 +112,7 @@ class RequestHandler
      *
      * @param array $slave available slave instance
      */
-    public function slaveAvailable(&$slave)
+    public function slaveAvailable(Slave $slave)
     {
         $this->redirectionTries++;
 
@@ -118,18 +121,19 @@ class RequestHandler
             return;
         }
 
-        $this->slave =& $slave;
+        $this->slave = $slave;
 
         $this->verboseTimer(function($took) {
             return sprintf('<info>took abnormal %.3f seconds for choosing next free worker</info>', $took);
         });
 
-        $this->slave['busy'] = true;
+        // mark slave as busy
+        $this->slave->occupy();
 
         $connector = new UnixConnector($this->loop);
         $connector = new TimeoutConnector($connector, $this->timeout, $this->loop);
 
-        $connector->connect($this->slave['host'])->then(
+        $connector->connect($this->slave->getSocketPath())->then(
             [$this, 'slaveConnected'],
             [$this, 'slaveConnectFailed']
         );
@@ -145,7 +149,7 @@ class RequestHandler
         $this->connection = $connection;
 
         $this->verboseTimer(function($took) {
-            return sprintf('<info>Took abnormal %.3f seconds for connecting to worker %d</info>', $took, $this->slave['port']);
+            return sprintf('<info>Took abnormal %.3f seconds for connecting to worker %d</info>', $took, $this->slave->getPort());
         });
 
         // call handler once in case entire request as already been buffered
@@ -168,22 +172,20 @@ class RequestHandler
      */
     public function slaveClosed() {
         $this->verboseTimer(function($took) {
-            return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave['port'], $took);
+            return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
         });
 
         $this->incoming->end();
 
-        $this->slave['busy'] = false;
-        $this->slave['requests']++;
+        // mark slave as available
+        $this->slave->release();
 
         /** @var ConnectionInterface $connection */
-        $connection = $this->slave['connection'];
+        $connection = $this->slave->getConnection();
 
-        if ($this->slave['requests'] >= $this->maxRequests) {
-            $this->slave['ready'] = false;
-            $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $this->slave['port'], $this->maxRequests));
-            $connection->close();
-        } elseif ($this->slave['closeWhenFree']) {
+        if ($this->slave->getHandledRequests() >= $this->maxRequests) {
+            $this->slave->close();
+            $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $this->slave->getPort(), $this->maxRequests));
             $connection->close();
         }
     }
@@ -199,13 +201,13 @@ class RequestHandler
      * @param \Exception slave connection error
      */
     public function slaveConnectFailed(\Exception $e) {
-        $this->slave['busy'] = false;
+        $this->slave->ready();
 
         $this->verboseTimer(function($took) {
             return sprintf(
                 '<error>Connection to worker %d failed. Try #%d, took %.3fs. ' .
                 'Try increasing your timeout of %d. Error message: [%d] %s</error>',
-                $this->slave['port'], $this->redirectionTries, $took, $this->timeout, $e->getMessage(), $e->getCode()
+                $this->slave->getPort(), $this->redirectionTries, $took, $this->timeout, $e->getMessage(), $e->getCode()
             );
         }, true);
 
@@ -256,11 +258,11 @@ class RequestHandler
 
         foreach ($headersToReplace as $key => $value) {
             if (false !== $headerPosition = stripos($result, $key . ':')) {
-                //check how long the header is
+                // check how long the header is
                 $length = strpos(substr($header, $headerPosition), "\r\n");
                 $result = substr_replace($result, "$key: $value", $headerPosition, $length);
             } else {
-                //$key is not in header yet, add it at the end
+                // $key is not in header yet, add it at the end
                 $end = strpos($result, "\r\n\r\n");
                 $result = substr_replace($result, "\r\n$key: $value", $end, 0);
             }
