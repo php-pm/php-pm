@@ -44,11 +44,11 @@ class SlavePool
     public function add($port, Slave $slave)
     {
         if (isset($this->slaves[$port])) {
-            throw new \Exception("Slave port $port already occupied. This should not happen.");
+            throw new \Exception("Slave port $port already occupied.");
         }
 
         if ($slave->getPort() !== $port) {
-            throw new \Exception("Slave mis-assigned. This should not happen.");
+            throw new \Exception("Slave mis-assigned.");
         }
 
         $this->slaves[$port] = $slave;
@@ -77,7 +77,7 @@ class SlavePool
     public function get($port)
     {
         if (!isset($this->slaves[$port])) {
-            throw new \Exception("Slave port $port empty. This should not happen.");
+            throw new \Exception("Slave port $port empty.");
         }
 
         return $this->slaves[$port];
@@ -98,7 +98,7 @@ class SlavePool
             }
         }
 
-        throw new \Exception("Slave connection not registered. This should not happen.");
+        throw new \Exception("Slave connection not registered.");
     }
 
     /**
