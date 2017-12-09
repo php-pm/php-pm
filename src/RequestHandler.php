@@ -95,8 +95,8 @@ class RequestHandler
         $available = SlavePool::getInstance()->getByStatus(Slave::READY);
 
         if (count($available)) {
-            // pick random slave
-            $slave = $available[array_rand($available)];
+            // pick first slave
+            $slave = array_shift($available);
 
             // slave available -> connect
             $this->slaveAvailable($slave);
