@@ -215,8 +215,8 @@ class ProcessManager
         $this->inShutdown = true;
 
         $this->output->writeln($graceful
-		? '<info>Shutdown received, exiting.</info>'
-		: '<error>Termination received, exiting.</error>'
+            ? '<info>Shutdown received, exiting.</info>'
+            : '<error>Termination received, exiting.</error>'
         );
 
         //this method is also called during startup when something crashed, so
