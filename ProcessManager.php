@@ -481,7 +481,7 @@ class ProcessManager
                 // this connection is not registered, so it died during the ProcessSlave constructor.
                 $this->output->writeln(
                     '<error>Worker permanently closed during PHP-PM bootstrap. Not so cool. ' .
-                    'Not your fault, please create a ticket at github.com/php-pm/php-pm with' .
+                    'Not your fault, please create a ticket at github.com/php-pm/php-pm with ' .
                     'the output of `ppm start -vv`.</error>'
                 );
 
