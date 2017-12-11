@@ -12,10 +12,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Http\Response;
-use React\Http\StreamingServer as HttpServer;
-use React\Http\MiddlewareRunner;
-use React\Http\Middleware\RequestBodyBufferMiddleware;
-use React\Http\Middleware\RequestBodyParserMiddleware;
+use React\Http\Server as HttpServer;
 use React\Promise\Promise;
 use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
@@ -318,19 +315,13 @@ class ProcessSlave
                 $this->bindProcessMessage($this->controller);
                 $this->controller->on('close', [$this, 'shutdown']);
 
-                // port is only used for tcp connection. If unix socket, 'host' contains the socket path
+                // Port is the slave identifier. Since using unix sockets, host is the socket path.
                 $port = $this->config['port'];
                 $host = $this->config['host'];
 
                 $this->server = new UnixServer($host, $this->loop);
 
-                $middlewares = new MiddlewareRunner([
-                    new RequestBodyBufferMiddleware(16 * 1024 * 1024), // 16 MiB
-                    new RequestBodyParserMiddleware(),
-                    [$this, 'onRequest']
-                ]);
-
-                $httpServer = new HttpServer($middlewares);
+                $httpServer = new HttpServer([$this, 'onRequest']);
                 $httpServer->listen($this->server);
 
                 $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
