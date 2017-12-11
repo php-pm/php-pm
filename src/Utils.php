@@ -71,17 +71,17 @@ class Utils
     public static function getMaxMemory()
     {
         $memoryLimit = ini_get('memory_limit');
-        
+
         // if no limit
         if (-1 == $memoryLimit) {
             return 134217728; //128 * 1024 * 1024 default 128mb
         }
-        
+
         // if set to exact byte
         if (is_numeric($memoryLimit)) {
             return (int) $memoryLimit;
         }
-        
+
         // if short hand version http://php.net/manual/en/faq.using.php#faq.using.shorthandbytes
         return substr($memoryLimit, 0, -1) * [
             'g' => 1073741824, //1024 * 1024 * 1024

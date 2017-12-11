@@ -123,7 +123,7 @@ trait ConfigTrait
                 exit(1);
             }
         }
-        
+
         return $config;
     }
 
