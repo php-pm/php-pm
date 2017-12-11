@@ -1,5 +1,7 @@
 <?php
 
+namespace PHPPM;
+
 use PHPPM\ProcessSlave;
 
 /**
@@ -11,7 +13,7 @@ use PHPPM\ProcessSlave;
  *
  * @param string $path
  */
-function ppm_register_file($path)
+function register_file($path)
 {
     ProcessSlave::$slave->registerFile($path);
 }
@@ -22,7 +24,7 @@ function ppm_register_file($path)
  * @param mixed $expression The variable you want to export.
  * @param mixed $_          [optional]
  */
-function ppm_log($expression, $_ = null)
+function console_log($expression, $_ = null)
 {
     ob_start();
     call_user_func_array('var_dump', func_get_args());
@@ -36,7 +38,7 @@ function ppm_log($expression, $_ = null)
  */
 function pcntl_enabled()
 {
-    $requiredFunctions = array('pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_fork', 'pcntl_waitpid');
+    $requiredFunctions = array('pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_waitpid');
     $disabledFunctions = explode(',', (string) ini_get('disable_functions'));
     $disabledFunctions = array_map(function ($item) {
         return trim($item);
