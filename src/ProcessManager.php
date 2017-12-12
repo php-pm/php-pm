@@ -63,16 +63,9 @@ class ProcessManager
     public $maxRequests = 2000;
 
     /**
-     * Timeout in seconds for master to worker connection.
-     *
-     * @var int
-     */
-    public $timeout = 30;
-
-    /**
      * @var array
      */
-    protected $slaves = [];
+    public $slaves = [];
 
     /**
      * @var string
@@ -406,7 +399,7 @@ class ProcessManager
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
         $this->writePid();
 
-        $this->slaves = SlavePool::getInstance();
+        $this->slaves = new SlavePool();
         $this->createSlaves();
 
         $this->loop->run();

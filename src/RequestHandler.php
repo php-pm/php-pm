@@ -20,10 +20,20 @@ class RequestHandler
      */
     private $connection;
 
-    /**
-     * @var ProcessManager
+    /*
+     * ProcessManager properties
      */
-    private $processManager;
+    private $loop;
+    private $output;
+    private $slaves;
+    private $maxRequests;
+
+    /**
+     * Timeout in seconds for master to worker connection.
+     *
+     * @var int
+     */
+    private $timeout = 10;
 
     /**
      * @var Slave instance
@@ -36,13 +46,10 @@ class RequestHandler
 
     public function __construct(ProcessManager $processManager)
     {
-        $this->processManager = $processManager;
-
-        // substitute properties below
-        $this->output = $processManager->output;
         $this->loop = $processManager->loop;
+        $this->output = $processManager->output;
+        $this->slaves = $processManager->slaves;
         $this->maxRequests = $processManager->maxRequests;
-        $this->timeout = $processManager->timeout;
     }
 
     /**
@@ -94,7 +101,7 @@ class RequestHandler
      */
     public function getNextSlave()
     {
-        $available = SlavePool::getInstance()->getByStatus(Slave::READY);
+        $available = $this->slaves->getByStatus(Slave::READY);
 
         if (count($available)) {
             // pick first slave
@@ -188,7 +195,7 @@ class RequestHandler
 
         if ($this->slave->getHandledRequests() >= $this->maxRequests) {
             $this->slave->close();
-            $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $this->slave->getPort(), $this->maxRequests));
+            $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $this->maxRequests));
             $connection->close();
         }
     }

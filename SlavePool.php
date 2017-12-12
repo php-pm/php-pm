@@ -9,29 +9,7 @@ use React\Socket\ConnectionInterface;
  */
 class SlavePool
 {
-    private static $instance;
-
     private $slaves = [];
-
-    /**
-     * Private constructor
-     */
-    private function __construct()
-    {
-    }
-
-    /**
-     * Get static instance
-     *
-     * @return SlavePool pool singleton instance
-     */
-    public static function getInstance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
 
     /**
      * Add slave to pool
