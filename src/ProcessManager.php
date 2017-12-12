@@ -862,14 +862,11 @@ class ProcessManager
             $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
-        $socketPath = $this->getSlaveSocketPath($port);
         $bridge = var_export($this->getBridge(), true);
         $bootstrap = var_export($this->getAppBootstrap(), true);
 
         $config = [
             'port' => $port,
-            'host' => $socketPath,
-
             'session_path' => session_save_path(),
             'controllerHost' => $this->controllerHost,
 
@@ -916,7 +913,7 @@ EOF;
         // use exec to omit wrapping shell
         $process = new Process('exec ' . $commandline);
 
-        $slave = new Slave($port, $socketPath, $process);
+        $slave = new Slave($port, $process);
         $this->slaves->add($port, $slave);
 
         $process->start($this->loop);

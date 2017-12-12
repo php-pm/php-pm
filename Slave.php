@@ -32,7 +32,6 @@ class Slave
     private $status;
 
     private $port;
-    private $socketPath;
     private $process;
     private $pid;
     private $connection; // slave incoming
@@ -44,10 +43,9 @@ class Slave
      */
     private $handledRequests = 0;
 
-    public function __construct($port, $socketPath, Process $process)
+    public function __construct($port, Process $process)
     {
         $this->port = $port;
-        $this->socketPath = $socketPath;
         $this->process = $process;
 
         $this->status = self::CREATED;
@@ -226,8 +224,7 @@ class Slave
         return print_r([
             'status' => $status,
             'port' => $this->port,
-            'pid' => $this->pid,
-            'socketPath' => $this->socketPath
+            'pid' => $this->pid
         ], 1);
     }
 }

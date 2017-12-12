@@ -8,6 +8,8 @@ use React\Socket\ConnectionInterface;
 
 class RequestHandler
 {
+    use ProcessCommunicationTrait;
+
     /**
      * @var ConnectionInterface
      */
@@ -133,7 +135,8 @@ class RequestHandler
         $connector = new UnixConnector($this->loop);
         $connector = new TimeoutConnector($connector, $this->timeout, $this->loop);
 
-        $connector->connect($this->slave->getSocketPath())->then(
+        $socketPath = $this->getSlaveSocketPath($this->slave->getPort());
+        $connector->connect($socketPath)->then(
             [$this, 'slaveConnected'],
             [$this, 'slaveConnectFailed']
         );
