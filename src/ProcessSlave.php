@@ -317,7 +317,7 @@ class ProcessSlave
 
                 // port is the slave identifier
                 $port = $this->config['port'];
-                $socketPath = $this->getSlaveSocketPath($port);
+                $socketPath = $this->getSlaveSocketPath($port, true);
                 $this->server = new UnixServer($socketPath, $this->loop);
 
                 $httpServer = new HttpServer([$this, 'onRequest']);

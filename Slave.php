@@ -214,6 +214,16 @@ class Slave
     }
 
     /**
+     * Get maximum number of request slave can handle
+     *
+     * @return int handled requests
+     */
+    public function getMaxRequests()
+    {
+        return $this->maxRequests;
+    }
+
+    /**
      * String conversion for debugging
      *
      * @return string

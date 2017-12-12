@@ -111,9 +111,9 @@ trait ProcessCommunicationTrait
      *
      * @return string
      */
-    protected function getSlaveSocketPath($port)
+    protected function getSlaveSocketPath($port, $overwrite = false)
     {
-        return $this->getSockFile($port, true);
+        return $this->getSockFile($port, $overwrite);
     }
 
     /**

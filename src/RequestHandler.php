@@ -220,21 +220,23 @@ class RequestHandler
      * @param \Exception slave connection error
      */
     public function slaveConnectFailed(\Exception $e) {
-        $this->slave->ready();
+        $this->slave->release();
 
-        $this->verboseTimer(function($took) {
+        $this->verboseTimer(function($took) use ($e) {
             return sprintf(
-                '<error>Connection to worker %d failed. Try #%d, took %.3fs. ' .
-                'Try increasing your timeout of %d. Error message: [%d] %s</error>',
-                $this->slave->getPort(), $this->redirectionTries, $took, $this->timeout, $e->getMessage(), $e->getCode()
+                '<error>Connection to worker %d failed. Try #%d, took %.3fs ' .
+                '(timeout %ds). Error message: [%d] %s</error>',
+                $this->slave->getPort(), $this->redirectionTries, $took, $this->timeout, $e->getCode(), $e->getMessage()
             );
         }, true);
 
         // should not get any more access to this slave instance
         unset($this->slave);
 
-        // Try next free client
-        $this->getNextSlave([$this, 'slaveAvailable']);
+        // try next free slave, let loop schedule it (stack friendly)
+        // after 10th retry add 10ms delay, keep increasing until timeout
+        $delay = min($this->timeout, floor($this->redirectionTries / 10) / 100);
+        $this->loop->addTimer($delay, [$this, 'getNextSlave']);
     }
 
     /**
