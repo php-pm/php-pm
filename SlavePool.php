@@ -19,8 +19,10 @@ class SlavePool
      * @param int $port
      * @return void
      */
-    public function add($port, Slave $slave)
+    public function add(Slave $slave)
     {
+        $port = $slave->getPort();
+
         if (isset($this->slaves[$port])) {
             throw new \Exception("Slave port $port already occupied.");
         }
@@ -37,10 +39,12 @@ class SlavePool
      *
      * @param int $port
      */
-    public function remove($port)
+    public function remove(Slave $slave)
     {
+        $port = $slave->getPort();
+
         // validate existance
-        $this->get($port);
+        $this->getByPort($port);
 
         // remove
         unset($this->slaves[$port]);
@@ -52,7 +56,7 @@ class SlavePool
      * @param int $port
      * @return void
      */
-    public function get($port)
+    public function getByPort($port)
     {
         if (!isset($this->slaves[$port])) {
             throw new \Exception("Slave port $port empty.");

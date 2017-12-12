@@ -576,7 +576,7 @@ class ProcessManager
         $port = (int)$data['port'];
 
         try {
-            $slave = $this->slaves->get($port);
+            $slave = $this->slaves->getByPort($port);
             $slave->register($pid, $conn);
         }
         catch (\Exception $e) {
@@ -799,7 +799,7 @@ class ProcessManager
     {
         foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
             $slave->close();
-            $this->slaves->remove($slave->getPort());
+            $this->slaves->remove($slave);
 
             if (!empty($slave->getConnection())) {
                 $slave->getConnection()->close();
@@ -908,7 +908,7 @@ EOF;
 
         $slave = new Slave($port, $this->maxRequests);
         $slave->attach($process);
-        $this->slaves->add($port, $slave);
+        $this->slaves->add($slave);
 
         $process->start($this->loop);
         $process->stderr->on(
@@ -930,7 +930,7 @@ EOF;
     {
         // set closed and remove from pool
         $slave->close();
-        $this->slaves->remove($slave->getPort());
+        $this->slaves->remove($slave);
 
         /** @var Process */
         $process = $slave->getProcess();
