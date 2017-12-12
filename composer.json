@@ -9,7 +9,7 @@
         "symfony/process": "^2.6|^3.0",
         "react/event-loop": "^0.4",
         "react/stream": "^0.7.1",
-        "react/http": "dev-master",
+        "react/http": "^0.8",
         "react/socket": "^0.8.6",
         "react/child-process": "^0.5",
         "mkraemer/react-pcntl": "^2.0|^3.0",

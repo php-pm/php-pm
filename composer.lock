@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "abfe56b3c4e84168b216e5a9d5649b01",
+    "content-hash": "7270c15eac94dab8208e180c17bf63c0",
     "packages": [
         {
             "name": "evenement/evenement",
@@ -538,23 +538,23 @@
         },
         {
             "name": "react/http",
-            "version": "dev-master",
+            "version": "v0.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/http.git",
-                "reference": "1d5bd0ba0ec5f97c00798c02e599e5dcb6c7bad2"
+                "reference": "0410c94463bdae4bdf34d60bff91e9e1eb4a6652"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/http/zipball/1d5bd0ba0ec5f97c00798c02e599e5dcb6c7bad2",
-                "reference": "1d5bd0ba0ec5f97c00798c02e599e5dcb6c7bad2",
+                "url": "https://api.github.com/repos/reactphp/http/zipball/0410c94463bdae4bdf34d60bff91e9e1eb4a6652",
+                "reference": "0410c94463bdae4bdf34d60bff91e9e1eb4a6652",
                 "shasum": ""
             },
             "require": {
                 "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
                 "php": ">=5.3.0",
                 "react/promise": "^2.3 || ^1.2.1",
-                "react/promise-stream": "^1.0 || ^0.1.2",
+                "react/promise-stream": "^1.1",
                 "react/socket": "^1.0 || ^0.8.3",
                 "react/stream": "^1.0 || ^0.7.1",
                 "ringcentral/psr7": "^1.2"
@@ -582,7 +582,7 @@
                 "server",
                 "streaming"
             ],
-            "time": "2017-11-20T19:04:01+00:00"
+            "time": "2017-12-12T13:01:48+00:00"
         },
         {
             "name": "react/promise",
@@ -632,16 +632,16 @@
         },
         {
             "name": "react/promise-stream",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/promise-stream.git",
-                "reference": "1503761d01116bf893f86b9843b3bc7a80682587"
+                "reference": "77ca2a233db59d671864c88e2b716d875cfbeb1f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/promise-stream/zipball/1503761d01116bf893f86b9843b3bc7a80682587",
-                "reference": "1503761d01116bf893f86b9843b3bc7a80682587",
+                "url": "https://api.github.com/repos/reactphp/promise-stream/zipball/77ca2a233db59d671864c88e2b716d875cfbeb1f",
+                "reference": "77ca2a233db59d671864c88e2b716d875cfbeb1f",
                 "shasum": ""
             },
             "require": {
@@ -684,7 +684,7 @@
                 "stream",
                 "unwrap"
             ],
-            "time": "2017-10-24T14:35:40+00:00"
+            "time": "2017-11-28T18:31:39+00:00"
         },
         {
             "name": "react/promise-timer",
@@ -2556,9 +2556,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "react/http": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
