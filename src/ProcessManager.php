@@ -215,8 +215,8 @@ class ProcessManager
         $this->inShutdown = true;
 
         $this->output->writeln($graceful
-        	? '<info>Shutdown received, exiting.</info>'
-        	: '<error>Termination received, exiting.</error>'
+            ? '<info>Shutdown received, exiting.</info>'
+            : '<error>Termination received, exiting.</error>'
         );
 
         //this method is also called during startup when something crashed, so
@@ -895,9 +895,11 @@ class ProcessManager
 
         $config = var_export($config, true);
 
-        $dir = var_export(__DIR__, true);
+        $dir = var_export(__DIR__ . '/..', true);
         $script = <<<EOF
 <?php
+
+namespace PHPPM;
 
 set_time_limit(0);
 
@@ -905,15 +907,13 @@ require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
 
-require_once $dir . '/functions.php';
-
-if(!pcntl_enabled()){
-    throw new \RuntimeException('Some of required pcntl functions are disabled. Please enable them.');
+if (!pcntl_enabled()) {
+    throw new \RuntimeException('Some of required pcntl functions are disabled. Check `disable_functions` setting in `php.ini`.');
 }
 
 //global for all global functions
-\PHPPM\ProcessSlave::\$slave = new \PHPPM\ProcessSlave($bridge, $bootstrap, $config);
-\PHPPM\ProcessSlave::\$slave->run();
+ProcessSlave::\$slave = new ProcessSlave($bridge, $bootstrap, $config);
+ProcessSlave::\$slave->run();
 EOF;
 
         $commandline = $this->phpCgiExecutable;

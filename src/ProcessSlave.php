@@ -364,7 +364,7 @@ class ProcessSlave
         $logTime = date('d/M/Y:H:i:s O');
 
         $catchLog = function ($e) {
-            ppm_log((string) $e);
+            console_log((string) $e);
             return new Response(500);
         };
 

@@ -18,6 +18,10 @@ if ((!$loader = includeIfExists(__DIR__.'/../vendor/autoload.php')) && (!$loader
     );
 }
 
+if (!PHPPM\pcntl_enabled()) {
+    die('Some of required pcntl functions are disabled. Check `disable_functions` setting in `php.ini`.');
+}
+
 use Symfony\Component\Console\Application;
 use PHPPM\Commands\StartCommand;
 use PHPPM\Commands\StopCommand;
