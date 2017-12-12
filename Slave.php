@@ -31,10 +31,21 @@ class Slave
      */
     private $status;
 
+    /**
+     * Slave port - this is an identifier mapped to a socket path
+     */
     private $port;
+
     private $process;
     private $pid;
     private $connection; // slave incoming
+
+    /**
+     * Maximum number of requests a slave can handle
+     *
+     * @var int
+     */
+    private $maxRequests = 0;
 
     /**
      * Number of handled requests
@@ -43,12 +54,20 @@ class Slave
      */
     private $handledRequests = 0;
 
-    public function __construct($port, Process $process)
+    public function __construct($port, $maxRequests)
     {
         $this->port = $port;
-        $this->process = $process;
+        $this->maxRequests = $maxRequests;
 
         $this->status = self::CREATED;
+    }
+
+    /**
+     * Attach a slave to a running process
+     */
+    public function attach(Process $process)
+    {
+        $this->process = $process;
     }
 
     /**

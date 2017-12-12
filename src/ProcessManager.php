@@ -60,7 +60,7 @@ class ProcessManager
      *
      * @var int
      */
-    public $maxRequests = 2000;
+    private $maxRequests = 2000;
 
     /**
      * @var array
@@ -906,7 +906,8 @@ EOF;
         // use exec to omit wrapping shell
         $process = new Process('exec ' . $commandline);
 
-        $slave = new Slave($port, $process);
+        $slave = new Slave($port, $this->maxRequests);
+        $slave->attach($process);
         $this->slaves->add($port, $slave);
 
         $process->start($this->loop);

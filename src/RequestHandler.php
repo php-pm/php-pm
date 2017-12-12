@@ -26,7 +26,6 @@ class RequestHandler
     private $loop;
     private $output;
     private $slaves;
-    private $maxRequests;
 
     /**
      * Timeout in seconds for master to worker connection.
@@ -49,7 +48,6 @@ class RequestHandler
         $this->loop = $processManager->loop;
         $this->output = $processManager->output;
         $this->slaves = $processManager->slaves;
-        $this->maxRequests = $processManager->maxRequests;
     }
 
     /**
@@ -193,9 +191,10 @@ class RequestHandler
         /** @var ConnectionInterface $connection */
         $connection = $this->slave->getConnection();
 
-        if ($this->slave->getHandledRequests() >= $this->maxRequests) {
+        $maxRequests = $this->slave->getMaxRequests();
+        if ($this->slave->getHandledRequests() >= $maxRequests) {
             $this->slave->close();
-            $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $this->maxRequests));
+            $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
             $connection->close();
         }
     }
