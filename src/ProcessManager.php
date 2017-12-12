@@ -48,24 +48,24 @@ class ProcessManager
     /**
      * @var LoopInterface
      */
-    public $loop;
+    protected $loop;
 
     /**
      * @var OutputInterface
      */
-    public $output;
+    protected $output;
 
     /**
      * Maximum requests per worker before it's recycled
      *
      * @var int
      */
-    private $maxRequests = 2000;
+    protected $maxRequests = 2000;
 
     /**
      * @var array
      */
-    public $slaves = [];
+    protected $slaves = [];
 
     /**
      * @var string
@@ -428,7 +428,7 @@ class ProcessManager
     {
         $this->handledRequests++;
 
-        $handler = new RequestHandler($this);
+        $handler = new RequestHandler($this->loop, $this->output, $this->slaves);
         $handler->handle($incoming);
     }
 

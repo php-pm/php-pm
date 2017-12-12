@@ -2,9 +2,11 @@
 
 namespace PHPPM;
 
+use React\EventLoop\LoopInterface;
 use React\Socket\UnixConnector;
 use React\Socket\TimeoutConnector;
 use React\Socket\ConnectionInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class RequestHandler
 {
@@ -20,11 +22,19 @@ class RequestHandler
      */
     private $connection;
 
-    /*
-     * ProcessManager properties
+    /**
+     * @var LoopInterface
      */
     private $loop;
+
+    /**
+     * @var OutputInterface
+     */
     private $output;
+
+    /**
+     * @var SlavePool
+     */
     private $slaves;
 
     /**
@@ -43,11 +53,11 @@ class RequestHandler
     private $redirectionTries = 0;
     private $incomingBuffer = '';
 
-    public function __construct(ProcessManager $processManager)
+    public function __construct(LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
     {
-        $this->loop = $processManager->loop;
-        $this->output = $processManager->output;
-        $this->slaves = $processManager->slaves;
+        $this->loop = $loop;
+        $this->output = $output;
+        $this->slaves = $slaves;
     }
 
     /**
@@ -94,7 +104,7 @@ class RequestHandler
     }
 
     /**
-     * Get next free slave from process manager.
+     * Get next free slave from pool
      * Asynchronously keep trying until slave becomes available
      */
     public function getNextSlave()
