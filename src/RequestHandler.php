@@ -188,24 +188,29 @@ class RequestHandler
      *
      * Typically called after slave has finished handling request
      */
-    public function slaveClosed() {
+    public function slaveClosed()
+    {
         $this->verboseTimer(function($took) {
             return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
         });
 
         $this->incoming->end();
 
-        // mark slave as available
-        $this->slave->release();
+        // if slave has already closed its connection to master,
+        // it probably died and is already terminated
+        if ($this->slave->getStatus() !== Slave::CLOSED) {
+            // mark slave as available
+            $this->slave->release();
 
-        /** @var ConnectionInterface $connection */
-        $connection = $this->slave->getConnection();
+            /** @var ConnectionInterface $connection */
+            $connection = $this->slave->getConnection();
 
-        $maxRequests = $this->slave->getMaxRequests();
-        if ($this->slave->getHandledRequests() >= $maxRequests) {
-            $this->slave->close();
-            $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
-            $connection->close();
+            $maxRequests = $this->slave->getMaxRequests();
+            if ($this->slave->getHandledRequests() >= $maxRequests) {
+                $this->slave->close();
+                $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
+                $connection->close();
+            }
         }
     }
 
@@ -219,7 +224,8 @@ class RequestHandler
      *
      * @param \Exception slave connection error
      */
-    public function slaveConnectFailed(\Exception $e) {
+    public function slaveConnectFailed(\Exception $e)
+    {
         $this->slave->release();
 
         $this->verboseTimer(function($took) use ($e) {
@@ -262,7 +268,8 @@ class RequestHandler
      *
      * @return bool
      */
-    protected function isHeaderEnd($buffer) {
+    protected function isHeaderEnd($buffer)
+    {
         return false !== strpos($buffer, "\r\n\r\n");
     }
 
@@ -274,7 +281,8 @@ class RequestHandler
      *
      * @return string
      */
-    protected function replaceHeader($header, $headersToReplace) {
+    protected function replaceHeader($header, $headersToReplace)
+    {
         $result = $header;
 
         foreach ($headersToReplace as $key => $value) {
