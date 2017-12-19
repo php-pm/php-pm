@@ -19,41 +19,53 @@ class ProcessManager
 {
     use ProcessCommunicationTrait;
 
+    /*
+     * Load balander started, waiting for slaves to come up
+     */
+    const STATE_STARTING = 0;
+
+    /*
+     * Slaves started and registered
+     */
+    const STATE_RUNNING = 1;
+
+    /*
+     * In emergency mode we need to close all workers due a fatal error
+     * and wait for file changes to be able to restart workers
+     */
+    const STATE_EMERGENCY = 2;
+
+    /*
+     * Load balancer is in shutdown
+     */
+    const STATE_SHUTDOWN = 3;
+
+    /**
+     * Load balancer status
+     */
+    protected $status = self::STATE_STARTING;
+
     /**
      * @var LoopInterface
      */
-    public $loop;
+    protected $loop;
 
     /**
      * @var OutputInterface
      */
-    public $output;
+    protected $output;
 
     /**
      * Maximum requests per worker before it's recycled
      *
      * @var int
      */
-    public $maxRequests = 2000;
-
-    /**
-     * Timeout in seconds for master to worker connection.
-     *
-     * @var int
-     */
-    public $timeout = 30;
+    protected $maxRequests = 2000;
 
     /**
      * @var array
      */
     protected $slaves = [];
-
-    /**
-     * $object_hash => port
-     *
-     * @var int[]
-     */
-    protected $ports = [];
 
     /**
      * @var string
@@ -74,16 +86,6 @@ class ProcessManager
      * @var int
      */
     protected $slaveCount = 1;
-
-    /**
-     * @var bool
-     */
-    protected $waitForSlaves = true;
-
-    /**
-     * @var int
-     */
-    protected $index = 0;
 
     /**
      * @var string
@@ -141,19 +143,6 @@ class ProcessManager
     protected $phpCgiExecutable = false;
 
     /**
-     * @var bool
-     */
-    protected $inShutdown = false;
-
-    /**
-     * Whether we are in the emergency mode or not. True means we need to close all workers due a fatal error
-     * and waiting for file changes to be able to restart workers.
-     *
-     * @var bool
-     */
-    protected $emergencyMode = false;
-
-    /**
      * @var null|int
      */
     protected $lastWorkerErrorPrintBy;
@@ -208,19 +197,19 @@ class ProcessManager
      */
     public function shutdown($graceful = false)
     {
-        if ($this->inShutdown) {
+        if ($this->status === self::STATE_SHUTDOWN) {
             return;
         }
 
-        $this->inShutdown = true;
+        $this->status = self::STATE_SHUTDOWN;
 
         $this->output->writeln($graceful
             ? '<info>Shutdown received, exiting.</info>'
             : '<error>Termination received, exiting.</error>'
         );
 
-        //this method is also called during startup when something crashed, so
-        //make sure we don't operate on nulls.
+        // this method is also called during startup when something crashed, so
+        // make sure we don't operate on nulls.
         if ($this->controller) {
             @$this->controller->close();
         }
@@ -232,7 +221,7 @@ class ProcessManager
             $this->loop->stop();
         }
 
-        foreach ($this->slaves as $slave) {
+        foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
             $this->terminateSlave($slave);
         }
 
@@ -379,7 +368,7 @@ class ProcessManager
     {
         Debug::enable();
 
-        //make whatever is necessary to disable all stuff that could buffer output
+        // make whatever is necessary to disable all stuff that could buffer output
         ini_set('zlib.output_compression', 0);
         ini_set('output_buffering', 0);
         ini_set('implicit_flush', 1);
@@ -391,13 +380,13 @@ class ProcessManager
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
-        $this->web->on('connection', array($this, 'onWeb'));
+        $this->web->on('connection', array($this, 'onRequest'));
 
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
         $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
-        $pcntl->on(SIGUSR1, [$this, 'restartWorker']);
+        $pcntl->on(SIGUSR1, [$this, 'restartSlaves']);
 
         if ($this->isDebug()) {
             $this->loop->addPeriodicTimer(0.5, function () {
@@ -409,9 +398,9 @@ class ProcessManager
 
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
         $this->writePid();
-        for ($i = 0; $i < $this->slaveCount; $i++) {
-            $this->newSlaveInstance((self::CONTROLLER_PORT+1) + $i);
-        }
+
+        $this->slaves = new SlavePool();
+        $this->createSlaves();
 
         $this->loop->run();
     }
@@ -435,75 +424,77 @@ class ProcessManager
      *
      * @param Connection $incoming incoming connection from react
      */
-    public function onWeb(ConnectionInterface $incoming)
+    public function onRequest(ConnectionInterface $incoming)
     {
         $this->handledRequests++;
 
-        $handler = new RequestHandler($this);
+        $handler = new RequestHandler($this->loop, $this->output, $this->slaves);
         $handler->handle($incoming);
-    }
-
-    /**
-     * Get available slave
-     *
-     * @return null|array slave instance returned by reference
-     */
-    public function &getNextSlave()
-    {
-        $available = null;
-
-        foreach ($this->slaves as &$slave) {
-            // return only available workers not currently handling a connection
-            if ($slave['ready'] && !$slave['busy']) {
-                $available =& $slave;
-                break;
-            }
-        }
-
-        return $available;
     }
 
     /**
      * Handles data communication from slave -> master
      *
-     * @param ConnectionInterface $conn
+     * @param ConnectionInterface $connection
      */
-    public function onSlaveConnection(ConnectionInterface $conn)
+    public function onSlaveConnection(ConnectionInterface $connection)
     {
-        $this->bindProcessMessage($conn);
-
-        $conn->on('close', function () use ($conn) {
-            if ($this->inShutdown) {
-                return;
-            }
-
-            if (!$this->isConnectionRegistered($conn)) {
-                // this connection is not registered, so it died during the ProcessSlave constructor.
-                $this->output->writeln(
-                    '<error>Worker permanently closed during PHP-PM bootstrap. Not so cool. ' .
-                    'Not your fault, please create a ticket at github.com/php-pm/php-pm with ' .
-                    'the output of `ppm start -vv`.</error>'
-                );
-
-                return;
-            }
-
-            $port = $this->getPort($conn);
-            $slave =& $this->slaves[$port];
-
-            if ($this->output->isVeryVerbose()) {
-                $this->output->writeln(sprintf('Worker #%d closed after %d handled requests', $slave['port'], $slave['requests']));
-            }
-
-            $slave['ready'] = false;
-            $this->terminateSlave($slave);
-
-            if ($slave['duringBootstrap']) {
-                $this->bootstrapFailed($conn);
-            }
-
-            $this->newSlaveInstance($slave['port']);
+        $this->bindProcessMessage($connection);
+        $connection->on('close', function () use ($connection) {
+            $this->onSlaveClosed($connection);
         });
+    }
+
+    /**
+     * Handle slave closed
+     *
+     * @param ConnectionInterface $connection
+     * @return void
+     */
+    public function onSlaveClosed(ConnectionInterface $connection)
+    {
+        if ($this->status === self::STATE_SHUTDOWN) {
+            return;
+        }
+
+        try {
+            $slave = $this->slaves->getByConnection($connection);
+        }
+        catch (\Exception $e) {
+            // this connection is not registered, so it died during the ProcessSlave constructor.
+            $this->output->writeln(
+                '<error>Worker permanently closed during PHP-PM bootstrap. Not so cool. ' .
+                'Not your fault, please create a ticket at github.com/php-pm/php-pm with ' .
+                'the output of `ppm start -vv`.</error>'
+            );
+
+            return;
+        }
+
+        // get status before terminating
+        $status = $slave->getStatus();
+        $port = $slave->getPort();
+
+        if ($this->output->isVeryVerbose()) {
+            $this->output->writeln(sprintf('Worker #%d closed after %d handled requests', $port, $slave->getHandledRequests()));
+        }
+
+        // kill slave and remove from pool
+        $this->terminateSlave($slave);
+
+        /*
+         * If slave is in registered state it died during bootstrap.
+         * In this case new instances should only be created:
+         * - in debug mode after file change detection via restartSlaves()
+         * - in production mode immediately
+         */
+        if ($status === Slave::REGISTERED) {
+            $this->bootstrapFailed($port);
+        }
+        else {
+            // recreate
+            $this->newSlaveInstance($port);
+        }
     }
 
     /**
@@ -514,17 +505,43 @@ class ProcessManager
      */
     protected function commandStatus(array $data, ConnectionInterface $conn)
     {
-        //remove nasty info about worker's bootstrap fail
+        // remove nasty info about worker's bootstrap fail
         $conn->removeAllListeners('close');
         if ($this->output->isVeryVerbose()) {
             $conn->on('close', function () {
                 $this->output->writeln('Status command requested');
             });
         }
+
+        // create port -> requests map
+        $requests = array_reduce(
+            $this->slaves->getByStatus(Slave::ANY),
+            function($carry, Slave $slave) {
+                $carry[$slave->getPort()] = 0 + $slave->getHandledRequests();
+                return $carry;
+            },
+            []
+        );
+
+        switch ($this->status) {
+            case self::STATE_STARTING:
+                $status = 'starting';
+                break;
+            case self::STATE_RUNNING:
+                $status = 'healthy';
+                break;
+            case self::STATE_EMERGENCY:
+                $status = 'offline';
+                break;
+            default:
+                $status = 'unknown';
+        }
+
         $conn->end(json_encode([
-            'slave_count' => $this->slaveCount,
+            'status' => $status,
+            'workers' => $this->slaveCount,
             'handled_requests' => $this->handledRequests,
-            'handled_requests_per_worker' => array_column($this->slaves, 'requests', 'port')
+            'handled_requests_per_worker' => $requests
         ]));
     }
 
@@ -558,55 +575,23 @@ class ProcessManager
         $pid = (int)$data['pid'];
         $port = (int)$data['port'];
 
-        if (!isset($this->slaves[$port]) || !$this->slaves[$port]['waitForRegister']) {
-            if ($this->output->isVeryVerbose()) {
-                $this->output->writeln(sprintf(
-                    '<error>Worker #%d wanted to register on master which was not expected.</error>',
-                    $port));
-            }
+        try {
+            $slave = $this->slaves->getByPort($port);
+            $slave->register($pid, $conn);
+        }
+        catch (\Exception $e) {
+            $this->output->writeln(sprintf(
+                '<error>Worker #%d wanted to register on master which was not expected.</error>', $port
+            ));
             $conn->close();
             return;
         }
-
-        $this->ports[spl_object_hash($conn)] = $port;
 
         if ($this->output->isVeryVerbose()) {
             $this->output->writeln(sprintf('Worker #%d registered. Waiting for application bootstrap ... ', $port));
         }
 
-        $this->slaves[$port]['pid'] = $pid;
-        $this->slaves[$port]['connection'] = $conn;
-        $this->slaves[$port]['ready'] = false;
-        $this->slaves[$port]['waitForRegister'] = false;
-        $this->slaves[$port]['duringBootstrap'] = true;
-
         $this->sendMessage($conn, 'bootstrap');
-    }
-
-    /**
-     * @param ConnectionInterface $conn
-     *
-     * @return null|int
-     */
-    protected function getPort(ConnectionInterface $conn)
-    {
-        $id = spl_object_hash($conn);
-
-        return $this->ports[$id];
-    }
-
-    /**
-     * Whether the given connection is registered.
-     *
-     * @param ConnectionInterface $conn
-     *
-     * @return bool
-     */
-    protected function isConnectionRegistered(ConnectionInterface $conn)
-    {
-        $id = spl_object_hash($conn);
-
-        return isset($this->ports[$id]);
     }
 
     /**
@@ -618,21 +603,21 @@ class ProcessManager
      */
     protected function commandReady(array $data, ConnectionInterface $conn)
     {
-        $port = $this->getPort($conn);
-        $this->slaves[$port]['ready'] = true;
-        $this->slaves[$port]['bootstrapFailed'] = 0;
-        $this->slaves[$port]['duringBootstrap'] = false;
-
-        if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(sprintf('Worker #%d ready.', $port));
+        try {
+            $slave = $this->slaves->getByConnection($conn);
+        }
+        catch (\Exception $e) {
+            return;
         }
 
-        $readySlaves = array_filter($this->slaves, function($item){
-            return $item['ready'];
-        });
+        $slave->ready();
 
-        if (($this->emergencyMode || $this->waitForSlaves) && $this->slaveCount === count($readySlaves)) {
-            if ($this->emergencyMode) {
+        if ($this->output->isVeryVerbose()) {
+            $this->output->writeln(sprintf('Worker #%d ready.', $slave->getPort()));
+        }
+
+        if ($this->allSlavesReady()) {
+            if ($this->status === self::STATE_EMERGENCY) {
                 $this->output->writeln("<info>Emergency survived. Workers up and running again.</info>");
             } else {
                 $this->output->writeln(
@@ -646,50 +631,7 @@ class ProcessManager
                 );
             }
 
-            $this->waitForSlaves = false; // all slaves started
-            $this->emergencyMode = false; // emergency survived
-        }
-    }
-
-    /**
-     * Handles failed application bootstraps.
-     *
-     * @param ConnectionInterface $conn
-     */
-    protected function bootstrapFailed(ConnectionInterface $conn)
-    {
-        $port = $this->getPort($conn);
-        $this->slaves[$port]['bootstrapFailed']++;
-
-        if ($this->isDebug()) {
-
-            $this->output->writeln('');
-
-            if (!$this->emergencyMode) {
-                $this->emergencyMode = true;
-                $this->output->writeln(
-                    sprintf(
-                        '<error>Application bootstrap failed. We are entering emergency mode now. All offline. ' .
-                        'Waiting for file changes ...</error>'
-                    )
-                );
-            } else {
-                $this->output->writeln(
-                    sprintf(
-                        '<error>Application bootstrap failed. We are still in emergency mode. All offline. ' .
-                        'Waiting for file changes ...</error>'
-                    )
-                );
-            }
-
-            foreach ($this->slaves as &$slave) {
-                $slave['keepClosed'] = true;
-                if (!empty($slave['connection'])) {
-                    $slave['connection']->close();
-                }
-            }
-        } else {
-            $this->output->writeln(sprintf('<error>Application bootstrap failed. Restart worker ...</error>'));
+            $this->status == self::STATE_RUNNING;
         }
     }
 
@@ -707,19 +649,65 @@ class ProcessManager
     }
 
     /**
+     * Register client files for change tracking
+     *
      * @param array      $data
      * @param ConnectionInterface $conn
      */
     protected function commandFiles(array $data, ConnectionInterface $conn)
     {
-        if (!$this->isConnectionRegistered($conn)) {
-            return;
-        }
+        try {
+            $slave = $this->slaves->getByConnection($conn);
 
-        if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(sprintf('Received %d files from %d', count($data['files']), $this->getPort($conn)));
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(sprintf('Received %d files from %d', count($data['files']), $slave->getPort()));
+            }
+            $this->filesToTrack = array_unique(array_merge($this->filesToTrack, $data['files']));
         }
-        $this->filesToTrack = array_unique(array_merge($this->filesToTrack, $data['files']));
+        catch (\Exception $e) {
+            // silent
+        }
+    }
+
+    /**
+     * Handles failed application bootstraps.
+     *
+     * @param int $port
+     */
+    protected function bootstrapFailed($port)
+    {
+        if ($this->isDebug()) {
+            $this->output->writeln('');
+
+            if ($this->status !== self::STATE_EMERGENCY) {
+                $this->status = self::STATE_EMERGENCY;
+
+                $this->output->writeln(
+                    sprintf(
+                        '<error>Application bootstrap failed. We are entering emergency mode now. All offline. ' .
+                        'Waiting for file changes ...</error>'
+                    )
+                );
+            } else {
+                $this->output->writeln(
+                    sprintf(
+                        '<error>Application bootstrap failed. We are still in emergency mode. All offline. ' .
+                        'Waiting for file changes ...</error>'
+                    )
+                );
+            }
+
+            $this->closeSlaves();
+        } else {
+            $this->output->writeln(
+                sprintf(
+                    '<error>Application bootstrap failed. Restarting worker #%d ...</error>',
+                    $port
+                )
+            );
+
+            $this->newSlaveInstance($port);
+        }
     }
 
     /**
@@ -729,11 +717,11 @@ class ProcessManager
      * all other file watching stuff have either big dependencies or do not work under all platforms without
      * installing a pecl extension. Also this way is interestingly fast and is only used when debug=true.
      *
-     * @param bool $restartWorkers
+     * @param bool $restartSlaves
      *
      * @return bool
      */
-    protected function checkChangedFiles($restartWorkers = true)
+    protected function checkChangedFiles($restartSlaves = true)
     {
         if ($this->inReload) {
             return false;
@@ -773,10 +761,10 @@ class ProcessManager
             }
         }
 
-        if ($reload && $restartWorkers) {
+        if ($reload && $restartSlaves) {
             $this->output->writeln(
                 sprintf(
-                    "<info>[%s] File changed %s (detection %f, %d). Reload workers.</info>",
+                    "<info>[%s] File changed %s (detection %.3f, %d). Reload workers.</info>",
                     date('d/M/Y:H:i:s O'),
                     $filePath,
                     microtime(true) - $start,
@@ -784,105 +772,94 @@ class ProcessManager
                 )
             );
 
-            $this->restartWorker();
+            $this->restartSlaves();
         }
 
         return $reload;
     }
 
     /**
-     * Closes all slaves, so we automatically reconnect. Necessary when watched files have changed.
+     * Populate slave pool
+     *
+     * @return void
      */
-    public function restartWorker()
+    public function createSlaves()
+    {
+        for ($i = 1; $i <= $this->slaveCount; $i++) {
+            $this->newSlaveInstance(self::CONTROLLER_PORT + $i);
+        }
+    }
+
+    /**
+     * Close all slaves
+     *
+     * @return void
+     */
+    public function closeSlaves()
+    {
+        foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
+            $slave->close();
+            $this->slaves->remove($slave);
+
+            if (!empty($slave->getConnection())) {
+                $slave->getConnection()->close();
+            }
+        }
+    }
+
+    /**
+     * Restart all slaves. Necessary when watched files have changed.
+     */
+    public function restartSlaves()
     {
         if ($this->inReload) {
             return;
         }
 
         $this->inReload = true;
+        $this->output->writeln('Restarting all workers');
 
-        $this->output->writeln('Restart all worker');
-
-        foreach ($this->slaves as &$slave) {
-            $slave['ready'] = false; //does not accept new connections
-            $slave['keepClosed'] = false;
-
-            //important to not get 'bootstrap failed' exception, when the bootstrap changes files.
-            $slave['duringBootstrap'] = false;
-
-            $slave['bootstrapFailed'] = 0;
-
-            /** @var ConnectionInterface $connection */
-            $connection = $slave['connection'];
-
-            if ($connection && $connection->isWritable()) {
-                if ($slave['busy']) {
-                    $slave['closeWhenFree'] = true;
-                } else {
-                    $connection->close();
-                }
-            } else {
-                $this->newSlaveInstance($slave['port']);
-            }
-        };
+        $this->closeSlaves();
+        $this->createSlaves();
 
         $this->inReload = false;
     }
 
     /**
+     * Check if all slaves have become available
+     */
+    protected function allSlavesReady()
+    {
+        if ($this->status === self::STATE_STARTING || $this->status === self::STATE_EMERGENCY) {
+            $readySlaves = $this->slaves->getByStatus(Slave::READY);
+            return count($readySlaves) === $this->slaveCount;
+        }
+
+        return false;
+    }
+
+    /**
      * Creates a new ProcessSlave instance.
      *
-     * @param integer $port
+     * @param int $port
      */
     protected function newSlaveInstance($port)
     {
-        if ($this->inShutdown) {
-            //when we are in the shutdown phase, we close all connections
-            //as a result it actually tries to reconnect the slave, but we forbid it in this phase.
+        if ($this->status === self::STATE_SHUTDOWN) {
+            // during shutdown phase all connections are closed and as result new
+            // instances are created - which is forbidden during this phase
             return;
-        }
-
-        $keepClosed = false;
-        $bootstrapFailed = 0;
-
-        if (isset($this->slaves[$port])) {
-            $bootstrapFailed = $this->slaves[$port]['bootstrapFailed'];
-            $keepClosed = $this->slaves[$port]['keepClosed'];
-
-            if ($keepClosed) {
-                return;
-            }
         }
 
         if ($this->output->isVeryVerbose()) {
             $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
-        $host = $this->getSlaveSocketPath($port);
-
-        $slave = [
-            'ready' => false,
-            'pid' => null,
-            'port' => $port,
-            'closeWhenFree' => false,
-            'waitForRegister' => true,
-
-            'duringBootstrap' => false,
-            'bootstrapFailed' => $bootstrapFailed,
-            'keepClosed' => $keepClosed,
-
-            'busy' => false,
-            'requests' => 0,
-            'connection' => null,
-            'host' => $host
-        ];
-
         $bridge = var_export($this->getBridge(), true);
         $bootstrap = var_export($this->getAppBootstrap(), true);
-        $config = [
-            'port' => $slave['port'],
-            'host' => $slave['host'],
 
+        $config = [
+            'port' => $port,
             'session_path' => session_save_path(),
             'controllerHost' => $this->controllerHost,
 
@@ -916,21 +893,22 @@ ProcessSlave::\$slave = new ProcessSlave($bridge, $bootstrap, $config);
 ProcessSlave::\$slave->run();
 EOF;
 
-        $commandline = $this->phpCgiExecutable;
-
+        // slave php file
         $file = tempnam(sys_get_temp_dir(), 'dbg');
         file_put_contents($file, $script);
         register_shutdown_function('unlink', $file);
 
-        //we can not use -q since this disables basically all header support
-        //but since this is necessary at least in Symfony we can not use it.
-        //e.g. headers_sent() returns always true, although wrong.
-        $commandline .= ' -C ' . ProcessUtils::escapeArgument($file);
+        // we can not use -q since this disables basically all header support
+        // but since this is necessary at least in Symfony we can not use it.
+        // e.g. headers_sent() returns always true, although wrong.
+        $commandline = $this->phpCgiExecutable . ' -C ' . ProcessUtils::escapeArgument($file);
 
-        $process = new Process($commandline);
+        // use exec to omit wrapping shell
+        $process = new Process('exec ' . $commandline);
 
-        $slave['process'] = $process;
-        $this->slaves[$port] = $slave;
+        $slave = new Slave($port, $this->maxRequests);
+        $slave->attach($process);
+        $this->slaves->add($slave);
 
         $process->start($this->loop);
         $process->stderr->on(
@@ -946,19 +924,23 @@ EOF;
     }
 
     /**
-     * @param array $slave
+     * @param Slave $slave
      */
     private function terminateSlave($slave)
     {
+        // set closed and remove from pool
+        $slave->close();
+        $this->slaves->remove($slave);
+
         /** @var Process */
-        $process = $slave['process'];
+        $process = $slave->getProcess();
         if ($process->isRunning()) {
             $process->terminate();
         }
 
-        $pid = $slave['pid'];
+        $pid = $slave->getPid();
         if (is_int($pid)) {
-            posix_kill($pid, SIGKILL); //make sure its really dead
+            posix_kill($pid, SIGKILL); // make sure it's really dead
         }
     }
 }

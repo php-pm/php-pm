@@ -2,12 +2,16 @@
 
 namespace PHPPM;
 
+use React\EventLoop\LoopInterface;
 use React\Socket\UnixConnector;
 use React\Socket\TimeoutConnector;
 use React\Socket\ConnectionInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class RequestHandler
 {
+    use ProcessCommunicationTrait;
+
     /**
      * @var ConnectionInterface
      */
@@ -19,9 +23,26 @@ class RequestHandler
     private $connection;
 
     /**
-     * @var ProcessManager
+     * @var LoopInterface
      */
-    private $processManager;
+    private $loop;
+
+    /**
+     * @var OutputInterface
+     */
+    private $output;
+
+    /**
+     * @var SlavePool
+     */
+    private $slaves;
+
+    /**
+     * Timeout in seconds for master to worker connection.
+     *
+     * @var int
+     */
+    private $timeout = 10;
 
     /**
      * @var Slave instance
@@ -32,15 +53,11 @@ class RequestHandler
     private $redirectionTries = 0;
     private $incomingBuffer = '';
 
-    public function __construct(ProcessManager $processManager)
+    public function __construct(LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
     {
-        $this->processManager = $processManager;
-
-        // substitute properties below
-        $this->output = $processManager->output;
-        $this->loop = $processManager->loop;
-        $this->maxRequests = $processManager->maxRequests;
-        $this->timeout = $processManager->timeout;
+        $this->loop = $loop;
+        $this->output = $output;
+        $this->slaves = $slaves;
     }
 
     /**
@@ -87,14 +104,17 @@ class RequestHandler
     }
 
     /**
-     * Get next free slave from process manager.
+     * Get next free slave from pool
      * Asynchronously keep trying until slave becomes available
      */
     public function getNextSlave()
     {
-        $slave =& $this->processManager->getNextSlave();
+        $available = $this->slaves->getByStatus(Slave::READY);
 
-        if ($slave) {
+        if (count($available)) {
+            // pick first slave
+            $slave = array_shift($available);
+
             // slave available -> connect
             $this->slaveAvailable($slave);
         }
@@ -109,7 +129,7 @@ class RequestHandler
      *
      * @param array $slave available slave instance
      */
-    public function slaveAvailable(&$slave)
+    public function slaveAvailable(Slave $slave)
     {
         $this->redirectionTries++;
 
@@ -118,18 +138,20 @@ class RequestHandler
             return;
         }
 
-        $this->slave =& $slave;
+        $this->slave = $slave;
 
         $this->verboseTimer(function($took) {
             return sprintf('<info>took abnormal %.3f seconds for choosing next free worker</info>', $took);
         });
 
-        $this->slave['busy'] = true;
+        // mark slave as busy
+        $this->slave->occupy();
 
         $connector = new UnixConnector($this->loop);
         $connector = new TimeoutConnector($connector, $this->timeout, $this->loop);
 
-        $connector->connect($this->slave['host'])->then(
+        $socketPath = $this->getSlaveSocketPath($this->slave->getPort());
+        $connector->connect($socketPath)->then(
             [$this, 'slaveConnected'],
             [$this, 'slaveConnectFailed']
         );
@@ -145,7 +167,7 @@ class RequestHandler
         $this->connection = $connection;
 
         $this->verboseTimer(function($took) {
-            return sprintf('<info>Took abnormal %.3f seconds for connecting to worker %d</info>', $took, $this->slave['port']);
+            return sprintf('<info>Took abnormal %.3f seconds for connecting to worker %d</info>', $took, $this->slave->getPort());
         });
 
         // call handler once in case entire request as already been buffered
@@ -166,25 +188,29 @@ class RequestHandler
      *
      * Typically called after slave has finished handling request
      */
-    public function slaveClosed() {
+    public function slaveClosed()
+    {
         $this->verboseTimer(function($took) {
-            return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave['port'], $took);
+            return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
         });
 
         $this->incoming->end();
 
-        $this->slave['busy'] = false;
-        $this->slave['requests']++;
+        // if slave has already closed its connection to master,
+        // it probably died and is already terminated
+        if ($this->slave->getStatus() !== Slave::CLOSED) {
+            // mark slave as available
+            $this->slave->release();
 
-        /** @var ConnectionInterface $connection */
-        $connection = $this->slave['connection'];
+            /** @var ConnectionInterface $connection */
+            $connection = $this->slave->getConnection();
 
-        if ($this->slave['requests'] >= $this->maxRequests) {
-            $this->slave['ready'] = false;
-            $this->output->writeln(sprintf('Restart worker #%d because it reached maxRequests of %d', $this->slave['port'], $this->maxRequests));
-            $connection->close();
-        } elseif ($this->slave['closeWhenFree']) {
-            $connection->close();
+            $maxRequests = $this->slave->getMaxRequests();
+            if ($this->slave->getHandledRequests() >= $maxRequests) {
+                $this->slave->close();
+                $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
+                $connection->close();
+            }
         }
     }
 
@@ -198,22 +224,25 @@ class RequestHandler
      *
      * @param \Exception slave connection error
      */
-    public function slaveConnectFailed(\Exception $e) {
-        $this->slave['busy'] = false;
+    public function slaveConnectFailed(\Exception $e)
+    {
+        $this->slave->release();
 
-        $this->verboseTimer(function($took) {
+        $this->verboseTimer(function($took) use ($e) {
             return sprintf(
-                '<error>Connection to worker %d failed. Try #%d, took %.3fs. ' .
-                'Try increasing your timeout of %d. Error message: [%d] %s</error>',
-                $this->slave['port'], $this->redirectionTries, $took, $this->timeout, $e->getMessage(), $e->getCode()
+                '<error>Connection to worker %d failed. Try #%d, took %.3fs ' .
+                '(timeout %ds). Error message: [%d] %s</error>',
+                $this->slave->getPort(), $this->redirectionTries, $took, $this->timeout, $e->getCode(), $e->getMessage()
             );
         }, true);
 
         // should not get any more access to this slave instance
         unset($this->slave);
 
-        // Try next free client
-        $this->getNextSlave([$this, 'slaveAvailable']);
+        // try next free slave, let loop schedule it (stack friendly)
+        // after 10th retry add 10ms delay, keep increasing until timeout
+        $delay = min($this->timeout, floor($this->redirectionTries / 10) / 100);
+        $this->loop->addTimer($delay, [$this, 'getNextSlave']);
     }
 
     /**
@@ -239,7 +268,8 @@ class RequestHandler
      *
      * @return bool
      */
-    protected function isHeaderEnd($buffer) {
+    protected function isHeaderEnd($buffer)
+    {
         return false !== strpos($buffer, "\r\n\r\n");
     }
 
@@ -251,16 +281,17 @@ class RequestHandler
      *
      * @return string
      */
-    protected function replaceHeader($header, $headersToReplace) {
+    protected function replaceHeader($header, $headersToReplace)
+    {
         $result = $header;
 
         foreach ($headersToReplace as $key => $value) {
             if (false !== $headerPosition = stripos($result, $key . ':')) {
-                //check how long the header is
+                // check how long the header is
                 $length = strpos(substr($header, $headerPosition), "\r\n");
                 $result = substr_replace($result, "$key: $value", $headerPosition, $length);
             } else {
-                //$key is not in header yet, add it at the end
+                // $key is not in header yet, add it at the end
                 $end = strpos($result, "\r\n\r\n");
                 $result = substr_replace($result, "\r\n$key: $value", $end, 0);
             }

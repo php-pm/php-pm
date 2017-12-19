@@ -315,11 +315,10 @@ class ProcessSlave
                 $this->bindProcessMessage($this->controller);
                 $this->controller->on('close', [$this, 'shutdown']);
 
-                // Port is the slave identifier. Since using unix sockets, host is the socket path.
+                // port is the slave identifier
                 $port = $this->config['port'];
-                $host = $this->config['host'];
-
-                $this->server = new UnixServer($host, $this->loop);
+                $socketPath = $this->getSlaveSocketPath($port, true);
+                $this->server = new UnixServer($socketPath, $this->loop);
 
                 $httpServer = new HttpServer([$this, 'onRequest']);
                 $httpServer->listen($this->server);
