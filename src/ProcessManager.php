@@ -65,7 +65,7 @@ class ProcessManager
     /**
      * @var array
      */
-    protected $slaves = [];
+    protected $slaves;
 
     /**
      * @var string
@@ -166,6 +166,11 @@ class ProcessManager
     protected $populateServer = true;
 
     /**
+     * PID if pidfile has been written
+     */
+    protected $pid;
+
+    /**
      * Location of the file where we're going to store the PID of the master process
      */
     protected $pidfile;
@@ -186,9 +191,12 @@ class ProcessManager
     public function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
         $this->output = $output;
-        $this->slaveCount = $slaveCount;
         $this->host = $host;
         $this->port = $port;
+
+        $this->slaveCount = $slaveCount;
+        $this->slaves = new SlavePool(); // create early, used during shutdown
+
         register_shutdown_function([$this, 'shutdown']);
     }
 
@@ -225,7 +233,9 @@ class ProcessManager
             $this->terminateSlave($slave);
         }
 
-        unlink($this->pidfile);
+        if ($this->pid) {
+            unlink($this->pidfile);
+        }
         exit;
     }
 
@@ -399,7 +409,6 @@ class ProcessManager
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
         $this->writePid();
 
-        $this->slaves = new SlavePool();
         $this->createSlaves();
 
         $this->loop->run();
@@ -415,8 +424,8 @@ class ProcessManager
 
     public function writePid()
     {
-        $pid = getmypid();
-        file_put_contents($this->pidfile, $pid);
+        $this->pid = getmypid();
+        file_put_contents($this->pidfile, $this->pid);
     }
 
     /**
