@@ -30,9 +30,9 @@ script:
   - bin/ppm stop
 
   # pid handling - must not overwrite before started
-  - bin/ppm start&
+  - bin/ppm start --bridge=StaticBridge&
   - sleep 5
-  - bin/ppm start || true
+  - bin/ppm start  --bridge=StaticBridge || true
   - bin/ppm stop
 
 matrix:
