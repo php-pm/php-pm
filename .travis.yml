@@ -32,7 +32,7 @@ script:
   # pid handling - must not overwrite before started
   - bin/ppm start --bridge=StaticBridge&
   - sleep 5
-  - bin/ppm start  --bridge=StaticBridge || true
+  - bin/ppm start --bridge=StaticBridge || true
   - bin/ppm stop
 
 matrix:

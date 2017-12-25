@@ -166,6 +166,11 @@ class ProcessManager
     protected $populateServer = true;
 
     /**
+     * PID if pidfile has been written
+     */
+    protected $pid;
+
+    /**
      * Location of the file where we're going to store the PID of the master process
      */
     protected $pidfile;
@@ -228,7 +233,9 @@ class ProcessManager
             $this->terminateSlave($slave);
         }
 
-        unlink($this->pidfile);
+        if ($this->pid) {
+            unlink($this->pidfile);
+        }
         exit;
     }
 
@@ -417,8 +424,8 @@ class ProcessManager
 
     public function writePid()
     {
-        $pid = getmypid();
-        file_put_contents($this->pidfile, $pid);
+        $this->__constructpid = getmypid();
+        file_put_contents($this->pidfile, $this->pid);
     }
 
     /**
