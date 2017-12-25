@@ -65,7 +65,7 @@ class ProcessManager
     /**
      * @var array
      */
-    protected $slaves = [];
+    protected $slaves;
 
     /**
      * @var string
@@ -186,9 +186,12 @@ class ProcessManager
     public function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
         $this->output = $output;
-        $this->slaveCount = $slaveCount;
         $this->host = $host;
         $this->port = $port;
+
+        $this->slaveCount = $slaveCount;
+        $this->slaves = new SlavePool(); // create early, used during shutdown
+
         register_shutdown_function([$this, 'shutdown']);
     }
 
@@ -399,7 +402,6 @@ class ProcessManager
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
         $this->writePid();
 
-        $this->slaves = new SlavePool();
         $this->createSlaves();
 
         $this->loop->run();

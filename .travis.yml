@@ -29,6 +29,12 @@ script:
   - bin/ppm status
   - bin/ppm stop
 
+  # pid handling - must not overwrite before started
+  - bin/ppm start&
+  - sleep 5
+  - bin/ppm start || true
+  - bin/ppm stop
+
 matrix:
   fast_finish: true
 
