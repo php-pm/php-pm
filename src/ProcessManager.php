@@ -424,7 +424,7 @@ class ProcessManager
 
     public function writePid()
     {
-        $this->__constructpid = getmypid();
+        $this->pid = getmypid();
         file_put_contents($this->pidfile, $this->pid);
     }
 
