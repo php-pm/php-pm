@@ -85,7 +85,7 @@ class ProcessManager
     /**
      * @var int
      */
-    protected $slaveCount = 1;
+    protected $slaveCount;
 
     /**
      * @var string
@@ -186,9 +186,12 @@ class ProcessManager
     public function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
     {
         $this->output = $output;
-        $this->slaveCount = $slaveCount;
         $this->host = $host;
         $this->port = $port;
+
+        $this->slaveCount = $slaveCount;
+        $this->slaves = new SlavePool(); // create early, used during shutdown
+
         register_shutdown_function([$this, 'shutdown']);
     }
 
@@ -399,7 +402,6 @@ class ProcessManager
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
         $this->writePid();
 
-        $this->slaves = new SlavePool();
         $this->createSlaves();
 
         $this->loop->run();
@@ -764,7 +766,7 @@ class ProcessManager
         if ($reload && $restartSlaves) {
             $this->output->writeln(
                 sprintf(
-                    "<info>[%s] File changed %s (detection %.3f, %d). Reload workers.</info>",
+                    "<info>[%s] File changed %s (detection %.3f, %d). Reloading workers.</info>",
                     date('d/M/Y:H:i:s O'),
                     $filePath,
                     microtime(true) - $start,
@@ -802,7 +804,10 @@ class ProcessManager
             $this->slaves->remove($slave);
 
             if (!empty($slave->getConnection())) {
-                $slave->getConnection()->close();
+                /** @var ConnectionInterface */
+                $connection = $slave->getConnection();
+                $connection->removeAllListeners('close');
+                $connection->close();
             }
         }
     }
