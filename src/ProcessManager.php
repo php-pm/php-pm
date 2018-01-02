@@ -764,7 +764,7 @@ class ProcessManager
         if ($reload && $restartSlaves) {
             $this->output->writeln(
                 sprintf(
-                    "<info>[%s] File changed %s (detection %.3f, %d). Reload workers.</info>",
+                    "<info>[%s] File changed %s (detection %.3f, %d). Reloading workers.</info>",
                     date('d/M/Y:H:i:s O'),
                     $filePath,
                     microtime(true) - $start,
@@ -802,7 +802,10 @@ class ProcessManager
             $this->slaves->remove($slave);
 
             if (!empty($slave->getConnection())) {
-                $slave->getConnection()->close();
+                /** @var ConnectionInterface */
+                $connection = $slave->getConnection();
+                $connection->removeAllListeners('close');
+                $connection->close();
             }
         }
     }
