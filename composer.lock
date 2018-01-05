@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "b33c26bb5936868f92c53765cfa7405c",
+    "content-hash": "ac4aaa99a5be79e4df54c99d22f591a0",
     "packages": [
         {
             "name": "evenement/evenement",
@@ -548,16 +548,16 @@
         },
         {
             "name": "react/http",
-            "version": "v0.8.0",
+            "version": "v0.8.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/http.git",
-                "reference": "0410c94463bdae4bdf34d60bff91e9e1eb4a6652"
+                "reference": "92deba861d5a1320584450cfa61622a2969b00ef"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/http/zipball/0410c94463bdae4bdf34d60bff91e9e1eb4a6652",
-                "reference": "0410c94463bdae4bdf34d60bff91e9e1eb4a6652",
+                "url": "https://api.github.com/repos/reactphp/http/zipball/92deba861d5a1320584450cfa61622a2969b00ef",
+                "reference": "92deba861d5a1320584450cfa61622a2969b00ef",
                 "shasum": ""
             },
             "require": {
@@ -592,7 +592,7 @@
                 "server",
                 "streaming"
             ],
-            "time": "2017-12-12T13:01:48+00:00"
+            "time": "2018-01-05T15:30:50+00:00"
         },
         {
             "name": "react/promise",
@@ -2577,8 +2577,5 @@
         "php": ">=5.6.0",
         "ext-pcntl": "*"
     },
-    "platform-dev": [],
-    "platform-overrides": {
-        "php": "5.6"
-    }
+    "platform-dev": []
 }
