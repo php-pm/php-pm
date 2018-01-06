@@ -12,7 +12,7 @@
 
     <testsuites>
         <testsuite name="PHP-PM Test Suite">
-            <directory>Tests/</directory>
+            <directory>tests/</directory>
         </testsuite>
     </testsuites>
 
