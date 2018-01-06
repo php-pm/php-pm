@@ -378,8 +378,7 @@ class ProcessManager
         ob_implicit_flush(1);
 
         $this->loop = Factory::create();
-        $this->controllerHost = $this->getControllerSocketPath();
-        $this->controller = new UnixServer($this->controllerHost, $this->loop);
+        $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
@@ -860,13 +859,13 @@ class ProcessManager
             $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
+        $socketpath = var_export($this->getSocketPath(), true);
         $bridge = var_export($this->getBridge(), true);
         $bootstrap = var_export($this->getAppBootstrap(), true);
 
         $config = [
             'port' => $port,
             'session_path' => session_save_path(),
-            'controllerHost' => $this->controllerHost,
 
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
@@ -894,7 +893,7 @@ if (!pcntl_enabled()) {
 }
 
 //global for all global functions
-ProcessSlave::\$slave = new ProcessSlave($bridge, $bootstrap, $config);
+ProcessSlave::\$slave = new ProcessSlave($socketpath, $bridge, $bootstrap, $config);
 ProcessSlave::\$slave->run();
 EOF;
 

@@ -7,7 +7,7 @@ use React\EventLoop\LoopInterface;
 use React\Socket\UnixConnector;
 use React\Socket\ConnectionInterface;
 
-class Client
+class ProcessClient
 {
     use ProcessCommunicationTrait;
 

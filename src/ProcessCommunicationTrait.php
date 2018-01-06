@@ -126,6 +126,14 @@ trait ProcessCommunicationTrait
     }
 
     /**
+     * @return string
+     */
+    public function getSocketPath()
+    {
+        return $this->socketPath;
+    }
+
+    /**
      * @param string $socketPath
      */
     public function setSocketPath($socketPath)
