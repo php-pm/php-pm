@@ -2,8 +2,7 @@
 
 namespace PHPPM\Commands;
 
-// use PHPPM\ProcessManager;
-use PHPPM\Client;
+use PHPPM\ProcessClient;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -35,7 +34,7 @@ class StopCommand extends Command
     {
         $config = $this->initializeConfig($input, $output, false);
 
-        $handler = new Client();
+        $handler = new ProcessClient();
         $handler->setSocketPath($config['socket-path']);
 
         $handler->stopProcessManager(function ($status) use ($output) {
