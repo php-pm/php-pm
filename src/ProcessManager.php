@@ -378,8 +378,7 @@ class ProcessManager
         ob_implicit_flush(1);
 
         $this->loop = Factory::create();
-        $this->controllerHost = $this->getControllerSocketPath();
-        $this->controller = new UnixServer($this->controllerHost, $this->loop);
+        $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
         $this->controller->on('connection', array($this, 'onSlaveConnection'));
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
@@ -866,7 +865,7 @@ class ProcessManager
         $config = [
             'port' => $port,
             'session_path' => session_save_path(),
-            'controllerHost' => $this->controllerHost,
+            'socket-path' => $this->getSocketPath(),
 
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),

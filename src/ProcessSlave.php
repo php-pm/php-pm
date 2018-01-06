@@ -122,7 +122,8 @@ class ProcessSlave
         $this->config = $config;
         $this->appBootstrap = $appBootstrap;
         $this->bridgeName = $bridgeName;
-        $this->baseServer = $_SERVER;
+
+        $this->socketPath = $this->config['socket-path'];
 
         if ($this->config['session_path']) {
             session_save_path($this->config['session_path']);
@@ -303,7 +304,9 @@ class ProcessSlave
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
         $connector = new UnixConnector($this->loop);
-        $connector->connect($this->config['controllerHost'])->done(
+        $unixSocket = $this->getControllerSocketPath(false);
+
+        $connector->connect($unixSocket)->done(
             function($controller) {
                 $this->controller = $controller;
 
