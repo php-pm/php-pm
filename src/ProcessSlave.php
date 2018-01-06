@@ -117,13 +117,13 @@ class ProcessSlave
      */
     protected $config;
 
-    public function __construct($bridgeName = null, $appBootstrap, array $config = [])
+    public function __construct($socketpath, $bridgeName = null, $appBootstrap, array $config = [])
     {
-        $this->config = $config;
-        $this->appBootstrap = $appBootstrap;
-        $this->bridgeName = $bridgeName;
+        $this->setSocketPath($socketpath);
 
-        $this->socketPath = $this->config['socket-path'];
+        $this->bridgeName = $bridgeName;
+        $this->appBootstrap = $appBootstrap;
+        $this->config = $config;
 
         if ($this->config['session_path']) {
             session_save_path($this->config['session_path']);

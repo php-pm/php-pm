@@ -859,13 +859,13 @@ class ProcessManager
             $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
+        $socketpath = var_export($this->getSocketPath(), true);
         $bridge = var_export($this->getBridge(), true);
         $bootstrap = var_export($this->getAppBootstrap(), true);
 
         $config = [
             'port' => $port,
             'session_path' => session_save_path(),
-            'socket-path' => $this->getSocketPath(),
 
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
@@ -893,7 +893,7 @@ if (!pcntl_enabled()) {
 }
 
 //global for all global functions
-ProcessSlave::\$slave = new ProcessSlave($bridge, $bootstrap, $config);
+ProcessSlave::\$slave = new ProcessSlave($socketpath, $bridge, $bootstrap, $config);
 ProcessSlave::\$slave->run();
 EOF;
 
