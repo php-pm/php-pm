@@ -1,3 +1,5 @@
+sudo: false
+
 language: php
 
 php:
@@ -10,12 +12,6 @@ install:
   - composer install
 
 script:
-  # check with lock file  
-  - ./vendor/bin/phpunit
-
-  # check without lock file  
-  - rm composer.lock && rm -rf vendor
-  - composer install
   - ./vendor/bin/phpunit
 
   # integration test
@@ -36,7 +32,3 @@ matrix:
 cache:
   directories:
     - $HOME/.composer/cache
-
-# This triggers builds to run on the new TravisCI infrastructure.
-# See: http://docs.travis-ci.com/user/workers/container-based-infrastructure/
-sudo: false
