@@ -89,4 +89,35 @@ class Utils
             'k' => 1024
         ][strtolower(substr($memoryLimit, -1))];
     }
+
+    /**
+     * @param string $path
+     *
+     * @return string|boolean false when path resolution resolved to out of range
+     */
+    public static function parseQueryPath($path)
+    {
+        $path = '/' . ltrim($path, '/');
+        $path = preg_replace('/[\x00-\x1F\x7F]/', '', $path);
+
+        //examples:
+        //1.> /images/../foo.png
+        //2.> /foo.png
+
+        //1.> /images/../../foo.png
+        //2.> /foo.png
+        //3.> false
+        while (false !== $pos = strpos($path, '/../')) {
+            $leftSlashNext = strrpos(substr($path, 0, $pos), '/');
+
+            if (false === $leftSlashNext) {
+                // one /../ too much, without space to the left/up
+                return false;
+            }
+
+            $path = substr($path, 0, $leftSlashNext + 1) . substr($path, $pos + 4);
+        }
+
+        return $path;
+    }
 }

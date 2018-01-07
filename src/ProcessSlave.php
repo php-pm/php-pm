@@ -84,13 +84,6 @@ class ProcessSlave
     protected $inShutdown = false;
 
     /**
-     * Real base path for static files
-     *
-     * @var string
-     */
-    protected $staticBasePath;
-
-    /**
      * @var BufferingLogger
      */
     protected $errorLogger;
@@ -472,18 +465,17 @@ class ProcessSlave
             $path = str_replace("\\", '/', $path);
         }
 
-        if (!isset($this->staticBasePath)) {
-            $this->staticBasePath = realpath($this->getStaticDirectory());
-        }
-        $filePath = realpath($this->staticBasePath . $path);
+        $path = Utils::parseQueryPath($path);
 
-        if (false === $filePath) {
-            return false;
-        }
-
-        // prevent access outside base path
-        if (strpos($filePath, $this->staticBasePath) !== 0) {
+        if (false === $path) {
+            //too many /../ in path
             return new Response(403);
+        }
+
+        $filePath = $this->getStaticDirectory() . $path;
+
+        if (!file_exists($filePath)) {
+            return false;
         }
 
         if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
