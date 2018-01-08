@@ -293,7 +293,9 @@ class ProcessSlave
     {
         $this->loop = Factory::create();
 
+        /** @psalm-suppress InvalidPropertyAssignment */
         $this->errorLogger = BufferingLogger::create();
+        /** @psalm-suppress PossiblyInvalidArgument */
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
         $connector = new UnixConnector($this->loop);

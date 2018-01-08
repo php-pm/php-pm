@@ -32,7 +32,7 @@ trait BootstrapTrait
      */
     private function normalizeBootstrapClass($appBootstrap)
     {
-        $appBootstrap = str_replace('\\\\', '\\', $appBootstrap);
+        $appBootstrap = str_replace('\\\\', '\\', (string) $appBootstrap);
 
         $bootstraps = [
             $appBootstrap,
