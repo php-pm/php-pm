@@ -164,16 +164,6 @@ class Slave
     }
 
     /**
-     * Get slave socket path
-     *
-     * @return string slave socket path
-     */
-    public function getSocketPath()
-    {
-        return $this->socketPath;
-    }
-
-    /**
      * Get slave incoming connection
      *
      * @return ConnectionInterface slave connection

@@ -9,6 +9,7 @@ use React\Socket\ConnectionInterface;
  */
 class SlavePool
 {
+    /** @var Slave[] */
     private $slaves = [];
 
     /**
@@ -54,7 +55,7 @@ class SlavePool
      * Get slave by port
      *
      * @param int $port
-     * @return void
+     * @return Slave
      */
     public function getByPort($port)
     {

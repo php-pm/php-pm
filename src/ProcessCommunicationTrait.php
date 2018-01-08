@@ -20,7 +20,7 @@ trait ProcessCommunicationTrait
      * Parses a received message. Redirects to the appropriate `command*` method.
      *
      * @param ConnectionInterface $conn
-     * @param array $data
+     * @param string $data
      *
      * @throws \Exception when invalid 'cmd' in $data.
      */

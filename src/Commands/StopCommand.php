@@ -40,5 +40,7 @@ class StopCommand extends Command
         $handler->stopProcessManager(function ($status) use ($output) {
             $output->writeln('Requested process manager to stop.');
         });
+
+        return null;
     }
 }
