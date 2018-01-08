@@ -13,8 +13,10 @@ install:
   - composer install
 
 script:
+  # Static Analysis
+  - vendor/bin/phpstan analyse --ansi --no-progress --level=4 -- src/ || echo "It's free beer untill PHPDoc-s are fixed."
   # Unit test
-  - ./vendor/bin/phpunit
+  - vendor/bin/phpunit
   # Integration test
   - mkdir web && echo "Hello" > web/index.html
   - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v &
