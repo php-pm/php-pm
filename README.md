@@ -46,7 +46,7 @@ docker run --name ppm --rm -v `pwd`:/var/www -e PPM_STATIC=./web/ -p 8080:80 php
 ```
 
 Docker is easier to setup and maintain. If your applications requires additional environment tools or libraries,
-you can build your own image based on ours. See [https://github.com/php-pm/php-pm-docker](github.com/php-pm/php-pm-docker) for more information.
+you can build your own image based on ours. See [github.com/php-pm/php-pm-docker](https://github.com/php-pm/php-pm-docker) for more information.
 
 When `debug` is enabled, PHP-PM detects file changes and restarts its worker automatically.
 
