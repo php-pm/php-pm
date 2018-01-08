@@ -365,6 +365,7 @@ class ProcessSlave
             return new Response(500);
         };
 
+        /** @psalm-suppress UndefinedClass for PHP 5.6-compatibility */
         try {
             $response = $this->handleRequest($request);
         } catch (\Throwable $t) {
