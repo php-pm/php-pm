@@ -26,7 +26,7 @@ trait BootstrapTrait
     }
 
     /**
-     * @param $appBootstrap
+     * @param string|null $appBootstrap The environment your application will use to bootstrap (if any)
      * @return string
      * @throws \RuntimeException
      */
