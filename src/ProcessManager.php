@@ -632,7 +632,7 @@ class ProcessManager
                 );
             }
 
-            $this->status == self::STATE_RUNNING;
+            $this->status = self::STATE_RUNNING;
         }
     }
 
