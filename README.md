@@ -25,16 +25,6 @@ More information can be found in the article: [Bring High Performance Into Your 
 * Static file serving for easy development procedures.
 * Support for HttpKernel (Symfony/Laravel), Drupal (experimental), Zend (experimental).
 
-### Why using PPM as development server instead of vagrant, nginx or apache?
-
-* No hassle with file permissions (www-data vs local user ids).
-* No painful slow virtual-box file sync.
-* Faster response times of your PHP app.
-* No fighting with vagrant / virtual machine settings. 
-* Checkout a new project, run `ppm start` - done. (if configured with `ppm config`)
-* No hassle with domain names (/etc/hosts), just use different ports for your app without root access.
-
-
 ### Badge all the things
 
 Does your app/library support PPM? Show it!
@@ -45,8 +35,24 @@ Does your app/library support PPM? Show it!
 [![PPM Compatible](https://raw.githubusercontent.com/php-pm/ppm-badge/master/ppm-badge.png)](https://github.com/php-pm/php-pm)
 ```
 
+#### Use
 
-### Installation
+```bash
+# configure ppm.json and commit it to your VCS
+docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=symfony
+
+# run
+docker run --name ppm --rm -v `pwd`:/var/www -e PPM_STATIC=./web/ -p 8080:80 phppm/nginx:latest
+```
+
+Docker is easier to setup and maintain. If your applications requires additional environment tools or libraries,
+you can build your own image based on ours. See [https://github.com/php-pm/php-pm-docker](github.com/php-pm/php-pm-docker) for more information.
+
+When `debug` is enabled, PHP-PM detects file changes and restarts its worker automatically.
+
+#### Use without Docker
+
+Requirements:
 
 To get PHP-PM you need beside the php binary also php-cgi, which comes often with php. If not available try to install it:
 
@@ -88,9 +94,6 @@ Open `/etc/php5/cgi/php.ini`, find line `disable_functions = pcntl_alarm,pcntl_f
 ;disable_functions = pcntl_alarm,pcntl_fork, ...
 ```
 
-
-#### Global
-
 ```bash
 $ git clone https://github.com/php-pm/php-pm.git
 $ cd php-pm
@@ -98,25 +101,6 @@ $ composer install
 $ ln -s `pwd`/bin/ppm /usr/local/bin/ppm
 $ ppm --help
 ```
-
-#### Per project
-
-```bash
-# change minimum-stability to dev in your composer.json (until we have a version tagged): "minimum-stability": "dev"
-composer require php-pm/php-pm:dev-master
-composer require php-pm/httpkernel-adapter:dev-master #if you have httpkernel (laravel, symfony)
-./vendor/bin/ppm config --bootstrap=symfony #places a ppm.json in your directory
-./vendor/bin/ppm start #reads ppm.json and starts the server like you want
-```
-
-Once configured (composer and ppm.json) you can start your app on your development machine or server instantly:
-
-```bash
-composer install
-./vendor/bin/ppm start
-```
-
-When `debug` is enabled, PHP-PM detects file changes and restarts its worker automatically.
 
 #### Performance
 
@@ -146,25 +130,11 @@ Per default exceptions and errors are only displayed on the console, prettified 
 
 **HttpKernel for Symfony/Laravel** - https://github.com/php-pm/php-pm-httpkernel
 
-**Drupal** - https://github.com/php-pm/php-pm-drupal
-
 **Zend** - https://github.com/php-pm/php-pm-zend
 
 ### Command
 
 ![ppm-help](https://raw.githubusercontent.com/php-pm/assets/master/help-screenshot.png)
-
-Start
-
-```bash
-cd ~/my/path/to/symfony/
-ppm start
-
-ppm start ~/my/path/to/symfony/ --bootstrap=Symfony --bridge=HttpKernel
-
-cd ~/my/path/to/symfony/
-./vendor/bin/ppm start
-```
 
 ![ppm-start](https://raw.githubusercontent.com/php-pm/assets/master/start-command.png)
 
@@ -173,32 +143,24 @@ cd ~/my/path/to/symfony/
 
 ```bash
 cd my-project
-composer require php-pm/httpkernel-adapter:dev-master
-$ ./bin/ppm start --bootstrap=symfony
+docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=symfony
+docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx:latest
 ```
 
 #### Laravel
 
 ```bash
 cd my-project
-composer require php-pm/httpkernel-adapter:dev-master
-$ ./vendor/bin/ppm start --bootstrap=laravel
-```
-
-#### Drupal
-
-```bash
-cd my-project
-composer require php-pm/httpkernel-adapter:dev-master
-$ ./bin/ppm start --bootstrap=drupal
+docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=laravel
+docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx:latest
 ```
 
 #### Zend
 
 ```bash
 cd my-project
-composer require php-pm/zend-adapter:dev-master
-$ ./bin/ppm start --bridge=Zf2 --bootstrap=Zf2
+docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=Zf2
+docker run -t --rm --name ppm -v `pwd`:/var/www -p 8080:80 phppm/nginx:latest
 ```
 
 #### Wordpress
@@ -215,7 +177,7 @@ currently impossible to serve multiple requests in one application process.
 
 `ppm start --bootstrap=symfony --app-env=prod --logging=0 --debug=0 --workers=20`
 
-http://jarves.io
+https://github.com/jarves/jarves
 
 | PHP Version              | Dynamic at Jarves | Static file |
 |--------------------------|-------------------|-------------|
@@ -236,39 +198,22 @@ https://github.com/bestmomo/laravel5-example
 
 ## Issues
 
-* Not production ready yet, as it's in development and still needs some work in the bootstrap classes of supported frameworks. Some people are currently trying to use it in production. Stay tuned :)
 * Memory leaks, memory leaks and memory leaks. You will also find leaks in your application. :) But no big issue since workers restart automatically.
 * Does not work with ExtEventLoop. (So don't install `php70-event`, but you can try LibEventLoop `php56-libevent`)
 * Drupal and Zend is very experimental and not fully working. Try using https://github.com/php-pm/php-pm-drupal.
 * Laravel's debugger isn't working perfectly yet since it's still needed to reset some stuff after each request.
 * Streamed responses are not streamed yet
-* File upload is experimental
 * No windows support due to signal handling
-* Doesn't fully implement HTTP/1.1, but [reactphp/http](https://github.com/reactphp/http) is working on it.
 
 Please help us fix these issues by creating pull requests. :)
 
-### Setup 1. Use NGINX
+### Setup
 
-Example config for NGINX:
+We provide ready-to-use docker images you can use right away.
+If you have own setup, see in the [PHP-PM docker repository](https://github.com/php-pm/php-pm-docker) how to integrate PHP-PM in your NGiNX setup.
 
-```nginx
-server {
-    root /path/to/symfony/web/;
-    server_name servername.com;
-    location / {
-        try_files $uri @ppm;
-    }
-    location @ppm {
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_pass http://127.0.0.1:8080;
-    }
-}
-```
-
+#### Trusted proxy Symfony
+ 
 To get the real remote IP in your Symfony application for example, don't forget to add ppm (default `127.0.0.1`)
 as trusted reverse proxy.
 
@@ -280,9 +225,3 @@ framework:
 ```
 
 More information at http://symfony.com/doc/current/cookbook/request/load_balancer_reverse_proxy.html.
-
-### Setup 2. Use PPM directly
-
-Since PPM has also a static file server (which isn't quite as fast as nginx, but works for basic usage, see Performance section),
-you can use PPM directly on your server or local. Do not run ppm as root (to get port like 80 working), as it does not set a new UID of the current process
-and would run all the time as root, which is highly unrecommended.
