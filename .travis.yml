@@ -15,6 +15,8 @@ install:
 script:
   # Unit test
   - ./vendor/bin/phpunit
+  # Static Analysis
+  - ./vendor/bin/psalm --show-info=false
   # Integration test
   - mkdir web && echo "Hello" > web/index.html
   - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v &
