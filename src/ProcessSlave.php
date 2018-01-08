@@ -110,7 +110,7 @@ class ProcessSlave
      */
     protected $config;
 
-    public function __construct($socketpath, $bridgeName = null, $appBootstrap, array $config = [])
+    public function __construct($socketpath, $bridgeName, $appBootstrap, array $config = [])
     {
         $this->setSocketPath($socketpath);
 
@@ -246,7 +246,7 @@ class ProcessSlave
     protected function bootstrap($appBootstrap, $appenv, $debug)
     {
         if ($bridge = $this->getBridge()) {
-            $bridge->bootstrap($appBootstrap, $appenv, $debug, $this->loop);
+            $bridge->bootstrap($appBootstrap, $appenv, $debug);
             $this->sendMessage($this->controller, 'ready');
         }
     }

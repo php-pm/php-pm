@@ -23,8 +23,10 @@ class ProcessClient
 
     protected function request($command, $options, $callback)
     {
-        $data['cmd'] = $command;
-        $data['options'] = $options;
+        $data = [
+            'cmd' => $command,
+            'options' => $options
+        ];
 
         $connector = new UnixConnector($this->loop);
         $unixSocket = $this->getControllerSocketPath(false);

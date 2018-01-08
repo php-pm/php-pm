@@ -47,5 +47,7 @@ class StartCommand extends Command
         $handler->setPopulateServer($config['populate-server-var']);
         $handler->setStaticDirectory($config['static-directory']);
         $handler->run();
+
+        return null;
     }
 }

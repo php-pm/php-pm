@@ -53,6 +53,11 @@ class RequestHandler
     private $redirectionTries = 0;
     private $incomingBuffer = '';
 
+    /**
+     * @var ?float
+     */
+    private $start;
+
     public function __construct(LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
     {
         $this->loop = $loop;
@@ -89,7 +94,7 @@ class RequestHandler
         $this->incomingBuffer .= $data;
 
         if ($this->connection && $this->isHeaderEnd($this->incomingBuffer)) {
-            $remoteAddress = $this->incoming->getRemoteAddress();
+            $remoteAddress = (string) $this->incoming->getRemoteAddress();
             $headersToReplace = [
                 'X-PHP-PM-Remote-IP' => trim(parse_url($remoteAddress, PHP_URL_HOST), '[]'),
                 'X-PHP-PM-Remote-Port' => trim(parse_url($remoteAddress, PHP_URL_PORT), '[]')
@@ -127,7 +132,7 @@ class RequestHandler
     /**
      * Slave available handler
      *
-     * @param array $slave available slave instance
+     * @param Slave $slave available slave instance
      */
     public function slaveAvailable(Slave $slave)
     {

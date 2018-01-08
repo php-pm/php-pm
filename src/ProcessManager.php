@@ -63,9 +63,9 @@ class ProcessManager
     protected $maxRequests = 2000;
 
     /**
-     * @var array
+     * @var SlavePool
      */
-    protected $slaves = [];
+    protected $slaves;
 
     /**
      * @var string
@@ -305,7 +305,7 @@ class ProcessManager
     }
 
     /**
-     * @return string
+     * @return ?string
      */
     public function getAppEnv()
     {

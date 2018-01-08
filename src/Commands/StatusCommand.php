@@ -38,6 +38,8 @@ class StatusCommand extends Command
         $handler->getStatus(function ($status) use ($output) {
             $output->writeln($this->parseStatus($status));
         });
+
+        return null;
     }
 
     /**
