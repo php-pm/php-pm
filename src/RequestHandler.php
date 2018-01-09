@@ -49,12 +49,16 @@ class RequestHandler
      */
     private $slave;
 
+    private $start;
+
     private $connectionOpen = true;
     private $redirectionTries = 0;
     private $incomingBuffer = '';
 
-    public function __construct(LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
+    public function __construct($socketPath, LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
     {
+        $this->setSocketPath($socketPath);
+
         $this->loop = $loop;
         $this->output = $output;
         $this->slaves = $slaves;

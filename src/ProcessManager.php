@@ -429,7 +429,7 @@ class ProcessManager
     {
         $this->handledRequests++;
 
-        $handler = new RequestHandler($this->loop, $this->output, $this->slaves);
+        $handler = new RequestHandler($this->socketPath, $this->loop, $this->output, $this->slaves);
         $handler->handle($incoming);
     }
 
