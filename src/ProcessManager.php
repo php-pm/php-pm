@@ -619,11 +619,11 @@ class ProcessManager
 
         if ($this->allSlavesReady()) {
             if ($this->status === self::STATE_EMERGENCY) {
-                $this->output->writeln('<info>Emergency survived. Workers up and running again.</info>');
+                $this->output->writeln("<info>Emergency survived. Workers up and running again.</info>");
             } else {
                 $this->output->writeln(
                     sprintf(
-                        '<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>',
+                        "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
                         $this->slaveCount,
                         self::CONTROLLER_PORT+1,
                         $this->host,
@@ -765,7 +765,7 @@ class ProcessManager
         if ($reload && $restartSlaves) {
             $this->output->writeln(
                 sprintf(
-                    '<info>[%s] File changed %s (detection %.3f, %d). Reloading workers.</info>',
+                    "<info>[%s] File changed %s (detection %.3f, %d). Reloading workers.</info>",
                     date('d/M/Y:H:i:s O'),
                     $filePath,
                     microtime(true) - $start,
@@ -856,7 +856,7 @@ class ProcessManager
         }
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(sprintf('Start new worker #%d', $port));
+            $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
         $socketpath = var_export($this->getSocketPath(), true);

@@ -170,7 +170,7 @@ class ProcessSlave
                     if (isset($context['stack'])) {
                         foreach ($context['stack'] as $idx => $stack) {
                             $message .= PHP_EOL . sprintf(
-                                    '#%d: %s%s %s%s',
+                                    "#%d: %s%s %s%s",
                                     $idx,
                                     isset($stack['class']) ? $stack['class'] . '->' : '',
                                     $stack['function'],

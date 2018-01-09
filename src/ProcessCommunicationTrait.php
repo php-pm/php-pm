@@ -93,6 +93,7 @@ trait ProcessCommunicationTrait
             $run .= '/';
         }
 
+        /* https://github.com/kalessil/phpinspectionsea/blob/master/docs/probable-bugs.md#mkdir-race-condition */
         if (!is_dir($run) && !mkdir($run, 0777, true) && !is_dir($run)) {
             throw new \RuntimeException(sprintf('Could not create %s folder.', $run));
         }
