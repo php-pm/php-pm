@@ -38,11 +38,13 @@ Does your app/library support PPM? Show it!
 #### Use
 
 ```bash
-# configure ppm.json and commit it to your VCS
-docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=symfony
+cd into/your-application
 
-# run
-docker run --name ppm --rm -v `pwd`:/var/www -e PPM_STATIC=./web/ -p 8080:80 phppm/nginx
+# run Symfony
+docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --bootstrap=symfony --static-directory=web/
+
+# run Laravel
+docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --bootstrap=laravel --static-directory=web/
 ```
 
 Docker is easier to setup and maintain. If your applications requires additional environment tools or libraries,
@@ -52,55 +54,7 @@ When `debug` is enabled, PHP-PM detects file changes and restarts its worker aut
 
 #### Use without Docker
 
-Requirements:
-
-To get PHP-PM you need beside the php binary also php-cgi, which comes often with php. If not available try to install it:
-
-**Debian/Ubuntu** (https://www.digitalocean.com/community/tutorials/how-to-upgrade-to-php-7-on-ubuntu-14-04)
-
-`apt-get install php7.0-cgi`
-
-By default cgi bin is in  `/usr/lib/cgi-bin/php`, so you need to run:
-
-`sudo ln -s /usr/lib/cgi-bin/php /usr/bin/php7.0-cgi`
-
-**Red Hat/Centos (RHEL-7, 6)** (https://webtatic.com/packages/php70/)
-
-install Webtatic first
-
-`yum install php70w-cli`
-
-**Mac OS X - Homebrew** (https://github.com/Homebrew/homebrew-php)
-
-`brew install php70`
-
-**Mac OS X - Macports**
-
-`port install php70-cgi`
-
-By default, PPM looks for a binary named `php-cgi`. If your PHP installation uses
-a different binary name, you can specify the full path to that binary with the `php-cgi`
-configuration option (for example: `ppm config --cgi-path=/opt/local/bin/php-cgi70`).
-
-On Ubuntu for example per default `pcntl_*` functions are disabled.
-If you get `Warning: pcntl_signal() has been disabled for security reasons`, you should activate these functions:
-
-Open `/etc/php5/cgi/php.ini`, find line `disable_functions = pcntl_alarm,pcntl_fork, ...` and place a `;` in front of it:
-
-```
-; This directive allows you to disable certain functions for security reasons.
-; It receives a comma-delimited list of function names.
-; http://php.net/disable-functions
-;disable_functions = pcntl_alarm,pcntl_fork, ...
-```
-
-```bash
-$ git clone https://github.com/php-pm/php-pm.git
-$ cd php-pm
-$ composer install
-$ ln -s `pwd`/bin/ppm /usr/local/bin/ppm
-$ ppm --help
-```
+Follow the wiki article [Use without Docker](https://github.com/php-pm/php-pm/wiki/Use-without-Docker).
 
 #### Performance
 
