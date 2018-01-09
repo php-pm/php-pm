@@ -29,7 +29,7 @@ class SlavePool
         }
 
         if ($slave->getPort() !== $port) {
-            throw new \Exception("Slave mis-assigned.");
+            throw new \Exception('Slave mis-assigned.');
         }
 
         $this->slaves[$port] = $slave;
@@ -81,7 +81,7 @@ class SlavePool
             }
         }
 
-        throw new \Exception("Slave connection not registered.");
+        throw new \Exception('Slave connection not registered.');
     }
 
     /**
