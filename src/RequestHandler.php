@@ -261,7 +261,7 @@ class RequestHandler
     protected function verboseTimer($callback, $always = false)
     {
         $took = microtime(true) - $this->start;
-        if ($this->output->isVeryVerbose() && ($always || $took > 1)) {
+        if (($always || $took > 1) && $this->output->isVeryVerbose()) {
             $message = $callback($took);
             $this->output->writeln($message);
         }

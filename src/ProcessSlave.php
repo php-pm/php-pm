@@ -500,7 +500,7 @@ class ProcessSlave
                 'Cache-Control' => 'max-age=' . $expires,
                 'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
                 'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
-            ], new ReadableResourceStream(fopen($filePath, 'r'), $this->loop));
+            ], new ReadableResourceStream(fopen($filePath, 'rb'), $this->loop));
 
             return $response;
         }
