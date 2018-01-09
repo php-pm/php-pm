@@ -39,10 +39,10 @@ Does your app/library support PPM? Show it!
 
 ```bash
 # configure ppm.json and commit it to your VCS
-docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=symfony
+docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=symfony
 
 # run
-docker run --name ppm --rm -v `pwd`:/var/www -e PPM_STATIC=./web/ -p 8080:80 phppm/nginx:latest
+docker run --name ppm --rm -v `pwd`:/var/www -e PPM_STATIC=./web/ -p 8080:80 phppm/nginx
 ```
 
 Docker is easier to setup and maintain. If your applications requires additional environment tools or libraries,
@@ -143,24 +143,24 @@ Per default exceptions and errors are only displayed on the console, prettified 
 
 ```bash
 cd my-project
-docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=symfony
-docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx:latest
+docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=symfony
+docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx
 ```
 
 #### Laravel
 
 ```bash
 cd my-project
-docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=laravel
-docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx:latest
+docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=laravel
+docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx
 ```
 
 #### Zend
 
 ```bash
 cd my-project
-docker run phppm/ppm -v `pwd`:/var/www/ config --bootstrap=Zf2
-docker run -t --rm --name ppm -v `pwd`:/var/www -p 8080:80 phppm/nginx:latest
+docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=Zf2
+docker run -t --rm --name ppm -v `pwd`:/var/www -p 8080:80 phppm/nginx 
 ```
 
 #### Wordpress

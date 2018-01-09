@@ -13,23 +13,23 @@ install:
   - composer install
 
 script:
+  # Unit test
   - ./vendor/bin/phpunit
-
-  # integration test
-  - mkdir web && echo Hello > web/index.html
-  - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v&
+  # Integration test
+  - mkdir web && echo "Hello" > web/index.html
+  - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v &
   - sleep 5
   - bin/ppm status
-  - curl -v -f http://127.0.0.1:8080
+  - curl -v -f "http://127.0.0.1:8080"
   - bin/ppm status
-  - curl -v -f http://127.0.0.1:8080
+  - curl -v -f "http://127.0.0.1:8080"
   - bin/ppm status
   - bin/ppm stop
 
 matrix:
   fast_finish: true
 
-# cache vendors
+# Cache package sources
 cache:
   directories:
     - $HOME/.composer/cache
