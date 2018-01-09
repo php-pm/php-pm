@@ -3,6 +3,7 @@
 namespace PHPPM\Bridges;
 
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 class InvokableMiddleware implements BridgeInterface
 {
@@ -23,7 +24,7 @@ class InvokableMiddleware implements BridgeInterface
     /**
      * {@inheritdoc}
      */
-    public function handle(ServerRequestInterface $request)
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $middleware = $this->middleware;
         return $middleware($request);
