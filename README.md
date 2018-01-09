@@ -143,24 +143,21 @@ Per default exceptions and errors are only displayed on the console, prettified 
 
 ```bash
 cd my-project
-docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=symfony
-docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx
+docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --static-directory=web/
 ```
 
 #### Laravel
 
 ```bash
 cd my-project
-docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=laravel
-docker run -t --rm --name ppm -e PPM_STATIC=web/ -v `pwd`:/var/www -p 8080:80 phppm/nginx
+docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --bootstrap=laravel --static-directory=web/
 ```
 
 #### Zend
 
 ```bash
 cd my-project
-docker run -v `pwd`:/var/www/ phppm/ppm config --bootstrap=Zf2
-docker run -t --rm --name ppm -v `pwd`:/var/www -p 8080:80 phppm/nginx 
+docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --bootstrap=Zf2
 ```
 
 #### Wordpress
