@@ -1,5 +1,6 @@
 {
     "name": "php-pm/php-pm",
+    "description": "Process manager for modern PHP applications",
     "license": "MIT",
     "require": {
         "php": ">=5.6.0",
@@ -37,5 +38,7 @@
         "ext-libev": "Allows for use of a more performant event-loop implementation.",
         "ext-event": "Allows for use of a more performant event-loop implementation."
     },
-    "bin": ["bin/ppm"]
+    "bin": [
+        "bin/ppm"
+    ]
 }
