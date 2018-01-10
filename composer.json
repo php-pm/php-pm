@@ -32,10 +32,7 @@
         ]
     },
     "suggest": {
-        "php-pm/httpkernel-adapter": "HttpKernel adapter for Symfony and Laravel frameworks",
-        "ext-libevent": "Allows for use of a more performant event-loop implementation.",
-        "ext-libev": "Allows for use of a more performant event-loop implementation.",
-        "ext-event": "Allows for use of a more performant event-loop implementation."
+        "php-pm/httpkernel-adapter": "HttpKernel adapter for Symfony and Laravel frameworks"
     },
     "bin": ["bin/ppm"]
 }
