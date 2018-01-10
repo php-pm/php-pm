@@ -10,6 +10,7 @@ php:
 
 install:
   - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
+  - composer validate
   - composer install
 
 script:
