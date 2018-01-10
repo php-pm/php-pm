@@ -1,0 +1,5 @@
+parameters:
+    excludes_analyse:
+        - %rootDir%/vendor/*
+    ignoreErrors:
+        - '#Result of method React\\Socket\\ServerInterface::close\(\) \(void\) is used#'

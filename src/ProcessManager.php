@@ -206,7 +206,8 @@ class ProcessManager
 
         $this->status = self::STATE_SHUTDOWN;
 
-        $this->output->writeln($graceful
+        $this->output->writeln(
+            $graceful
             ? '<info>Shutdown received, exiting.</info>'
             : '<error>Termination received, exiting.</error>'
         );
@@ -379,10 +380,10 @@ class ProcessManager
 
         $this->loop = Factory::create();
         $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
-        $this->controller->on('connection', array($this, 'onSlaveConnection'));
+        $this->controller->on('connection', [$this, 'onSlaveConnection']);
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
-        $this->web->on('connection', array($this, 'onRequest'));
+        $this->web->on('connection', [$this, 'onRequest']);
 
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
@@ -460,8 +461,7 @@ class ProcessManager
 
         try {
             $slave = $this->slaves->getByConnection($connection);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             // this connection is not registered, so it died during the ProcessSlave constructor.
             $this->output->writeln(
                 '<error>Worker permanently closed during PHP-PM bootstrap. Not so cool. ' .
@@ -491,8 +491,7 @@ class ProcessManager
          */
         if ($status === Slave::REGISTERED) {
             $this->bootstrapFailed($port);
-        }
-        else {
+        } else {
             // recreate
             $this->newSlaveInstance($port);
         }
@@ -517,7 +516,7 @@ class ProcessManager
         // create port -> requests map
         $requests = array_reduce(
             $this->slaves->getByStatus(Slave::ANY),
-            function($carry, Slave $slave) {
+            function ($carry, Slave $slave) {
                 $carry[$slave->getPort()] = 0 + $slave->getHandledRequests();
                 return $carry;
             },
@@ -579,10 +578,10 @@ class ProcessManager
         try {
             $slave = $this->slaves->getByPort($port);
             $slave->register($pid, $conn);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             $this->output->writeln(sprintf(
-                '<error>Worker #%d wanted to register on master which was not expected.</error>', $port
+                '<error>Worker #%d wanted to register on master which was not expected.</error>',
+                $port
             ));
             $conn->close();
             return;
@@ -606,8 +605,7 @@ class ProcessManager
     {
         try {
             $slave = $this->slaves->getByConnection($conn);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return;
         }
 
@@ -664,8 +662,7 @@ class ProcessManager
                 $this->output->writeln(sprintf('Received %d files from %d', count($data['files']), $slave->getPort()));
             }
             $this->filesToTrack = array_unique(array_merge($this->filesToTrack, $data['files']));
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             // silent
         }
     }

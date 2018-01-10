@@ -4,8 +4,8 @@ namespace PHPPM;
 
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
-use React\Socket\UnixConnector;
 use React\Socket\ConnectionInterface;
+use React\Socket\UnixConnector;
 
 class ProcessClient
 {
@@ -32,14 +32,14 @@ class ProcessClient
         $unixSocket = $this->getControllerSocketPath(false);
 
         $connector->connect($unixSocket)->done(
-            function($connection) use ($data, $callback) {
+            function (ConnectionInterface $connection) use ($data, $callback) {
                 $result = '';
 
-                $connection->on('data', function($data) use (&$result) {
+                $connection->on('data', function ($data) use (&$result) {
                     $result .= $data;
                 });
 
-                $connection->on('close', function() use ($callback, &$result) {
+                $connection->on('close', function () use ($callback, &$result) {
                     $callback($result);
                 });
 
@@ -50,7 +50,7 @@ class ProcessClient
 
     public function getStatus(callable $callback)
     {
-        $this->request('status', [], function($result) use ($callback) {
+        $this->request('status', [], function ($result) use ($callback) {
             $callback(json_decode($result, true));
         });
         $this->loop->run();
@@ -58,7 +58,7 @@ class ProcessClient
 
     public function stopProcessManager(callable $callback)
     {
-        $this->request('stop', [], function($result) use ($callback) {
+        $this->request('stop', [], function ($result) use ($callback) {
             $callback(json_decode($result, true));
         });
         $this->loop->run();

@@ -24,6 +24,8 @@ class Slave
     const BUSY = 4;
     const CLOSED = 5;
 
+    protected $socketPath;
+
     /**
      * Slave status
      *
@@ -64,6 +66,8 @@ class Slave
 
     /**
      * Attach a slave to a running process
+     *
+     * @param Process $process
      */
     public function attach(Process $process)
     {
@@ -72,6 +76,9 @@ class Slave
 
     /**
      * Register a slave after it's process started
+     *
+     * @param int $pid
+     * @param ConnectionInterface $connection
      *
      * @return void
      */
