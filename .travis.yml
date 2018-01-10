@@ -10,8 +10,8 @@ php:
 
 install:
   - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
-  - composer install
   - composer validate
+  - composer install
 
 script:
   # Unit test
