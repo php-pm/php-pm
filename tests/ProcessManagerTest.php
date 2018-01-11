@@ -4,7 +4,6 @@ namespace PHPPM\Tests;
 
 class ProcessManagerTest extends PhpPmTestCase
 {
-
     public function provideReplaceHeader()
     {
         return [

@@ -1,0 +1,3 @@
+parameters:
+    ignoreErrors:
+        - '#Result of method React\\Socket\\ServerInterface::close\(\) \(void\) is used#'

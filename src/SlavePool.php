@@ -17,7 +17,8 @@ class SlavePool
      *
      * Slave is in CREATED state
      *
-     * @param int $port
+     * @param Slave $slave
+     *
      * @return void
      */
     public function add(Slave $slave)
@@ -38,13 +39,15 @@ class SlavePool
     /**
      * Remove from pool
      *
-     * @param int $port
+     * @param Slave $slave
+     *
+     * @return void
      */
     public function remove(Slave $slave)
     {
         $port = $slave->getPort();
 
-        // validate existance
+        // validate existence
         $this->getByPort($port);
 
         // remove
@@ -69,6 +72,9 @@ class SlavePool
     /**
      * Get slave slaves by connection
      *
+     * @param ConnectionInterface $connection
+     *
+     * @return mixed
      * @throws \Exception
      */
     public function getByConnection(ConnectionInterface $connection)
@@ -89,7 +95,7 @@ class SlavePool
      */
     public function getByStatus($status)
     {
-        return array_filter($this->slaves, function($slave) use ($status) {
+        return array_filter($this->slaves, function ($slave) use ($status) {
             return $status === Slave::ANY || $status === $slave->getStatus();
         });
     }

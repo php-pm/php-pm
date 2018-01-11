@@ -29,7 +29,7 @@ trait ProcessCommunicationTrait
         $array = json_decode($data, true);
 
         $method = 'command' . ucfirst($array['cmd']);
-        if (is_callable(array($this, $method))) {
+        if (is_callable([$this, $method])) {
             $this->$method($array, $conn);
         } else {
             throw new \Exception(sprintf('Command %s not found. Got %s', $method, $data));

@@ -59,5 +59,4 @@ class StatusCommand extends Command
         }
         return $p;
     }
-
 }

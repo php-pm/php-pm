@@ -13,6 +13,11 @@ class RequestHandler
     use ProcessCommunicationTrait;
 
     /**
+     * @var float
+     */
+    protected $start;
+
+    /**
      * @var ConnectionInterface
      */
     private $incoming;
@@ -52,11 +57,6 @@ class RequestHandler
     private $connectionOpen = true;
     private $redirectionTries = 0;
     private $incomingBuffer = '';
-
-    /**
-     * @var ?float
-     */
-    private $start;
 
     public function __construct($socketPath, LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
     {
@@ -124,8 +124,7 @@ class RequestHandler
 
             // slave available -> connect
             $this->slaveAvailable($slave);
-        }
-        else {
+        } else {
             // keep retrying until slave becomes available
             $this->loop->futureTick([$this, 'getNextSlave']);
         }
@@ -147,7 +146,7 @@ class RequestHandler
 
         $this->slave = $slave;
 
-        $this->verboseTimer(function($took) {
+        $this->verboseTimer(function ($took) {
             return sprintf('<info>took abnormal %.3f seconds for choosing next free worker</info>', $took);
         });
 
@@ -167,13 +166,13 @@ class RequestHandler
     /**
      * Handle successful slave connection
      *
-     * @param ConnectionInterface slave connection
+     * @param ConnectionInterface $connection Slave connection
      */
     public function slaveConnected(ConnectionInterface $connection)
     {
         $this->connection = $connection;
 
-        $this->verboseTimer(function($took) {
+        $this->verboseTimer(function ($took) {
             return sprintf('<info>Took abnormal %.3f seconds for connecting to worker %d</info>', $took, $this->slave->getPort());
         });
 
@@ -197,7 +196,7 @@ class RequestHandler
      */
     public function slaveClosed()
     {
-        $this->verboseTimer(function($took) {
+        $this->verboseTimer(function ($took) {
             return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
         });
 
@@ -229,17 +228,22 @@ class RequestHandler
      * available worker list. If it is really dying it will be removed from the
      * worker list by the connection:close event.
      *
-     * @param \Exception slave connection error
+     * @param \Exception $e slave connection error
      */
     public function slaveConnectFailed(\Exception $e)
     {
         $this->slave->release();
 
-        $this->verboseTimer(function($took) use ($e) {
+        $this->verboseTimer(function ($took) use ($e) {
             return sprintf(
                 '<error>Connection to worker %d failed. Try #%d, took %.3fs ' .
                 '(timeout %ds). Error message: [%d] %s</error>',
-                $this->slave->getPort(), $this->redirectionTries, $took, $this->timeout, $e->getCode(), $e->getMessage()
+                $this->slave->getPort(),
+                $this->redirectionTries,
+                $took,
+                $this->timeout,
+                $e->getCode(),
+                $e->getMessage()
             );
         }, true);
 

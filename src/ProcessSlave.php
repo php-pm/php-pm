@@ -3,10 +3,10 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
-use PHPPM\Bridges\BridgeInterface;
-use PHPPM\Debug\BufferingLogger;
 use Evenement\EventEmitterInterface;
 use MKraemer\ReactPCNTL\PCNTL;
+use PHPPM\Bridges\BridgeInterface;
+use PHPPM\Debug\BufferingLogger;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use React\EventLoop\Factory;
@@ -14,10 +14,10 @@ use React\EventLoop\LoopInterface;
 use React\Http\Response;
 use React\Http\Server as HttpServer;
 use React\Promise\Promise;
-use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
-use React\Socket\UnixServer;
+use React\Socket\ServerInterface;
 use React\Socket\UnixConnector;
+use React\Socket\UnixServer;
 use React\Stream\ReadableResourceStream;
 use Symfony\Component\Debug\ErrorHandler;
 
@@ -300,7 +300,7 @@ class ProcessSlave
         $unixSocket = $this->getControllerSocketPath(false);
 
         $connector->connect($unixSocket)->done(
-            function($controller) {
+            function ($controller) {
                 $this->controller = $controller;
 
                 $pcntl = new PCNTL($this->loop);
@@ -373,11 +373,11 @@ class ProcessSlave
             $response = $catchLog($e);
         }
 
-        $promise = new Promise(function($resolve) use ($response) {
+        $promise = new Promise(function ($resolve) use ($response) {
             return $resolve($response);
         });
 
-        $promise = $promise->then(function(ResponseInterface $response) use ($request, $logTime, $remoteIp) {
+        $promise = $promise->then(function (ResponseInterface $response) use ($request, $logTime, $remoteIp) {
             if ($this->isLogging()) {
                 $this->logResponse($request, $response, $logTime, $remoteIp);
             }
@@ -405,8 +405,7 @@ class ProcessSlave
         if ($bridge = $this->getBridge()) {
             $response = $bridge->handle($request);
             $this->sendCurrentFiles();
-        }
-        else {
+        } else {
             $response = new Response(404, [], 'No Bridge defined');
         }
 
@@ -460,8 +459,7 @@ class ProcessSlave
 
         if ($path === '/') {
             $path = '/index.html';
-        }
-        else {
+        } else {
             $path = str_replace("\\", '/', $path);
         }
 
@@ -515,7 +513,7 @@ class ProcessSlave
      */
     protected function logResponse(ServerRequestInterface $request, ResponseInterface $response, $timeLocal, $remoteIp)
     {
-        $logFunction = function($size) use ($request, $response, $timeLocal, $remoteIp) {
+        $logFunction = function ($size) use ($request, $response, $timeLocal, $remoteIp) {
             $requestString = $request->getMethod() . ' ' . $request->getUri()->getPath() . ' HTTP/' . $request->getProtocolVersion();
             $statusCode = $response->getStatusCode();
 
@@ -524,26 +522,29 @@ class ProcessSlave
                 $statusCode = "<info>$statusCode</info>";
             }
 
-            $message = str_replace([
-                '$remote_addr',
-                '$remote_user',
-                '$time_local',
-                '$request',
-                '$status',
-                '$bytes_sent',
-                '$http_referer',
-                '$http_user_agent',
-            ], [
-                $remoteIp,
-                '-', //todo remote_user
-                $timeLocal,
-                $requestString,
-                $statusCode,
-                $size,
-                $request->hasHeader('Referer') ? $request->getHeaderLine('Referer') : '-',
-                $request->hasHeader('User-Agent') ? $request->getHeaderLine('User-Agent') : '-'
-            ],
-                $this->logFormat);
+            $message = str_replace(
+                [
+                    '$remote_addr',
+                    '$remote_user',
+                    '$time_local',
+                    '$request',
+                    '$status',
+                    '$bytes_sent',
+                    '$http_referer',
+                    '$http_user_agent',
+                ],
+                [
+                    $remoteIp,
+                    '-', //todo remote_user
+                    $timeLocal,
+                    $requestString,
+                    $statusCode,
+                    $size,
+                    $request->hasHeader('Referer') ? $request->getHeaderLine('Referer') : '-',
+                    $request->hasHeader('User-Agent') ? $request->getHeaderLine('User-Agent') : '-'
+                ],
+                $this->logFormat
+            );
 
             if ($response->getStatusCode() >= 400) {
                 $message = "<error>$message</error>";
@@ -556,11 +557,11 @@ class ProcessSlave
             /** @var EventEmitterInterface $body */
             $body = $response->getBody();
             $size = strlen(\RingCentral\Psr7\str($response));
-            $body->on('data', function($data) use (&$size) {
+            $body->on('data', function ($data) use (&$size) {
                 $size += strlen($data);
             });
             //using `close` event since `end` is not fired for files
-            $body->on('close', function() use (&$size, $logFunction) {
+            $body->on('close', function () use (&$size, $logFunction) {
                 $logFunction($size);
             });
         } else {
@@ -575,7 +576,7 @@ class ProcessSlave
      */
     protected function mimeContentType($filename)
     {
-        $mimeTypes = array(
+        $mimeTypes = [
             'txt' => 'text/plain',
             'htm' => 'text/html',
             'html' => 'text/html',
@@ -629,7 +630,7 @@ class ProcessSlave
             // open office
             'odt' => 'application/vnd.oasis.opendocument.text',
             'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
-        );
+        ];
 
         $ext = strtolower(substr($filename, strrpos($filename, '.') + 1));
         if (isset($mimeTypes[$ext])) {
