@@ -4,6 +4,7 @@ namespace PHPPM\Bridges;
 
 use Interop\Http\Server\RequestHandlerInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 class Psr15Middleware implements BridgeInterface
 {
@@ -17,14 +18,14 @@ class Psr15Middleware implements BridgeInterface
         $this->bootstrapApplicationEnvironment($appBootstrap, $appenv, $debug);
 
         if (!$this->middleware instanceof RequestHandlerInterface) {
-            throw new \Exception('Middleware must implement RequestHandlerInterface');
+            throw new \Exception('Request handler must implement RequestHandlerInterface');
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function handle(ServerRequestInterface $request)
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
         return $this->middleware->handle($request);
     }
