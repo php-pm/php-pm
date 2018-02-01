@@ -44,7 +44,7 @@ cd into/your-application
 docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --bootstrap=symfony --static-directory=web/
 
 # run Laravel
-docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --bootstrap=laravel --static-directory=web/
+docker run -v `pwd`:/var/www -p 8080:80 phppm/nginx --bootstrap=laravel --static-directory=public/
 ```
 
 Docker is easier to setup and maintain. If your applications requires additional environment tools or libraries,
