@@ -648,4 +648,12 @@ class ProcessSlave
 
         return 'application/octet-stream';
     }
+
+    /**
+     * @param string $message
+     */
+    public function log($message)
+    {
+        $this->sendMessage($this->controller, 'log', ['message' => $message]);
+    }
 }
