@@ -23,11 +23,10 @@ class StopCommand extends Command
         $this
             ->setName('stop')
             ->setDescription('Stops the server')
-            ->addOption('socket-path', null, InputOption::VALUE_REQUIRED, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
             ->addArgument('working-directory', InputArgument::OPTIONAL, 'Working directory', './')
         ;
 
-        $this->configurePPMOptions($this);
+        $this->configureStartupAndAccessOptions($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)

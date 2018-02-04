@@ -22,10 +22,10 @@ class StartCommand extends Command
         $this
             ->setName('start')
             ->setDescription('Starts the server')
-            ->addArgument('working-directory', InputArgument::OPTIONAL, 'Working directory', './')
-        ;
+            ->addArgument('working-directory', InputArgument::OPTIONAL, 'Working directory', './');
 
-        $this->configurePPMOptions($this);
+        $this->configureStartupAndAccessOptions($this);
+        $this->configureConfigOptions($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
