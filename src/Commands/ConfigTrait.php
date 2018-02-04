@@ -25,6 +25,7 @@ trait ConfigTrait
     protected function configureConfigOptions(Command $command)
     {
         $command
+            ->addOption('daemonize', 'd', InputOption::VALUE_NONE, 'Run in background')
             ->addOption('host', null, InputOption::VALUE_REQUIRED, 'Load-Balancer host', '127.0.0.1')
             ->addOption('port', null, InputOption::VALUE_REQUIRED, 'Load-Balancer port', 8080)
             ->addOption('bridge', null, InputOption::VALUE_REQUIRED, 'Bridge for converting React Psr7 requests to target framework', 'HttpKernel')
