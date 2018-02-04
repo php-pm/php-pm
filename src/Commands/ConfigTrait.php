@@ -150,7 +150,15 @@ trait ConfigTrait
             return $input->getOption($name);
         }
 
-        return isset($config[$name]) ? $config[$name] : $input->getOption($name);
+        if (isset($config[$name])) {
+            return $config[$name];
+        }
+
+        if ($input->hasOption($name)) {
+            return $input->getOption($name);
+        }
+
+        return null;
     }
 
     /**
