@@ -493,6 +493,7 @@ class ProcessManager
         ob_implicit_flush(1);
 
         $this->loop = Factory::create();
+
         $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
         $this->controller->on('connection', [$this, 'onSlaveConnection']);
 
@@ -512,13 +513,59 @@ class ProcessManager
         }
 
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
-
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
+
         $this->writePid();
 
+        // create handlers after pid file
+        $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
+        $pcntl->on(SIGTERM, [$this, 'handleShutdown']);
+        $pcntl->on(SIGINT, [$this, 'handleShutdown']);
+        $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
+        $pcntl->on(SIGUSR1, [$this, 'restartSlaves']);
+
+        $this->slaves = new SlavePool();
         $this->createSlaves();
 
         $this->loop->run();
+    }
+
+    /**
+     * Handles termination signals, so we can gracefully stop all servers.
+     */
+    public function handleShutdown($graceful = false)
+    {
+        if ($this->status === self::STATE_SHUTDOWN) {
+            return;
+        }
+
+        $this->status = self::STATE_SHUTDOWN;
+
+        $this->output->writeln(
+            $graceful
+            ? '<info>Shutdown received, exiting.</info>'
+            : '<error>Termination received, exiting.</error>'
+        );
+
+        // this method is also called during startup when something crashed, so
+        // make sure we don't operate on nulls.
+        if ($this->controller) {
+            @$this->controller->close();
+        }
+        if ($this->web) {
+            @$this->web->close();
+        }
+        if ($this->loop) {
+            $this->loop->tick();
+            $this->loop->stop();
+        }
+
+        foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
+            $this->terminateSlave($slave);
+        }
+
+        @unlink($this->pidfile);
+        exit;
     }
 
     /**
@@ -529,10 +576,23 @@ class ProcessManager
         $pid = pcntl_waitpid(-1, $status, WNOHANG);
     }
 
+    /**
+     * Write pid file
+     */
     public function writePid()
     {
         $pid = getmypid();
-        file_put_contents($this->pidfile, $pid);
+
+        if (file_exists($this->pidfile)) {
+            throw new \InvalidArgumentException(sprintf("PID file '%s' already exists", $this->pidfile));
+        }
+        if (!is_writable(dirname($this->pidfile))) {
+            throw new \InvalidArgumentException(sprintf("PID file '%s' not writable", $this->pidfile));
+        }
+
+        if (null === file_put_contents($this->pidfile, $pid)) {
+            throw new \Exception(sprintf("Failed writing PID file '%s'", $this->pidfile));
+        }
     }
 
     /**
@@ -1191,7 +1251,7 @@ set_time_limit(0);
 require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
-    
+
 if (!pcntl_installed()) {
     error_log(
         sprintf(
