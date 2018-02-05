@@ -140,7 +140,7 @@ class ProcessManager
      *
      * @var string
      */
-    protected $phpCgiExecutable = false;
+    protected $phpCgiExecutable = '';
 
     /**
      * @var null|int
