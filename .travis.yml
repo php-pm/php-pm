@@ -15,7 +15,7 @@ install:
 
 script:
   # Static analyzer check
-  - if [ $TRAVIS_PHP_VERSION = '7.1' ]; then composer require "phpstan/phpstan:^0.9" && ./vendor/bin/phpstan analyze -c .phpstan.neon --level=2 --no-progress src;fi
+  - if [ $TRAVIS_PHP_VERSION = '7.1' ]; then composer require "phpstan/phpstan:^0.9" && ./vendor/bin/phpstan analyze -c .phpstan.neon --level=4 --no-progress src;fi
   # Check the code style
   - if [ $TRAVIS_PHP_VERSION = '7.1' ]; then IFS=$'\n'; COMMIT_SCA_FILES=($(git diff --name-only --diff-filter=ACMRTUXB "${TRAVIS_COMMIT_RANGE}")); unset IFS; fi
   - if [ $TRAVIS_PHP_VERSION = '7.1' ]; then composer require "friendsofphp/php-cs-fixer:^2.8" && ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}";fi
