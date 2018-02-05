@@ -84,7 +84,7 @@ class ProcessSlave
     protected $inShutdown = false;
 
     /**
-     * @var BufferingLogger
+     * @var BufferingLogger|\Symfony\Component\Debug\BufferingLogger
      */
     protected $errorLogger;
 
