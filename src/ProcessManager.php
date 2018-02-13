@@ -764,7 +764,9 @@ class ProcessManager
             clearstatcache();
 
             $newFilesCount = 0;
-            foreach (array_diff($data['files'], array_keys($this->filesLastMTime)) as $filePath) {
+            $knownFiles = array_keys($this->filesLastMTime);
+            $recentlyIncludedFiles = array_diff($data['files'], $knownFiles);
+            foreach ($recentlyIncludedFiles as $filePath) {
                 if (file_exists($filePath)) {
                     $this->filesLastMTime[$filePath] = filemtime($filePath);
                     $this->filesLastMd5[$filePath] = md5_file($filePath, true);
@@ -1050,13 +1052,11 @@ class ProcessManager
         }
 
         $this->inRestart = true;
-        $start = microtime(true);
 
         $this->closeSlaves();
         $this->createSlaves();
 
         $this->inRestart = false;
-        $this->output->writeln(sprintf("Workers have been restarted in %.3f ms.", (microtime(true) - $start) * 1000));
     }
 
     /**
