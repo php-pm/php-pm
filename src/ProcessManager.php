@@ -11,6 +11,7 @@ use React\Socket\Connection;
 use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
 use React\ChildProcess\Process;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
@@ -141,11 +142,6 @@ class ProcessManager
      * @var string
      */
     protected $phpCgiExecutable = '';
-
-    /**
-     * @var null|int
-     */
-    protected $lastWorkerErrorPrintBy;
 
     protected $filesToTrack = [];
     protected $filesLastMTime = [];
@@ -910,16 +906,25 @@ EOF;
         $slave = new Slave($port, $this->maxRequests);
         $slave->attach($process);
         $this->slaves->add($slave);
-
         $process->start($this->loop);
+
+        $process->stdout->on(
+            'data',
+            function ($data) use ($port) {
+                $this->output->write("[$port] $data");
+            }
+        );
+
         $process->stderr->on(
             'data',
             function ($data) use ($port) {
-                if ($this->lastWorkerErrorPrintBy !== $port) {
-                    $this->output->writeln("<info>--- Worker $port stderr ---</info>");
-                    $this->lastWorkerErrorPrintBy = $port;
+                $stdErr = $this->output;
+
+                if ($stdErr instanceof ConsoleOutputInterface) {
+                    $stdErr = $stdErr->getErrorOutput();
                 }
-                $this->output->write("<error>$data</error>");
+
+                $stdErr->write("[$port] $data");
             }
         );
     }

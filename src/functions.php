@@ -17,16 +17,13 @@ function register_file($path)
 }
 
 /**
- * Dumps information about a variable into your console output.
+ * Log a message to stdout
  *
- * @param mixed $expression The variable you want to export.
- * @param mixed $_          [optional]
+ * @param string $message
  */
-function console_log($expression, $_ = null)
+function console_log($message)
 {
-    ob_start();
-    var_dump(...func_get_args());
-    file_put_contents('php://stderr', ob_get_clean() . PHP_EOL, FILE_APPEND);
+    ProcessSlave::$slave->log($message);
 }
 
 /**
