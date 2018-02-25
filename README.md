@@ -86,6 +86,8 @@ Per default exceptions and errors are only displayed on the console, prettified 
 
 **Zend** - https://github.com/php-pm/php-pm-zend
 
+**CakePHP** - https://github.com/CakeDC/cakephp-phppm
+
 ### Command
 
 ![ppm-help](https://raw.githubusercontent.com/php-pm/assets/master/help-screenshot.png)
