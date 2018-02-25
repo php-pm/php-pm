@@ -902,7 +902,7 @@ EOF;
         // we can not use -q since this disables basically all header support
         // but since this is necessary at least in Symfony we can not use it.
         // e.g. headers_sent() returns always true, although wrong.
-        $commandline = $this->phpCgiExecutable . ' -C ' . ProcessUtils::escapeArgument($file);
+        $commandline = $this->phpCgiExecutable . ' -C ' . self::escapeArgument($file);
 
         // use exec to omit wrapping shell
         $process = new Process('exec ' . $commandline);
@@ -943,5 +943,68 @@ EOF;
         if (is_int($pid)) {
             posix_kill($pid, SIGKILL); // make sure it's really dead
         }
+    }
+
+    /**
+     * Moved from vendor/symfony/process/ProcessUtils.php.
+     *
+     * Escapes a string to be used as a shell argument.
+     *
+     * @param string $argument The argument that will be escaped
+     *
+     * @return string The escaped argument
+     *
+     * @deprecated since version 3.3, to be removed in 4.0. Use a command line array or give env vars to the `Process::start/run()` method instead.
+     */
+    public static function escapeArgument($argument)
+    {
+        @trigger_error('The '.__METHOD__.'() method is deprecated since Symfony 3.3 and will be removed in 4.0. Use a command line array or give env vars to the Process::start/run() method instead.', E_USER_DEPRECATED);
+
+        //Fix for PHP bug #43784 escapeshellarg removes % from given string
+        //Fix for PHP bug #49446 escapeshellarg doesn't work on Windows
+        //@see https://bugs.php.net/bug.php?id=43784
+        //@see https://bugs.php.net/bug.php?id=49446
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            if ('' === $argument) {
+                return escapeshellarg($argument);
+            }
+
+            $escapedArgument = '';
+            $quote = false;
+            foreach (preg_split('/(")/', $argument, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE) as $part) {
+                if ('"' === $part) {
+                    $escapedArgument .= '\\"';
+                } elseif (self::isSurroundedBy($part, '%')) {
+                    // Avoid environment variable expansion
+                    $escapedArgument .= '^%"'.substr($part, 1, -1).'"^%';
+                } else {
+                    // escape trailing backslash
+                    if ('\\' === substr($part, -1)) {
+                        $part .= '\\';
+                    }
+                    $quote = true;
+                    $escapedArgument .= $part;
+                }
+            }
+            if ($quote) {
+                $escapedArgument = '"'.$escapedArgument.'"';
+            }
+
+            return $escapedArgument;
+        }
+
+        return "'".str_replace("'", "'\\''", $argument)."'";
+    }
+
+    /**
+     * Moved from vendor/symfony/process/ProcessUtils.php.
+     *
+     * @param $arg
+     * @param $char
+     * @return bool
+     */
+    private static function isSurroundedBy($arg, $char)
+    {
+        return 2 < strlen($arg) && $char === $arg[0] && $char === $arg[strlen($arg) - 1];
     }
 }
