@@ -999,8 +999,8 @@ EOF;
     /**
      * Moved from vendor/symfony/process/ProcessUtils.php.
      *
-     * @param $arg
-     * @param $char
+     * @param string $arg
+     * @param string $char
      * @return bool
      */
     private static function isSurroundedBy($arg, $char)
