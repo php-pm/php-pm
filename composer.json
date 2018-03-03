@@ -5,9 +5,9 @@
     "require": {
         "php": ">=5.6.0",
         "ext-pcntl":"*",
-        "symfony/console": "^2.6|^3.0",
-        "symfony/debug": "^2.6|^3.0",
-        "symfony/process": "^2.6|^3.0",
+        "symfony/console": "^2.6|^3.0|^4.0",
+        "symfony/debug": "^2.6|^3.0|^4.0",
+        "symfony/process": "^2.6|^3.0|^4.0",
         "react/event-loop": "^0.4",
         "react/stream": "^0.7.1",
         "react/http": "^0.8",
