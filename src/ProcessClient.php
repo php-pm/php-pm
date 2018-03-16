@@ -63,4 +63,11 @@ class ProcessClient
         });
         $this->loop->run();
     }
+
+    public function reloadProcessManager(callable $callback) {
+        $this->request('reload', [], function ($result) use ($callback) {
+            $callback(json_decode($result, true));
+        });
+        $this->loop->run();
+    }
 }

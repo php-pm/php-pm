@@ -565,6 +565,25 @@ class ProcessManager
     }
 
     /**
+     * A slave sent a `reload` command.
+     *
+     * @param array      $data
+     * @param ConnectionInterface $conn
+     */
+    protected function commandReload(array $data, ConnectionInterface $conn)
+    {
+        if ($this->output->isVeryVerbose()) {
+            $conn->on('close', function () {
+                $this->output->writeln('Reload command requested');
+            });
+        }
+
+        $conn->end(json_encode([]));
+
+        $this->restartSlaves();
+    }
+
+    /**
      * A slave sent a `register` command.
      *
      * @param array      $data
