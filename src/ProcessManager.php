@@ -40,6 +40,11 @@ class ProcessManager
      */
     const STATE_SHUTDOWN = 3;
 
+    /*
+     * Load balancer is being reloaded
+     */
+    const STATE_RELOADING = 4;
+
     /**
      * Load balancer status
      */
@@ -455,7 +460,7 @@ class ProcessManager
      */
     public function onSlaveClosed(ConnectionInterface $connection)
     {
-        if ($this->status === self::STATE_SHUTDOWN) {
+        if ($this->status === self::STATE_SHUTDOWN || $this->status === self::STATE_RELOADING) {
             return;
         }
 
@@ -533,6 +538,9 @@ class ProcessManager
             case self::STATE_EMERGENCY:
                 $status = 'offline';
                 break;
+            case self::STATE_RELOADING:
+                $status = 'reloading';
+                break;
             default:
                 $status = 'unknown';
         }
@@ -580,6 +588,7 @@ class ProcessManager
 
         $conn->end(json_encode([]));
 
+        $this->status = self::STATE_RELOADING;
         $this->restartSlaves();
     }
 
