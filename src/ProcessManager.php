@@ -140,6 +140,13 @@ class ProcessManager
     protected $inReload = false;
 
     /**
+     * Whether the server is in the restart phase.
+     *
+     * @var bool
+     */
+    protected $inRestart = false;
+
+    /**
      * The number of seconds to wait before force closing a worker during a reload.
      *
      * @var int
@@ -776,7 +783,7 @@ class ProcessManager
      */
     protected function checkChangedFiles($restartSlaves = true)
     {
-        if ($this->inReload) {
+        if ($this->inRestart) {
             return false;
         }
 
@@ -940,17 +947,17 @@ class ProcessManager
      */
     public function restartSlaves()
     {
-        if ($this->inReload) {
+        if ($this->inRestart) {
             return;
         }
 
-        $this->inReload = true;
+        $this->inRestart = true;
         $this->output->writeln('Restarting all workers');
 
         $this->closeSlaves();
         $this->createSlaves();
 
-        $this->inReload = false;
+        $this->inRestart = false;
     }
 
     /**
