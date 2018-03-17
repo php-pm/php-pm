@@ -162,6 +162,10 @@ class Slave
      */
     public function lock()
     {
+        if ($this->status !== self::BUSY) {
+            throw new \LogicException('Cannot lock a slave that is not in busy state');
+        }
+
         $this->status = self::LOCKED;
     }
 
