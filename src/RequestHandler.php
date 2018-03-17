@@ -202,9 +202,13 @@ class RequestHandler
 
         $this->incoming->end();
 
-        // if slave has already closed its connection to master,
-        // it probably died and is already terminated
-        if ($this->slave->getStatus() !== Slave::CLOSED) {
+        if ($this->slave->getStatus() === Slave::LOCKED) {
+            // slave was locked, so mark as closed now.
+            $this->slave->close();
+        } else if ($this->slave->getStatus() !== Slave::CLOSED) {
+            // if slave has already closed its connection to master,
+            // it probably died and is already terminated
+
             // mark slave as available
             $this->slave->release();
 

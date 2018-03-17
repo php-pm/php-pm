@@ -140,6 +140,13 @@ class ProcessManager
     protected $inReload = false;
 
     /**
+     * An array of slaves currently in a graceful reload phase.
+     *
+     * @var Slave[]
+     */
+    protected $reloadingSlaves = [];
+
+    /**
      * Full path to the php-cgi executable. If not set, we try to determine the
      * path automatically.
      *
@@ -588,8 +595,7 @@ class ProcessManager
 
         $conn->end(json_encode([]));
 
-        $this->status = self::STATE_RELOADING;
-        $this->restartSlaves();
+        $this->reloadSlaves();
     }
 
     /**
@@ -817,6 +823,25 @@ class ProcessManager
     }
 
     /**
+     * Close a slave
+     *
+     * @param Slave $slave
+     *
+     * @return void
+     */
+    protected function closeSlave($slave) {
+        $slave->close();
+        $this->slaves->remove($slave);
+
+        if (!empty($slave->getConnection())) {
+            /** @var ConnectionInterface */
+            $connection = $slave->getConnection();
+            $connection->removeAllListeners('close');
+            $connection->close();
+        }
+    }
+
+    /**
      * Close all slaves
      *
      * @return void
@@ -824,16 +849,67 @@ class ProcessManager
     public function closeSlaves()
     {
         foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
-            $slave->close();
-            $this->slaves->remove($slave);
-
-            if (!empty($slave->getConnection())) {
-                /** @var ConnectionInterface */
-                $connection = $slave->getConnection();
-                $connection->removeAllListeners('close');
-                $connection->close();
-            }
+            $this->closeSlave($slave);
         }
+    }
+
+    /**
+     * Reload all slaves gracefully.
+     */
+    public function reloadSlaves()
+    {
+        if ($this->inReload) {
+            return;
+        }
+
+        $forceAfter = microtime(true) + 30000;
+
+        $this->status = self::STATE_RELOADING;
+        $this->inReload = true;
+        $this->reloadingSlaves = $this->slaves->getByStatus(Slave::ANY);
+
+        $this->output->writeln('Reloading all workers gracefully');
+
+        $this->loop->addPeriodicTimer(0.5, function ($timer) use ($forceAfter) {
+            $busy = [];
+
+            foreach ($this->reloadingSlaves as $slave) {
+                if ($slave->getStatus() == Slave::BUSY) {
+                    if ($this->output->isVeryVerbose()) {
+                        $this->output->writeln(sprintf('Locking worker #%d from any more requests', $slave->getPort()));
+                    }
+
+                    $slave->lock();
+                    $busy[] = $slave;
+                } else if ($slave->getStatus() == Slave::LOCKED) {
+                    if (microtime(true) > $forceAfter) {
+                        if ($this->output->isVeryVerbose()) {
+                            $this->output->writeln(sprintf('Worker #%d is taking too long to reload, forcefully closing.', $slave->getPort()));
+                        }
+
+                        $this->closeSlave($slave);
+                        $this->newSlaveInstance($slave->getPort());
+                    } else {
+                        $busy[] = $slave;
+                    }
+                } else {
+                    if ($this->output->isVeryVerbose()) {
+                        $this->output->writeln(sprintf('Reloading worker #%d', $slave->getPort()));
+                    }
+
+                    $this->closeSlave($slave);
+                    $this->newSlaveInstance($slave->getPort());
+                }
+            }
+
+            $this->reloadingSlaves = $busy;
+
+            if (empty($busy)) {
+                $this->output->writeln('Reload complete');
+                $timer->cancel();
+                $this->inReload = false;
+            }
+        });
     }
 
     /**
@@ -846,6 +922,7 @@ class ProcessManager
         }
 
         $this->inReload = true;
+
         $this->output->writeln('Restarting all workers');
 
         $this->closeSlaves();
