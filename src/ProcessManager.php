@@ -394,14 +394,16 @@ class ProcessManager
     /**
      * @return int
      */
-    public function getReloadThreshold() {
+    public function getReloadThreshold()
+    {
         return $this->reloadThreshold;
     }
 
     /**
      * @param int $reloadThreshold
      */
-    public function setReloadThreshold($reloadThreshold) {
+    public function setReloadThreshold($reloadThreshold)
+    {
         $this->reloadThreshold = $reloadThreshold;
     }
 
@@ -857,7 +859,8 @@ class ProcessManager
      *
      * @return void
      */
-    protected function closeSlave($slave) {
+    protected function closeSlave($slave)
+    {
         $slave->close();
         $this->slaves->remove($slave);
 
@@ -913,14 +916,14 @@ class ProcessManager
 
                     $this->closeSlave($slave);
                     $this->newSlaveInstance($slave->getPort());
-                } else if ($slave->getStatus() == Slave::BUSY) {
+                } elseif ($slave->getStatus() == Slave::BUSY) {
                     if ($this->output->isVeryVerbose()) {
                         $this->output->writeln(sprintf('Worker #%d is busy, locking', $slave->getPort()));
                     }
 
                     $slave->lock();
                     $busy[] = $slave;
-                } else if ($slave->getStatus() == Slave::LOCKED) {
+                } elseif ($slave->getStatus() == Slave::LOCKED) {
                     $busy[] = $slave;
                 } else {
                     if ($this->output->isVeryVerbose()) {
