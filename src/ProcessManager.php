@@ -922,7 +922,6 @@ class ProcessManager
         }
 
         $this->inReload = true;
-
         $this->output->writeln('Restarting all workers');
 
         $this->closeSlaves();
