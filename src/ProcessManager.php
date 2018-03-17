@@ -895,52 +895,54 @@ class ProcessManager
             return;
         }
 
-        $forceAfter = null;
-
-        if ($this->reloadThreshold !== -1) {
-            $forceAfter = microtime(true) + ($this->reloadThreshold * 1000);
-        }
-
+        $forceAfter = microtime(true) + ($this->reloadThreshold * 1000);
         $this->status = self::STATE_RELOADING;
         $this->inReload = true;
         $this->reloadingSlaves = $this->slaves->getByStatus(Slave::ANY);
 
-        $this->output->writeln('Reloading all workers gracefully');
+        $this->output->writeln('<info>Reloading all workers gracefully</info>');
 
         $this->loop->addPeriodicTimer(0.2, function ($timer) use ($forceAfter) {
             $busy = [];
 
             foreach ($this->reloadingSlaves as $slave) {
-                if ($forceAfter && microtime(true) >= $forceAfter) {
-                    $this->output->writeln(sprintf('<error>Worker #%d broke the graceful reload threshold, forcefully closing.</error>', $slave->getPort()));
+                $canRestart = ($slave->getStatus() !== Slave::BUSY && $slave->getStatus() !== Slave::LOCKED);
 
-                    $this->closeSlave($slave);
-                    $this->newSlaveInstance($slave->getPort());
-                } elseif ($slave->getStatus() == Slave::BUSY) {
+                if ($this->reloadThreshold !== -1 && microtime(true) >= $forceAfter) {
+                    $this->output->writeln(
+                        sprintf(
+                            '<error>Worker #%d broke the graceful reload threshold, forcefully closing.</error>',
+                            $slave->getPort()
+                        )
+                    );
+
+                    $canRestart = true;
+                } elseif ($slave->getStatus() === Slave::BUSY) {
                     if ($this->output->isVeryVerbose()) {
-                        $this->output->writeln(sprintf('Worker #%d is busy, locking', $slave->getPort()));
+                        $this->output->writeln(sprintf('Waiting for worker #%d to finish', $slave->getPort()));
                     }
 
                     $slave->lock();
-                    $busy[] = $slave;
-                } elseif ($slave->getStatus() == Slave::LOCKED) {
-                    $busy[] = $slave;
-                } else {
+                }
+
+                if ($canRestart) {
                     if ($this->output->isVeryVerbose()) {
                         $this->output->writeln(sprintf('Reloading worker #%d', $slave->getPort()));
                     }
 
                     $this->closeSlave($slave);
                     $this->newSlaveInstance($slave->getPort());
+                } else {
+                    $busy[] = $slave;
                 }
             }
 
             $this->reloadingSlaves = $busy;
 
             if (empty($busy)) {
-                $this->output->writeln('Reload complete.');
-                $timer->cancel();
+                $this->output->writeln('<info>Reload complete.</info>');
                 $this->inReload = false;
+                $timer->cancel();
             }
         });
     }
