@@ -39,6 +39,7 @@ class StartCommand extends Command
         $handler->setBridge($config['bridge']);
         $handler->setAppEnv($config['app-env']);
         $handler->setDebug((boolean)$config['debug']);
+        $handler->setReloadThreshold((int)$config['reload-threshold']);
         $handler->setLogging((boolean)$config['logging']);
         $handler->setAppBootstrap($config['bootstrap']);
         $handler->setMaxRequests($config['max-requests']);
