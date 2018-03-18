@@ -36,9 +36,8 @@ class ReloadCommand extends Command
 
         $handler = new ProcessClient();
         $handler->setSocketPath($config['socket-path']);
-
         $handler->reloadProcessManager(function ($status) use ($output) {
-            $output->writeln('Requested a worker reload.');
+            $output->writeln("Requested a worker reload.");
         });
 
         return null;
