@@ -5,6 +5,7 @@ namespace PHPPM;
 
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
+use React\EventLoop\Timer\TimerInterface;
 use React\Socket\Server;
 use React\Socket\UnixServer;
 use React\Socket\Connection;
@@ -144,7 +145,7 @@ class ProcessManager
     /**
      * Keep track of a single reload timer to prevent multiple reloads spawning several overlapping timers.
      *
-     * @var Timer
+     * @var TimerInterface
      */
     protected $reloadThresholdTimer;
 
