@@ -845,7 +845,8 @@ class ProcessManager
     {
         if ($this->status === self::STATE_STARTING || $this->status === self::STATE_EMERGENCY) {
             $readySlaves = $this->slaves->getByStatus(Slave::READY);
-            return count($readySlaves) === $this->slaveCount;
+            $busySlaves = $this->slaves->getByStatus(Slave::BUSY);
+            return count($readySlaves) + count($busySlaves) === $this->slaveCount;
         }
 
         return false;
