@@ -82,7 +82,7 @@ class SlavePool
         $hash = spl_object_hash($connection);
 
         foreach ($this->slaves as $slave) {
-            if ($hash === spl_object_hash($slave->getConnection())) {
+            if ($slave->getConnection() && $hash === spl_object_hash($slave->getConnection())) {
                 return $slave;
             }
         }

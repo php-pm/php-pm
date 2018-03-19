@@ -539,7 +539,14 @@ class ProcessManager
 
         $conn->end(json_encode([
             'status' => $status,
-            'workers' => $this->slaveCount,
+            'workers' => [
+                'total' => count($this->slaves->getByStatus(Slave::ANY)),
+                'ready' => count($this->slaves->getByStatus(Slave::READY)),
+                'busy' => count($this->slaves->getByStatus(Slave::BUSY)),
+                'created' => count($this->slaves->getByStatus(Slave::CREATED)),
+                'registered' => count($this->slaves->getByStatus(Slave::REGISTERED)),
+                'closed' => count($this->slaves->getByStatus(Slave::CLOSED))
+            ],
             'handled_requests' => $this->handledRequests,
             'handled_requests_per_worker' => $requests
         ]));
@@ -606,6 +613,11 @@ class ProcessManager
         try {
             $slave = $this->slaves->getByConnection($conn);
         } catch (\Exception $e) {
+            $this->output->writeln(
+                '<error>A ready command was sent by a worker with no connection. This was unexpected. ' .
+                'Not your fault, please create a ticket at github.com/php-pm/php-pm with ' .
+                'the output of `ppm start -vv`.</error>'
+            );
             return;
         }
 
