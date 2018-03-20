@@ -1,5 +1,5 @@
 {
-    "name": "php-pm/php-pm",
+    "name": "andreybolonin/php-pm",
     "description": "PHP-PM is a process manager, supercharger and load balancer for PHP applications.",
     "license": "MIT",
     "require": {
