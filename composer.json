@@ -16,7 +16,7 @@
         "mkraemer/react-pcntl": "^2.0|^3.0",
         "monolog/monolog": "^1.3",
         "paragonie/random_compat": "^2.0",
-        "http-interop/http-middleware": "^0.5",
+        "psr/http-server-middleware": "^1",
         "ringcentral/psr7": "^1.2"
     },
     "require-dev": {
