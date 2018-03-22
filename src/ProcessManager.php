@@ -902,10 +902,18 @@ EOF;
         // we can not use -q since this disables basically all header support
         // but since this is necessary at least in Symfony we can not use it.
         // e.g. headers_sent() returns always true, although wrong.
-        $commandline = $this->phpCgiExecutable . ' -C ' . ProcessUtils::escapeArgument($file);
+        //For version 2.x and 3.x of \Symfony\Component\Process\Process package
+        if (method_exists('\Symfony\Component\Process\ProcessUtils', 'escapeArgument')) {
+            $commandline = 'exec ' . $this->phpCgiExecutable . ' -C ' . ProcessUtils::escapeArgument($file);
+        } else {
+            //For version 4.x of \Symfony\Component\Process\Process package
+            $commandline = ['exec', $this->phpCgiExecutable, '-C', $file];
+            $processInstance = new \Symfony\Component\Process\Process($commandline);
+            $commandline = $processInstance->getCommandLine();
+        }
 
         // use exec to omit wrapping shell
-        $process = new Process('exec ' . $commandline);
+        $process = new Process($commandline);
 
         $slave = new Slave($port, $this->maxRequests);
         $slave->attach($process);
