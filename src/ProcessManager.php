@@ -428,6 +428,7 @@ class ProcessManager
         $pcntl->on(SIGINT, [$this, 'shutdown']);
         $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
         $pcntl->on(SIGUSR1, [$this, 'restartSlaves']);
+        $pcntl->on(SIGUSR2, [$this, 'reloadSlaves']);
 
         if ($this->isDebug()) {
             $this->loop->addPeriodicTimer(0.5, function () {
