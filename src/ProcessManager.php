@@ -539,14 +539,7 @@ class ProcessManager
 
         $conn->end(json_encode([
             'status' => $status,
-            'workers' => [
-                'total' => count($this->slaves->getByStatus(Slave::ANY)),
-                'ready' => count($this->slaves->getByStatus(Slave::READY)),
-                'busy' => count($this->slaves->getByStatus(Slave::BUSY)),
-                'created' => count($this->slaves->getByStatus(Slave::CREATED)),
-                'registered' => count($this->slaves->getByStatus(Slave::REGISTERED)),
-                'closed' => count($this->slaves->getByStatus(Slave::CLOSED))
-            ],
+            'workers' => $this->slaves->getStatusSummary(),
             'handled_requests' => $this->handledRequests,
             'handled_requests_per_worker' => $requests
         ]));

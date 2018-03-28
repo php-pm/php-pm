@@ -99,4 +99,25 @@ class SlavePool
             return $status === Slave::ANY || $status === $slave->getStatus();
         });
     }
+
+    /**
+     * Return a human-readable summary of the slaves in the pool.
+     *
+     * @return array
+     */
+    public function getStatusSummary()
+    {
+        $map = [
+            'total' => Slave::ANY,
+            'ready' => Slave::READY,
+            'busy' => Slave::BUSY,
+            'created' => Slave::CREATED,
+            'registered' => Slave::REGISTERED,
+            'closed' => Slave::CLOSED
+        ];
+
+        return array_map(function ($state) {
+            return count($this->getByStatus($state));
+        }, $map);
+    }
 }
