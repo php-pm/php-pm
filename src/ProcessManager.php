@@ -140,14 +140,14 @@ class ProcessManager
      *
      * @var int
      */
-    protected $reloadThreshold = 30;
+    protected $reloadTimeout = 30;
 
     /**
      * Keep track of a single reload timer to prevent multiple reloads spawning several overlapping timers.
      *
      * @var TimerInterface
      */
-    protected $reloadThresholdTimer;
+    protected $reloadTimeoutTimer;
 
     /**
      * An associative (port->slave) array of slaves currently in a graceful reload phase.
@@ -390,17 +390,17 @@ class ProcessManager
     /**
      * @return int
      */
-    public function getReloadThreshold()
+    public function getReloadTimeout()
     {
-        return $this->reloadThreshold;
+        return $this->reloadTimeout;
     }
 
     /**
-     * @param int $reloadThreshold
+     * @param int $reloadTimeout
      */
-    public function setReloadThreshold($reloadThreshold)
+    public function setReloadTimeout($reloadTimeout)
     {
-        $this->reloadThreshold = $reloadThreshold;
+        $this->reloadTimeout = $reloadTimeout;
     }
 
     /**
@@ -887,13 +887,13 @@ class ProcessManager
     /**
      * Reload all slaves gracefully.
      *
-     * Workers which break the reload-threshold setting will be prematurely terminated.
+     * Workers which break the reload-timeout setting will be prematurely terminated.
      */
     public function reloadSlaves()
     {
         /*
          * NB: we don't lock slave reload with a semaphore, since this could cause
-         * improper reloads when long reload thresholds and multiple code edits are combined.
+         * improper reloads when long reload timeouts and multiple code edits are combined.
          */
 
         $this->output->writeln('<info>Reloading all workers gracefully</info>');
@@ -923,12 +923,12 @@ class ProcessManager
             }
         }
 
-        if ($this->reloadThreshold !== -1) {
-            if ($this->reloadThresholdTimer !== null) {
-                $this->reloadThresholdTimer->cancel();
+        if ($this->reloadTimeout !== -1) {
+            if ($this->reloadTimeoutTimer !== null) {
+                $this->reloadTimeoutTimer->cancel();
             }
 
-            $this->reloadThresholdTimer = $this->loop->addTimer($this->reloadThreshold, function () {
+            $this->reloadTimeoutTimer = $this->loop->addTimer($this->reloadTimeout, function () {
                 if ($this->slavesToReload && $this->output->isVeryVerbose()) {
                     $this->output->writeln('Cleaning up workers that exceeded the graceful reload timeout.');
                 }
@@ -936,7 +936,7 @@ class ProcessManager
                 foreach ($this->slavesToReload as $slave) {
                     $this->output->writeln(
                         sprintf(
-                            '<error>Worker #%d exceeded the graceful reload threshold and was killed.</error>',
+                            '<error>Worker #%d exceeded the graceful reload timeout and was killed.</error>',
                             $slave->getPort()
                         )
                     );
