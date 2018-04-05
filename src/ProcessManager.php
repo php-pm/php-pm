@@ -893,9 +893,12 @@ class ProcessManager
         $this->output->writeln('<info>Reloading all workers gracefully</info>');
 
         $this->closeSlaves(true, function ($slave) {
+            /** @var $slave Slave */
+
             $this->output->writeln(
                 sprintf(
-                    '<info>Worker #%d has been closed, reinstantiating.</info>'
+                    '<info>Worker #%d has been closed, reinstantiating.</info>',
+                    $slave->getPort()
                 )
             );
 
