@@ -246,6 +246,16 @@ class ProcessManager
                 $this->terminateSlave($slave);
                 $remainingSlaves--;
 
+                if ($this->output->isVeryVerbose()) {
+                    $this->output->writeln(
+                        sprintf(
+                            'Worker #%d terminated, %d more worker(s) to close.',
+                            $slave->getPort(),
+                            $remainingSlaves
+                        )
+                    );
+                }
+
                 if ($remainingSlaves === 0) {
                     $this->quit();
                 }
@@ -258,6 +268,10 @@ class ProcessManager
      */
     private function quit()
     {
+        if ($this->output->isVeryVerbose()) {
+            $this->output->writeln('Stopping the process manager.');
+        }
+
         // this method is also called during startup when something crashed, so
         // make sure we don't operate on nulls.
         if ($this->controller) {
