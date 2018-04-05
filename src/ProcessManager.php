@@ -938,8 +938,8 @@ class ProcessManager
              * For now, we still need to call onClosed() in other circumstances as ProcessManager->closeSlave() removes
              * all close handlers.
              */
-            $slave->getConnection()->on('close', function () use ($onClosed) {
-                $onClosed($this);
+            $slave->getConnection()->on('close', function () use ($onClosed, $slave) {
+                $onClosed($slave);
             });
 
             if ($graceful && $slave->getStatus() === Slave::BUSY) {
@@ -961,7 +961,7 @@ class ProcessManager
                 $this->slavesToReload[$slave->getPort()] = $slave;
             } else {
                 $this->closeSlave($slave);
-                $onClosed($this);
+                $onClosed($slave);
             }
         }
 
@@ -993,7 +993,7 @@ class ProcessManager
                 );
 
                 $this->closeSlave($slave);
-                $onClosed($this);
+                $onClosed($slave);
             }
         });
     }
