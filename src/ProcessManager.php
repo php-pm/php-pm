@@ -230,12 +230,6 @@ class ProcessManager
 
         $this->status = self::STATE_SHUTDOWN;
 
-        $this->output->writeln(
-            $graceful
-            ? '<info>Shutdown command received, exiting gracefully.</info>'
-            : '<error>SIGINT received, exiting.</error>'
-        );
-
         $remainingSlaves = $this->slaveCount;
 
         if ($remainingSlaves === 0) {
@@ -268,9 +262,7 @@ class ProcessManager
      */
     private function quit()
     {
-        if ($this->output->isVeryVerbose()) {
-            $this->output->writeln('Stopping the process manager.');
-        }
+        $this->output->writeln('Stopping the process manager.');
 
         // this method is also called during startup when something crashed, so
         // make sure we don't operate on nulls.
@@ -459,8 +451,8 @@ class ProcessManager
         $this->web->on('connection', [$this, 'onRequest']);
 
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
-        $pcntl->on(SIGTERM, [$this, 'shutdown']);
-        $pcntl->on(SIGINT, [$this, 'shutdown']);
+        $pcntl->on(SIGTERM, [$this, 'handleSigterm']);
+        $pcntl->on(SIGINT, [$this, 'handleSigint']);
         $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
         $pcntl->on(SIGUSR1, [$this, 'restartSlaves']);
         $pcntl->on(SIGUSR2, [$this, 'reloadSlaves']);
@@ -487,6 +479,18 @@ class ProcessManager
     public function handleSigchld()
     {
         $pid = pcntl_waitpid(-1, $status, WNOHANG);
+    }
+
+    public function handleSigint()
+    {
+        $this->output->writeln('<info>SIGINT received, allowing current requests to finish...</info>');
+        $this->shutdown(true);
+    }
+
+    public function handleSigterm()
+    {
+        $this->output->writeln('<error>SIGTERM received, server is going down now.</error>');
+        $this->shutdown(false);
     }
 
     public function writePid()
@@ -638,6 +642,7 @@ class ProcessManager
 
         $conn->end(json_encode([]));
 
+        $this->output->writeln('<info>Stop command received, shutting down gracefully.</info>');
         $this->shutdown(true);
     }
 
