@@ -219,6 +219,8 @@ class ProcessManager
 
     /**
      * Handles termination signals, so we can gracefully stop all servers.
+     *
+     * @param bool $graceful If true, will wait for busy workers to finish.
      */
     public function shutdown($graceful = false)
     {
@@ -242,13 +244,24 @@ class ProcessManager
         if ($this->web) {
             @$this->web->close();
         }
+
+        $remainingSlaves = $this->slaveCount;
+
+        $this->closeSlaves($graceful, function ($slave) use (&$remainingSlaves) {
+            $this->terminateSlave($slave);
+            $remainingSlaves--;
+
+            if ($remainingSlaves === 0) {
+                $this->cleanup();
+            }
+        });
+    }
+
+    private function cleanup()
+    {
         if ($this->loop) {
             $this->loop->tick();
             $this->loop->stop();
-        }
-
-        foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
-            $this->terminateSlave($slave);
         }
 
         unlink($this->pidfile);
@@ -873,41 +886,70 @@ class ProcessManager
     }
 
     /**
-     * Close all slaves
-     *
-     * @return void
-     */
-    public function closeSlaves()
-    {
-        foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
-            $this->closeSlave($slave);
-        }
-    }
-
-    /**
-     * Reload all slaves gracefully.
-     *
-     * Workers which break the reload-timeout setting will be prematurely terminated.
+     * Reload slaves in-place, allowing busy workers to finish what they are doing.
      */
     public function reloadSlaves()
     {
+        $this->output->writeln('<info>Reloading all workers gracefully</info>');
+
+        $this->closeSlaves(true, function ($slave) {
+            $this->output->writeln(
+                sprintf(
+                    '<info>Worker #%d has been closed, reinstantiating.</info>'
+                )
+            );
+
+            $this->newSlaveInstance($slave->getPort());
+        });
+    }
+
+    /**
+     * Closes all slaves and fires a user-defined callback for each slave that is closed.
+     *
+     * Workers in a ready state are handled immediately. Workers that are busy are put into a locked state, and will be
+     * reloaded once they are free.
+     *
+     * If $graceful is true and reload-timeout is configured with a non-negative value, a timeout will be added to the
+     * event loop to clean up any lingering workers via termination.
+     *
+     * @param bool $graceful
+     * @param callable $onClosed A closure that is called for each worker.
+     */
+    public function closeSlaves($graceful = false, $onClosed = null)
+    {
+        if (!$onClosed) {
+            // create a default no-op if onClosed is not defined
+            $onClosed = function ($slave) {
+            };
+        }
+
         /*
          * NB: we don't lock slave reload with a semaphore, since this could cause
          * improper reloads when long reload timeouts and multiple code edits are combined.
          */
 
-        $this->output->writeln('<info>Reloading all workers gracefully</info>');
         $this->slavesToReload = [];
 
         foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
-            if ($slave->getStatus() === Slave::BUSY) {
+            /** @var Slave $slave */
+
+            /*
+             * Attach the callable to the connection close event, because locked workers are closed via RequestHandler.
+             * For now, we still need to call onClosed() in other circumstances as ProcessManager->closeSlave() removes
+             * all close handlers.
+             */
+            $slave->getConnection()->on('close', function () use ($onClosed) {
+                $onClosed($this);
+            });
+
+            if ($graceful && $slave->getStatus() === Slave::BUSY) {
                 if ($this->output->isVeryVerbose()) {
                     $this->output->writeln(sprintf('Waiting for worker #%d to finish', $slave->getPort()));
                 }
 
                 $slave->lock();
                 $this->slavesToReload[$slave->getPort()] = $slave;
-            } elseif ($slave->getStatus() === Slave::LOCKED) {
+            } elseif ($graceful && $slave->getStatus() === Slave::LOCKED) {
                 if ($this->output->isVeryVerbose()) {
                     $this->output->writeln(
                         sprintf(
@@ -919,33 +961,41 @@ class ProcessManager
                 $this->slavesToReload[$slave->getPort()] = $slave;
             } else {
                 $this->closeSlave($slave);
-                $this->newSlaveInstance($slave->getPort());
+                $onClosed($this);
             }
         }
 
-        if ($this->reloadTimeout !== -1) {
-            if ($this->reloadTimeoutTimer !== null) {
-                $this->reloadTimeoutTimer->cancel();
+        // Reload timeout is useless for non-graceful worker reloads
+        if (!$graceful) {
+            return;
+        }
+
+        // Reload timeout of -1 or less means graceful timeout has been disabled
+        if ($this->reloadTimeout <= -1) {
+            return;
+        }
+
+        if ($this->reloadTimeoutTimer !== null) {
+            $this->reloadTimeoutTimer->cancel();
+        }
+
+        $this->reloadTimeoutTimer = $this->loop->addTimer($this->reloadTimeout, function () use ($onClosed) {
+            if ($this->slavesToReload && $this->output->isVeryVerbose()) {
+                $this->output->writeln('Cleaning up workers that exceeded the graceful reload timeout.');
             }
 
-            $this->reloadTimeoutTimer = $this->loop->addTimer($this->reloadTimeout, function () {
-                if ($this->slavesToReload && $this->output->isVeryVerbose()) {
-                    $this->output->writeln('Cleaning up workers that exceeded the graceful reload timeout.');
-                }
+            foreach ($this->slavesToReload as $slave) {
+                $this->output->writeln(
+                    sprintf(
+                        '<error>Worker #%d exceeded the graceful reload timeout and was killed.</error>',
+                        $slave->getPort()
+                    )
+                );
 
-                foreach ($this->slavesToReload as $slave) {
-                    $this->output->writeln(
-                        sprintf(
-                            '<error>Worker #%d exceeded the graceful reload timeout and was killed.</error>',
-                            $slave->getPort()
-                        )
-                    );
-
-                    $this->closeSlave($slave);
-                    $this->newSlaveInstance($slave->getPort());
-                }
-            });
-        }
+                $this->closeSlave($slave);
+                $onClosed($this);
+            }
+        });
     }
 
     /**
