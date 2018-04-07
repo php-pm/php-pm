@@ -293,7 +293,9 @@ class ProcessSlave
     {
         $this->loop = Factory::create();
 
+        /** @psalm-suppress InvalidPropertyAssignment */
         $this->errorLogger = BufferingLogger::create();
+        /** @psalm-suppress PossiblyInvalidArgument */
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
         $connector = new UnixConnector($this->loop);
@@ -363,6 +365,7 @@ class ProcessSlave
             return new Response(500);
         };
 
+        /** @psalm-suppress UndefinedClass for PHP 5.6-compatibility */
         try {
             $response = $this->handleRequest($request);
         } catch (\Throwable $t) {

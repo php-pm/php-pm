@@ -21,6 +21,8 @@ script:
   - if [ $TRAVIS_PHP_VERSION = '7.1' ]; then composer require "friendsofphp/php-cs-fixer:^2.8" && ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}";fi
   # Unit test
   - ./vendor/bin/phpunit
+  # Static Analysis
+  - ./vendor/bin/psalm --show-info=false
   # Integration test
   - mkdir web && echo "Hello" > web/index.html
   - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v &

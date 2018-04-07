@@ -111,6 +111,7 @@ trait ConfigTrait
             ];
 
             foreach ($cgiPaths as $cgiPath) {
+                /** @psalm-suppress ForbiddenCode */
                 $path = trim(`which $cgiPath`);
                 if ($path) {
                     $config['cgi-path'] = $path;
