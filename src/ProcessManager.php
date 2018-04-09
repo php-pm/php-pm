@@ -222,12 +222,13 @@ class ProcessManager
      *
      * @param bool $graceful If true, will wait for busy workers to finish.
      */
-    public function shutdown($graceful = false)
+    public function shutdown($graceful = true)
     {
         if ($this->status === self::STATE_SHUTDOWN) {
             return;
         }
 
+        $this->output->writeln("<info>Server is shutting down.</info>");
         $this->status = self::STATE_SHUTDOWN;
 
         $remainingSlaves = $this->slaveCount;
@@ -451,8 +452,8 @@ class ProcessManager
         $this->web->on('connection', [$this, 'onRequest']);
 
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
-        $pcntl->on(SIGTERM, [$this, 'handleSigterm']);
-        $pcntl->on(SIGINT, [$this, 'handleSigint']);
+        $pcntl->on(SIGTERM, [$this, 'shutdown']);
+        $pcntl->on(SIGINT, [$this, 'shutdown']);
         $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
         $pcntl->on(SIGUSR1, [$this, 'restartSlaves']);
         $pcntl->on(SIGUSR2, [$this, 'reloadSlaves']);
@@ -479,18 +480,6 @@ class ProcessManager
     public function handleSigchld()
     {
         $pid = pcntl_waitpid(-1, $status, WNOHANG);
-    }
-
-    public function handleSigint()
-    {
-        $this->output->writeln('<info>SIGINT received, allowing current requests to finish...</info>');
-        $this->shutdown(true);
-    }
-
-    public function handleSigterm()
-    {
-        $this->output->writeln('<error>SIGTERM received, server is going down now.</error>');
-        $this->shutdown(false);
     }
 
     public function writePid()
@@ -642,8 +631,7 @@ class ProcessManager
 
         $conn->end(json_encode([]));
 
-        $this->output->writeln('<info>Stop command received, shutting down gracefully.</info>');
-        $this->shutdown(true);
+        $this->shutdown();
     }
 
     /**
