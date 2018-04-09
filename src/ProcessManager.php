@@ -885,18 +885,18 @@ require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
     
-if (!pcntl_enabled()) {
+if (!pcntl_installed()) {
     error_log(
         sprintf(
-            'PCNTL is not enabled in PHP installation at %s. See: http://php.net/manual/en/pcntl.installation.php',
+            'PCNTL is not enabled in the PHP installation at %s. See: http://php.net/manual/en/pcntl.installation.php',
             PHP_BINARY
         )
     );
     exit();
 }
 
-if (!pcntl_available()) {
-    error_log('It appears that PCNTL functions have been disabled. Check `disabled_functions` in `php.ini`.');
+if (!pcntl_enabled()) {
+    error_log('Some required PCNTL functions are disabled. Check `disabled_functions` in `php.ini`.');
     exit();
 }
 

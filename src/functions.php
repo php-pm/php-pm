@@ -34,7 +34,7 @@ function console_log($expression, $_ = null)
  *
  * @return bool
  */
-function pcntl_enabled()
+function pcntl_installed()
 {
     return function_exists('pcntl_signal');
 }
@@ -44,7 +44,7 @@ function pcntl_enabled()
  *
  * @return bool
  */
-function pcntl_available()
+function pcntl_enabled()
 {
     $requiredFunctions = ['pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_waitpid'];
     $disabledFunctions = explode(',', (string) ini_get('disable_functions'));
