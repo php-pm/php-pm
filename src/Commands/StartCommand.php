@@ -2,6 +2,7 @@
 
 namespace PHPPM\Commands;
 
+use PHPPM\Configuration;
 use PHPPM\ProcessManager;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,23 +32,10 @@ class StartCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $config = $this->initializeConfig($input, $output);
+        $class = $config->getProcessManager();
 
-        $class = isset($config['processmanager']) ? $config['processmanager'] : ProcessManager::class;
         /** @var ProcessManager $handler */
-        $handler = new $class($output, $config['port'], $config['host'], $config['workers']);
-
-        $handler->setBridge($config['bridge']);
-        $handler->setAppEnv($config['app-env']);
-        $handler->setDebug((boolean)$config['debug']);
-        $handler->setReloadTimeout((int)$config['reload-timeout']);
-        $handler->setLogging((boolean)$config['logging']);
-        $handler->setAppBootstrap($config['bootstrap']);
-        $handler->setMaxRequests($config['max-requests']);
-        $handler->setPhpCgiExecutable($config['cgi-path']);
-        $handler->setSocketPath($config['socket-path']);
-        $handler->setPIDFile($config['pidfile']);
-        $handler->setPopulateServer($config['populate-server-var']);
-        $handler->setStaticDirectory($config['static-directory']);
+        $handler = new $class($output, $config);
         $handler->run();
 
         return null;

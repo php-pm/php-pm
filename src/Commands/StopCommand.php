@@ -35,7 +35,7 @@ class StopCommand extends Command
         $config = $this->initializeConfig($input, $output, false);
 
         $handler = new ProcessClient();
-        $handler->setSocketPath($config['socket-path']);
+        $handler->setSocketPath($config->getSocketPath());
 
         $handler->stopProcessManager(function ($status) use ($output) {
             $output->writeln('Requested process manager to stop.');

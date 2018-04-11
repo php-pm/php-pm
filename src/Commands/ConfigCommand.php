@@ -35,13 +35,13 @@ class ConfigCommand extends Command
         $config = $this->loadConfig($input, $output);
 
         if ($input->getOption('show-option')) {
-            echo $config[$input->getOption('show-option')];
+            echo $config->getOption($input->getOption('show-option'));
             exit(0);
         }
 
-        $this->renderConfig($output, $config);
+        $this->renderConfig($output, $config->toArray());
 
-        $newContent = json_encode($config, JSON_PRETTY_PRINT);
+        $newContent = json_encode($config->toArray(), JSON_PRETTY_PRINT);
         if (file_exists($configPath) && $newContent === file_get_contents($configPath)) {
             $output->writeln(sprintf('No changes to %s file.', realpath($configPath)));
             return null;
