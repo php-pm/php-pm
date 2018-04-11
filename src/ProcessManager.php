@@ -1095,9 +1095,20 @@ set_time_limit(0);
 require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
+    
+if (!pcntl_installed()) {
+    error_log(
+        sprintf(
+            'PCNTL is not enabled in the PHP installation at %s. See: http://php.net/manual/en/pcntl.installation.php',
+            PHP_BINARY
+        )
+    );
+    exit();
+}
 
 if (!pcntl_enabled()) {
-    throw new \RuntimeException('Some of required pcntl functions are disabled. Check `disable_functions` setting in `php.ini`.');
+    error_log('Some required PCNTL functions are disabled. Check `disabled_functions` in `php.ini`.');
+    exit();
 }
 
 //global for all global functions

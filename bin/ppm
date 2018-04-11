@@ -18,8 +18,17 @@ if ((!$loader = includeIfExists(__DIR__.'/../vendor/autoload.php')) && (!$loader
     );
 }
 
+if (!PHPPM\pcntl_installed()) {
+    die(
+        sprintf(
+            'PCNTL is not enabled in the PHP installation at %s. See: http://php.net/manual/en/pcntl.installation.php',
+            PHP_BINARY
+        )
+    );
+}
+
 if (!PHPPM\pcntl_enabled()) {
-    die('Some of required pcntl functions are disabled. Check `disable_functions` setting in `php.ini`.');
+    die('Some required PCNTL functions are disabled. Check `disabled_functions` in `php.ini`.');
 }
 
 use Symfony\Component\Console\Application;

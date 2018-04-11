@@ -30,7 +30,17 @@ function console_log($expression, $_ = null)
 }
 
 /**
- * Checks that all required pcntl functions are available, so not fatal errors would be cause in runtime
+ * Checks that PCNTL is actually enabled in this installation.
+ *
+ * @return bool
+ */
+function pcntl_installed()
+{
+    return function_exists('pcntl_signal');
+}
+
+/**
+ * Makes sure required PCNTL functions aren't included in disable_functions.
  *
  * @return bool
  */
