@@ -287,15 +287,12 @@ class ProcessSlave
     }
 
     /**
-     * Connects to ProcessManager, master process.
+     * Attempt a connection to the unix socket.
+     *
+     * @throws \RuntimeException
      */
-    public function run()
+    private function doConnect()
     {
-        $this->loop = Factory::create();
-
-        $this->errorLogger = BufferingLogger::create();
-        ErrorHandler::register(new ErrorHandler($this->errorLogger));
-
         $connector = new UnixConnector($this->loop);
         $unixSocket = $this->getControllerSocketPath(false);
 
@@ -322,7 +319,35 @@ class ProcessSlave
                 $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
             }
         );
+    }
 
+    /**
+     * Attempt a connection through the unix socket until it succeeds.
+     * This is a workaround for an issue where the (hardcoded) 1s socket timeout is triggered due to a busy socket.
+     */
+    private function tryConnect()
+    {
+        try {
+            $this->doConnect();
+        } catch (\RuntimeException $ex) {
+            // Failed to connect to the controller, there was probably a timeout accessing the socket...
+            $this->loop->addTimer(1, function () {
+                $this->tryConnect();
+            });
+        }
+    }
+
+    /**
+     * Connects to ProcessManager, master process.
+     */
+    public function run()
+    {
+        $this->loop = Factory::create();
+
+        $this->errorLogger = BufferingLogger::create();
+        ErrorHandler::register(new ErrorHandler($this->errorLogger));
+
+        $this->tryConnect();
         $this->loop->run();
     }
 

@@ -82,7 +82,7 @@ class SlavePool
         $hash = spl_object_hash($connection);
 
         foreach ($this->slaves as $slave) {
-            if ($hash === spl_object_hash($slave->getConnection())) {
+            if ($slave->getConnection() && $hash === spl_object_hash($slave->getConnection())) {
                 return $slave;
             }
         }
@@ -98,5 +98,26 @@ class SlavePool
         return array_filter($this->slaves, function ($slave) use ($status) {
             return $status === Slave::ANY || $status === $slave->getStatus();
         });
+    }
+
+    /**
+     * Return a human-readable summary of the slaves in the pool.
+     *
+     * @return array
+     */
+    public function getStatusSummary()
+    {
+        $map = [
+            'total' => Slave::ANY,
+            'ready' => Slave::READY,
+            'busy' => Slave::BUSY,
+            'created' => Slave::CREATED,
+            'registered' => Slave::REGISTERED,
+            'closed' => Slave::CLOSED
+        ];
+
+        return array_map(function ($state) {
+            return count($this->getByStatus($state));
+        }, $map);
     }
 }
