@@ -6,7 +6,6 @@ use PHPPM\Utils;
 
 class UtilsTest extends PhpPmTestCase
 {
-
     public function providePaths()
     {
         return [
@@ -33,5 +32,4 @@ class UtilsTest extends PhpPmTestCase
     {
         $this->assertEquals($expected, Utils::parseQueryPath($path));
     }
-
 }

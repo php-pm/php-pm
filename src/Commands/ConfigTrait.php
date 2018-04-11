@@ -30,6 +30,7 @@ trait ConfigTrait
             ->addOption('cgi-path', null, InputOption::VALUE_REQUIRED, 'Full path to the php-cgi executable', false)
             ->addOption('socket-path', null, InputOption::VALUE_REQUIRED, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
             ->addOption('pidfile', null, InputOption::VALUE_REQUIRED, 'Path to a file where the pid of the master process is going to be stored', '.ppm/ppm.pid')
+            ->addOption('reload-timeout', null, InputOption::VALUE_REQUIRED, 'The number of seconds to wait before force closing a worker during a reload, or -1 to disable. Default: 30', 30)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Path to config file', '');
     }
 
@@ -97,6 +98,7 @@ trait ConfigTrait
         $config['populate-server-var'] = (boolean)$this->optionOrConfigValue($input, 'populate-server-var', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
         $config['pidfile'] = $this->optionOrConfigValue($input, 'pidfile', $config);
+        $config['reload-timeout'] = $this->optionOrConfigValue($input, 'reload-timeout', $config);
 
         $config['cgi-path'] = $this->optionOrConfigValue($input, 'cgi-path', $config);
 

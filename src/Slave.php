@@ -15,6 +15,7 @@ class Slave
      * 3. ready (application bootstrapped)
      * 4. busy (handling request)
      * 5. closed (awaiting termination)
+     * 6. locked (busy, but gracefully awaiting termination)
      */
 
     const ANY = 0;
@@ -23,6 +24,7 @@ class Slave
     const READY = 3;
     const BUSY = 4;
     const CLOSED = 5;
+    const LOCKED = 6;
 
     protected $socketPath;
 
@@ -148,6 +150,23 @@ class Slave
     public function close()
     {
         $this->status = self::CLOSED;
+    }
+
+    /**
+     * Lock slave
+     *
+     * Locked slaves are closed for new requests, but is finishing the current
+     * request gracefully as to not interrupt the response lifecycle.
+     *
+     * @return void
+     */
+    public function lock()
+    {
+        if ($this->status !== self::BUSY) {
+            throw new \LogicException('Cannot lock a slave that is not in busy state');
+        }
+
+        $this->status = self::LOCKED;
     }
 
     /**

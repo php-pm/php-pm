@@ -25,12 +25,14 @@ if (!PHPPM\pcntl_enabled()) {
 use Symfony\Component\Console\Application;
 use PHPPM\Commands\StartCommand;
 use PHPPM\Commands\StopCommand;
+use PHPPM\Commands\ReloadCommand;
 use PHPPM\Commands\StatusCommand;
 use PHPPM\Commands\ConfigCommand;
 
 $app = new Application('PHP-PM');
 $app->add(new StartCommand);
 $app->add(new StopCommand);
+$app->add(new ReloadCommand);
 $app->add(new StatusCommand);
 $app->add(new ConfigCommand());
 $app->run();
