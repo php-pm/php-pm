@@ -872,7 +872,7 @@ class ProcessManager
         if ($hasChanged) {
             $this->output->writeln(
                 sprintf(
-                    "<info>[%s] At least one of %u known files was changed.</info>",
+                    "<info>[%s] At least one of %u known files was changed. Reloading workers.</info>",
                     date('d/M/Y:H:i:s O'),
                     count($this->filesLastMTime)
                 )
