@@ -129,6 +129,11 @@ class ProcessManager
     protected $port = 8080;
 
     /**
+     * @var bool
+     */
+    protected $inChangesDetectionCycle = false;
+
+    /**
      * Whether the server is in the restart phase.
      *
      * @var bool
@@ -169,7 +174,6 @@ class ProcessManager
      */
     protected $lastWorkerErrorPrintBy;
 
-    protected $filesToTrack = [];
     protected $filesLastMTime = [];
     protected $filesLastMd5 = [];
 
@@ -755,10 +759,32 @@ class ProcessManager
         try {
             $slave = $this->slaves->getByConnection($conn);
 
-            if ($this->output->isVeryVerbose()) {
-                $this->output->writeln(sprintf('Received %d files from %d', count($data['files']), $slave->getPort()));
+            $start = microtime(true);
+
+            clearstatcache();
+
+            $newFilesCount = 0;
+            $knownFiles = array_keys($this->filesLastMTime);
+            $recentlyIncludedFiles = array_diff($data['files'], $knownFiles);
+            foreach ($recentlyIncludedFiles as $filePath) {
+                if (file_exists($filePath)) {
+                    $this->filesLastMTime[$filePath] = filemtime($filePath);
+                    $this->filesLastMd5[$filePath] = md5_file($filePath, true);
+                    $newFilesCount++;
+                }
             }
-            $this->filesToTrack = array_unique(array_merge($this->filesToTrack, $data['files']));
+
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(
+                    sprintf(
+                        'Received %d new files from %d. Stats collection cycle: %u files, %.3f ms',
+                        $newFilesCount,
+                        $slave->getPort(),
+                        count($this->filesLastMTime),
+                        (microtime(true) - $start) * 1000
+                    )
+                );
+            }
         } catch (\Exception $e) {
             // silent
         }
@@ -818,59 +844,54 @@ class ProcessManager
      */
     protected function checkChangedFiles($restartSlaves = true)
     {
-        if ($this->inRestart) {
+        if ($this->inChangesDetectionCycle) {
             return false;
         }
 
+        $start = microtime(true);
+        $hasChanged = false;
+
+        $this->inChangesDetectionCycle = true;
+
         clearstatcache();
 
-        $reload = false;
-        $filePath = '';
-        $start = microtime(true);
-
-        foreach ($this->filesToTrack as $idx => $filePath) {
+        foreach ($this->filesLastMTime as $filePath => $knownMTime) {
             if (!file_exists($filePath)) {
                 continue;
             }
 
-            $currentFileMTime = filemtime($filePath);
-
-            if (isset($this->filesLastMTime[$filePath])) {
-                if ($this->filesLastMTime[$filePath] !== $currentFileMTime) {
-                    $this->filesLastMTime[$filePath] = $currentFileMTime;
-
-                    $md5 = md5_file($filePath);
-                    if (!isset($this->filesLastMd5[$filePath]) || $md5 !== $this->filesLastMd5[$filePath]) {
-                        $this->filesLastMd5[$filePath] = $md5;
-                        $reload = true;
-
-                        //since chances are high that this file will change again we
-                        //move this file to the beginning of the array, so next check is way faster.
-                        unset($this->filesToTrack[$idx]);
-                        array_unshift($this->filesToTrack, $filePath);
-                        break;
-                    }
-                }
-            } else {
-                $this->filesLastMTime[$filePath] = $currentFileMTime;
+            if ($knownMTime !== filemtime($filePath) && $this->filesLastMd5[$filePath] !== md5_file($filePath, true)) {
+                $this->output->writeln(
+                    sprintf("<info>[%s] File %s has changed.</info>", date('d/M/Y:H:i:s O'), $filePath)
+                );
+                $hasChanged = true;
+                break;
             }
         }
 
-        if ($reload && $restartSlaves) {
+        if ($hasChanged) {
             $this->output->writeln(
                 sprintf(
-                    "<info>[%s] File changed %s (detection %.3f, %d). Reloading workers.</info>",
+                    "<info>[%s] At least one of %u known files was changed. Reloading workers.</info>",
                     date('d/M/Y:H:i:s O'),
-                    $filePath,
-                    microtime(true) - $start,
-                    count($this->filesToTrack)
+                    count($this->filesLastMTime)
                 )
             );
 
-            $this->restartSlaves();
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(
+                    sprintf("Changes detection cycle length = %.3f ms", (microtime(true) - $start) * 1000)
+                );
+            }
+
+            if ($restartSlaves) {
+                $this->restartSlaves();
+            }
         }
 
-        return $reload;
+        $this->inChangesDetectionCycle = false;
+
+        return $hasChanged;
     }
 
     /**
@@ -995,6 +1016,9 @@ class ProcessManager
             }
         }
 
+        $this->filesLastMTime = [];
+        $this->filesLastMd5 = [];
+
         if ($this->reloadTimeoutTimer !== null) {
             $this->reloadTimeoutTimer->cancel();
         }
@@ -1028,7 +1052,6 @@ class ProcessManager
         }
 
         $this->inRestart = true;
-        $this->output->writeln('Restarting all workers');
 
         $this->closeSlaves();
         $this->createSlaves();
