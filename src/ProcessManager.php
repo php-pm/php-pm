@@ -96,7 +96,7 @@ class ProcessManager
     /**
      * The debug timer
      *
-     * @var TimerInterface
+     * @var TimerInterface|null
      */
     protected $debugTimer;
 
@@ -943,7 +943,7 @@ class ProcessManager
         $this->slavesToReload = [];
 
         foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
-            /** @var $slave Slave */
+            /** @var Slave $slave */
             $closed = $this->closeSlave($slave, $graceful, $onSlaveClosed);
 
             if (!$closed) {

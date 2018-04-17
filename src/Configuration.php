@@ -116,7 +116,7 @@ class Configuration
     /**
      * Load a config from a file path
      *
-     * @param $path
+     * @param string $path
      * @return Configuration
      */
     public static function loadFromPath($path)
@@ -171,7 +171,7 @@ class Configuration
     /**
      * Set the arguments array
      *
-     * @param $arguments
+     * @param array $arguments
      */
     public function setArguments($arguments)
     {
@@ -189,7 +189,7 @@ class Configuration
     }
 
     /**
-     * @param $option
+     * @param array $option
      * @return mixed
      */
     public function getOption($option)
@@ -304,7 +304,7 @@ class Configuration
     }
 
     /**
-     * @return string
+     * @return string|null
      */
     public function getPhpCgiExecutable()
     {
