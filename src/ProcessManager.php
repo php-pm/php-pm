@@ -212,7 +212,9 @@ class ProcessManager
             $this->loop->stop();
         }
 
-        unlink($this->config->getPIDFile());
+        if (file_exists($this->config->getPIDFile())) {
+            unlink($this->config->getPIDFile());
+        }
         exit;
     }
 
@@ -481,15 +483,27 @@ class ProcessManager
         $this->config = $newConfig;
 
         if ($newConfig->getHost() !== $oldConfig->getHost() || $newConfig->getPort() !== $oldConfig->getPort()) {
-            $this->startListening();
+            try {
+                $this->startListening();
 
-            $this->output->writeln(
-                sprintf(
-                    "<info>host:port configuration has changed, server is now listening on %s:%d</info>",
-                    $newConfig->getHost(),
-                    $newConfig->getPort()
-                )
-            );
+                $this->output->writeln(
+                    sprintf(
+                        "<info>Server is now listening on %s:%d</info>",
+                        $newConfig->getHost(),
+                        $newConfig->getPort()
+                    )
+                );
+            } catch (\RuntimeException $e) {
+                $this->output->writeln(
+                    sprintf(
+                        "<error>Configuration error: %s</error>",
+                        $e->getMessage()
+                    )
+                );
+                $this->output->writeln(
+                    "<error>PHP-PM is now unable to serve requests. Please check your host:port config.</error>"
+                );
+            }
         }
 
         $this->updateCodeReloadTimer();
@@ -519,7 +533,9 @@ class ProcessManager
     }
 
     /**
-     * Bind to a host:port configuration for web requests.
+     * Bind to the host:port configuration to accept web requests.
+     *
+     * @throws \RuntimeException if listener cannot be established
      */
     protected function startListening()
     {
