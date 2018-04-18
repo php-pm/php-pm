@@ -32,10 +32,8 @@ class StartCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $config = $this->initializeConfig($input, $output);
-        $class = $config->getProcessManager();
 
-        /** @var ProcessManager $handler */
-        $handler = new $class($output, $config);
+        $handler = new ProcessManager($output, $config);
         $handler->run();
 
         return null;

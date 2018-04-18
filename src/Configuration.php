@@ -94,10 +94,6 @@ class Configuration
                 'description' => 'The number of seconds to wait before force closing a worker during a reload, or -1 to disable. Default: 30',
                 'default' => 30,
             ],
-            'processmanager' => [
-                'description' => 'Override the default ProcessManager implementation with another class (unstable)',
-                'default' => ProcessManager::class,
-            ],
         ];
     }
 
@@ -189,7 +185,7 @@ class Configuration
     }
 
     /**
-     * @param array $option
+     * @param string $option
      * @return mixed
      */
     public function getOption($option)
@@ -259,16 +255,6 @@ class Configuration
     public function getReloadTimeout()
     {
         return $this->getOption('reload-timeout');
-    }
-
-    /**
-     * Return a classpath for the desired process manager class
-     *
-     * @return string
-     */
-    public function getProcessManager()
-    {
-        return $this->getOption('processmanager');
     }
 
     /**

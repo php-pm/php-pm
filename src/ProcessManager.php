@@ -486,7 +486,7 @@ class ProcessManager
         }
 
         // the following config properties will not work with a reload... yet
-        $badPropKeys = ['pidfile', 'processmanager', 'socket-path', 'host', 'port'];
+        $badPropKeys = ['pidfile', 'socket-path', 'host', 'port'];
 
         $badProps = array_filter(array_keys($diff), function ($key) use ($badPropKeys) {
             return in_array($key, $badPropKeys);
