@@ -218,6 +218,9 @@ class ProcessManager
         exit;
     }
 
+    /**
+     * Manage the hot code reload timer as per the debug setting. Should be called during a reload.
+     */
     protected function updateCodeReloadTimer()
     {
         // Update the state of the debug hot code reload timer
@@ -459,11 +462,13 @@ class ProcessManager
         $this->reload();
     }
 
+    /**
+     * Perform a reload. Reloads the configuration and performs an in-place reload of each worker.
+     */
     public function reload()
     {
         $newConfig = Configuration::loadFromPath($this->config->getConfigPath());
         $newConfig->setArguments($this->config->getArguments());
-        $oldConfig = $this->config;
 
         $diff = array_diff_assoc($this->config->toArray(), $newConfig->toArray());
 
@@ -480,40 +485,8 @@ class ProcessManager
             }
         }
 
-        $this->config = $newConfig;
-
-        if ($newConfig->getHost() !== $oldConfig->getHost() || $newConfig->getPort() !== $oldConfig->getPort()) {
-            try {
-                $this->startListening();
-
-                $this->output->writeln(
-                    sprintf(
-                        "<info>Server is now listening on %s:%d</info>",
-                        $newConfig->getHost(),
-                        $newConfig->getPort()
-                    )
-                );
-            } catch (\RuntimeException $e) {
-                $this->output->writeln(
-                    sprintf(
-                        "<error>Configuration error: %s</error>",
-                        $e->getMessage()
-                    )
-                );
-                $this->output->writeln(
-                    "<error>PHP-PM is now unable to serve requests. Please check your host:port config.</error>"
-                );
-            }
-        }
-
-        $this->updateCodeReloadTimer();
-
-        // todo: if in emergency mode because an invalid bootstrap was used, we need to bring it out
-        $this->reloadSlaves();
-        $this->createSlaves();
-
         // the following config properties will not work with a reload... yet
-        $badPropKeys = ['pidfile', 'processmanager', 'socket-path'];
+        $badPropKeys = ['pidfile', 'processmanager', 'socket-path', 'host', 'port'];
 
         $badProps = array_filter(array_keys($diff), function ($key) use ($badPropKeys) {
             return in_array($key, $badPropKeys);
@@ -530,6 +503,14 @@ class ProcessManager
                 "<error>PHP-PM will continue to run, however the previous configuration values will be used.</error>"
             );
         }
+
+        $this->config = $newConfig;
+
+        $this->updateCodeReloadTimer();
+
+        // todo: if in emergency mode because an invalid bootstrap was used, we need to bring it out
+        $this->reloadSlaves();
+        $this->createSlaves();
     }
 
     /**
@@ -839,25 +820,23 @@ class ProcessManager
      * If graceful is true, this function should be used in conjunction with the reload timeout timer:
      * @see startReloadTimeoutTimer
      *
-     * @param Slave $slave The slave instance
-     * @param bool $graceful Whether we should wait for the slave to end its current task
-     * @param callable|null $onSlaveClosed
+     * @param Slave         $slave          The slave instance
+     * @param bool          $graceful       Whether we should wait for the slave to end its current task
+     * @param callable|null $onSlaveClosed  The callable to be fired when the slave is closed, with the Slave as the
+     *                                      argument. Defaults to a no-op
      *
      * @return bool
      */
     protected function closeSlave($slave, $graceful = false, callable $onSlaveClosed = null)
     {
         if (!$onSlaveClosed) {
-            // create a default no-op if callable is undefined
             $onSlaveClosed = function ($slave) {
             };
         }
 
-        /** @var Slave $slave */
-
         /*
          * Attach the callable to the connection close event, because locked workers are closed via RequestHandler.
-         * For now, we still need to call onClosed() in other circumstances as ProcessManager->closeSlave() removes
+         * For now, we still need to call onSlaveClosed() in other circumstances as ProcessManager->removeSlave() removes
          * all close handlers.
          */
         $connection = $slave->getConnection();
