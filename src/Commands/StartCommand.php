@@ -32,9 +32,7 @@ class StartCommand extends Command
     {
         $config = $this->initializeConfig($input, $output);
 
-        $class = isset($config['processmanager']) ? $config['processmanager'] : ProcessManager::class;
-        /** @var ProcessManager $handler */
-        $handler = new $class($output, $config['port'], $config['host'], $config['workers']);
+        $handler = new ProcessManager($output, $config['port'], $config['host'], $config['workers']);
 
         $handler->setBridge($config['bridge']);
         $handler->setAppEnv($config['app-env']);
