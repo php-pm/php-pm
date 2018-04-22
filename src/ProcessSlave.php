@@ -462,9 +462,11 @@ class ProcessSlave
 
         //We receive X-PHP-PM-Remote-IP and X-PHP-PM-Remote-Port from ProcessManager.
         //This headers is only used to proxy the remoteAddress and remotePort from master -> slave.
-        $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_IP'];
+        $_SERVER['REMOTE_ADDR'] = isset($_SERVER['HTTP_REMOTE_ADDR']) ? $_SERVER['HTTP_REMOTE_ADDR'] : $_SERVER['HTTP_X_PHP_PM_REMOTE_IP'];
+        unset($_SERVER['HTTP_REMOTE_ADDR']);
         unset($_SERVER['HTTP_X_PHP_PM_REMOTE_IP']);
-        $_SERVER['REMOTE_PORT'] = $_SERVER['HTTP_X_PHP_PM_REMOTE_PORT'];
+        $_SERVER['REMOTE_PORT'] = isset($_SERVER['HTTP_REMOTE_PORT']) ? $_SERVER['HTTP_REMOTE_PORT'] : $_SERVER['HTTP_X_PHP_PM_REMOTE_PORT'];
+        unset($_SERVER['HTTP_REMOTE_PORT']);
         unset($_SERVER['HTTP_X_PHP_PM_REMOTE_PORT']);
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
