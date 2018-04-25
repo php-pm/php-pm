@@ -508,7 +508,12 @@ class ProcessManager
 
         $this->updateCodeReloadTimer();
 
-        // todo: if in emergency mode because an invalid bootstrap was used, we need to bring it out
+        // Attempt to bring manager out of emergency mode
+        if ($this->status == self::STATE_EMERGENCY) {
+            $this->restartSlaves();
+        }
+
+        // todo: resolve race condition with reloadSlaves/createSlaves
         $this->reloadSlaves();
         $this->createSlaves();
     }
