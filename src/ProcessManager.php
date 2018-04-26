@@ -130,6 +130,19 @@ class ProcessManager
     const CONTROLLER_PORT = 5500;
 
     /**
+     * Event IDs
+     */
+    const EVENT_ALL_WORKERS_READY = 0;
+
+    /**
+     * Event listeners
+     *
+     * @var array
+     */
+    private $onceListeners = [];
+    private $listeners = [];
+
+    /**
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
@@ -183,6 +196,47 @@ class ProcessManager
                     $this->quit();
                 }
             });
+        }
+    }
+
+    /**
+     * Add a one-time listener for a specific event ID
+     *
+     * @param int $eventId
+     * @param callable $listener
+     */
+    protected function addOnceListener($eventId, $listener) {
+        $this->onceListeners[$eventId][] = $listener;
+    }
+
+    /**
+     * Add a listener for a specific event ID
+     *
+     * @param int $eventId
+     * @param callable $listener
+     */
+    protected function addListener($eventId, $listener) {
+        $this->listeners[$eventId][] = $listener;
+    }
+
+    /**
+     * Fire event listeners for a given event ID
+     *
+     * @param int $eventId
+     */
+    protected function fireListeners($eventId) {
+        if (array_key_exists($eventId, $this->onceListeners)) {
+            foreach ($this->onceListeners[$eventId] as $listener) {
+                $listener();
+            }
+
+            $this->onceListeners[$eventId] = [];
+        }
+
+        if (array_key_exists($eventId, $this->listeners)) {
+            foreach ($this->listeners[$eventId] as $listener) {
+                $listener();
+            }
         }
     }
 
@@ -264,6 +318,18 @@ class ProcessManager
         $pcntl->on(SIGUSR2, [$this, 'reload']);
 
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
+
+        $this->addOnceListener(self::EVENT_ALL_WORKERS_READY, function() {
+            $this->output->writeln(
+                sprintf(
+                    "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
+                    $this->config->getSlaveCount(),
+                    self::CONTROLLER_PORT+1,
+                    $this->config->getHost(),
+                    $this->config->getPort()
+                )
+            );
+        });
 
         $this->output->writeln("<info>Starting PHP-PM with {$this->config->getSlaveCount()} workers, using {$loopClass} ...</info>");
         $this->writePid();
@@ -504,13 +570,24 @@ class ProcessManager
         $this->updateCodeReloadTimer();
 
         // Attempt to bring manager out of emergency mode
-        if ($this->status == self::STATE_EMERGENCY) {
+        if ($this->status === self::STATE_EMERGENCY) {
             $this->restartSlaves();
         }
 
-        // todo: resolve race condition with reloadSlaves/createSlaves
-        $this->reloadSlaves();
         $this->createSlaves();
+
+        $this->addOnceListener(ProcessManager::EVENT_ALL_WORKERS_READY, function() {
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln("All workers ready, going to reload.");
+            }
+
+            $this->reloadSlaves();
+        });
+
+        // If no new workers are spawned, make sure this event is fired
+        if ($this->allSlavesReady()) {
+            $this->fireListeners(ProcessManager::EVENT_ALL_WORKERS_READY);
+        }
     }
 
     /**
@@ -589,19 +666,10 @@ class ProcessManager
         if ($this->allSlavesReady()) {
             if ($this->status === self::STATE_EMERGENCY) {
                 $this->output->writeln("<info>Emergency survived. Workers up and running again.</info>");
-            } else {
-                $this->output->writeln(
-                    sprintf(
-                        "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
-                        $this->config->getSlaveCount(),
-                        self::CONTROLLER_PORT+1,
-                        $this->config->getHost(),
-                        $this->config->getPort()
-                    )
-                );
             }
 
             $this->status = self::STATE_RUNNING;
+            $this->fireListeners(ProcessManager::EVENT_ALL_WORKERS_READY);
         }
     }
 
@@ -904,12 +972,11 @@ class ProcessManager
      * in seconds will be killed.
      *
      * @param bool $graceful
-     * @param callable $onSlaveClosed A closure that is called for each worker.
+     * @param callable $onSlaveClosed A closure that is called for each worker. Defaults to a no-op
      */
     public function closeSlaves($graceful = false, $onSlaveClosed = null)
     {
         if (!$onSlaveClosed) {
-            // create a default no-op if callable is undefined
             $onSlaveClosed = function ($slave) {
             };
         }
@@ -989,13 +1056,9 @@ class ProcessManager
      */
     protected function allSlavesReady()
     {
-        if ($this->status === self::STATE_STARTING || $this->status === self::STATE_EMERGENCY) {
-            $readySlaves = $this->slaves->getByStatus(Slave::READY);
-            $busySlaves = $this->slaves->getByStatus(Slave::BUSY);
-            return count($readySlaves) + count($busySlaves) === $this->config->getSlaveCount();
-        }
-
-        return false;
+        $readySlaves = $this->slaves->getByStatus(Slave::READY);
+        $busySlaves = $this->slaves->getByStatus(Slave::BUSY);
+        return count($readySlaves) + count($busySlaves) === $this->config->getSlaveCount();
     }
 
     /**
