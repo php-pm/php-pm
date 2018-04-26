@@ -67,11 +67,6 @@ class ProcessManager
     protected $slaves;
 
     /**
-     * @var string
-     */
-    protected $controllerHost;
-
-    /**
      * @var ServerInterface
      */
     protected $controller;
