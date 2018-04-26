@@ -205,7 +205,8 @@ class ProcessManager
      * @param int $eventId
      * @param callable $listener
      */
-    protected function addOnceListener($eventId, $listener) {
+    protected function addOnceListener($eventId, $listener)
+    {
         $this->onceListeners[$eventId][] = $listener;
     }
 
@@ -215,7 +216,8 @@ class ProcessManager
      * @param int $eventId
      * @param callable $listener
      */
-    protected function addListener($eventId, $listener) {
+    protected function addListener($eventId, $listener)
+    {
         $this->listeners[$eventId][] = $listener;
     }
 
@@ -224,7 +226,8 @@ class ProcessManager
      *
      * @param int $eventId
      */
-    protected function fireListeners($eventId) {
+    protected function fireListeners($eventId)
+    {
         if (array_key_exists($eventId, $this->onceListeners)) {
             foreach ($this->onceListeners[$eventId] as $listener) {
                 $listener();
@@ -319,7 +322,7 @@ class ProcessManager
 
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
 
-        $this->addOnceListener(self::EVENT_ALL_WORKERS_READY, function() {
+        $this->addOnceListener(self::EVENT_ALL_WORKERS_READY, function () {
             $this->output->writeln(
                 sprintf(
                     "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
@@ -576,7 +579,7 @@ class ProcessManager
 
         $this->createSlaves();
 
-        $this->addOnceListener(ProcessManager::EVENT_ALL_WORKERS_READY, function() {
+        $this->addOnceListener(ProcessManager::EVENT_ALL_WORKERS_READY, function () {
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln("All workers ready, going to reload.");
             }
