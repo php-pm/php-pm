@@ -89,16 +89,16 @@ class ProcessManager
     protected $inRestart = false;
 
     /**
-     * The debug timer
+     * The hot code reload timer instance, used if debugging is enabled.
      *
      * @var TimerInterface|null
      */
-    protected $debugTimer;
+    protected $debugReloadTimer;
 
     /**
      * Keep track of a single reload timer to prevent multiple reloads spawning several overlapping timers.
      *
-     * @var TimerInterface
+     * @var TimerInterface|null
      */
     protected $reloadTimeoutTimer;
 
@@ -271,26 +271,27 @@ class ProcessManager
     }
 
     /**
-     * Manage the hot code reload timer as per the debug setting. Should be called during a reload.
+     * Starts or stops the file watcher, which reloads workers if files are discovered to change.
+     *
+     * This is controlled by the debug configuration option, which may be changed at runtime.
      */
-    protected function updateCodeReloadTimer()
+    protected function prepareFileWatcher()
     {
-        // Update the state of the debug hot code reload timer
-        if ($this->config->isDebug() && !$this->debugTimer) {
+        if ($this->config->isDebug() && !$this->debugReloadTimer) {
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln('Debug mode is active: hot code reloading is now enabled.');
             }
 
-            $this->debugTimer = $this->loop->addPeriodicTimer(0.5, function () {
+            $this->debugReloadTimer = $this->loop->addPeriodicTimer(0.5, function () {
                 $this->checkChangedFiles();
             });
-        } elseif (!$this->config->isDebug() && $this->debugTimer) {
+        } elseif (!$this->config->isDebug() && $this->debugReloadTimer) {
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln('Debug mode is inactive: hot code reloading is now disabled.');
             }
 
-            $this->debugTimer->cancel();
-            $this->debugTimer = null;
+            $this->debugReloadTimer->cancel();
+            $this->debugReloadTimer = null;
         }
     }
 
@@ -339,7 +340,7 @@ class ProcessManager
 
         $this->createSlaves();
 
-        $this->updateCodeReloadTimer();
+        $this->prepareFileWatcher();
 
         $this->loop->run();
     }
@@ -570,7 +571,7 @@ class ProcessManager
 
         $this->config = $newConfig;
 
-        $this->updateCodeReloadTimer();
+        $this->prepareFileWatcher();
 
         // Attempt to bring manager out of emergency mode
         if ($this->status === self::STATE_EMERGENCY) {
@@ -623,8 +624,6 @@ class ProcessManager
             $slave = $this->slaves->getByPort($port);
             $slave->register($pid, $conn);
         } catch (\Exception $e) {
-            $this->output->writeln($e->getMessage());
-
             $this->output->writeln(sprintf(
                 '<error>Worker #%d wanted to register on master which was not expected.</error>',
                 $port
