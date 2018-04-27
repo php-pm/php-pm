@@ -37,36 +37,33 @@ class SlavePool
     }
 
     /**
-     * Remove from pool
+     * Remove a slave from the pool.
      *
      * @param Slave $slave
-     *
-     * @return void
+     * @throws \Exception If attempted to remove a slave from a pool it is not in.
      */
     public function remove(Slave $slave)
     {
         $port = $slave->getPort();
 
         // validate existence
-        $this->getByPort($port);
+        if ($this->getByPort($port) === null) {
+            throw new \Exception("Slave port $port empty.");
+        }
 
         // remove
         unset($this->slaves[$port]);
     }
 
     /**
-     * Get slave by port
+     * Get slave by port. Returns null if the port is not being used by a slave in this pool.
      *
      * @param int $port
-     * @return Slave
+     * @return Slave|null
      */
     public function getByPort($port)
     {
-        if (!isset($this->slaves[$port])) {
-            throw new \Exception("Slave port $port empty.");
-        }
-
-        return $this->slaves[$port];
+        return isset($this->slaves[$port]) ? $this->slaves[$port] : null;
     }
 
     /**

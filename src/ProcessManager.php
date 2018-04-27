@@ -960,7 +960,29 @@ class ProcessManager
                 );
             }
 
-            $this->newSlaveInstance($slave->getPort());
+            /**
+             * todo: onSlaveClosed() will respawn a worker if it was busy during a reload. onSlaveClosed is used for
+             * both workers that have reached max-requests, and workers that have been put in a locked state.
+             *
+             * We can't remove the close listeners from the locked workers, as we rely on them to know if the
+             * worker is closed for a reload.
+             *
+             * For now, wrap the attempt to create a new instance in a try-catch, since it will test the port validity.
+             *
+             * @see onSlaveClosed
+             */
+            try {
+                $this->newSlaveInstance($slave->getPort());
+            } catch (\Exception $e) {
+                if ($this->output->isVeryVerbose()) {
+                    $this->output->writeln(
+                        sprintf(
+                            "Attempted to reload worker #%d, but port is occupied. Most likely created already.",
+                            $slave->getPort()
+                        )
+                    );
+                }
+            }
         });
     }
 
@@ -1067,9 +1089,14 @@ class ProcessManager
      * Creates a new ProcessSlave instance.
      *
      * @param int $port
+     * @throws \Exception if attempted to create a slave on an occupied port.
      */
     protected function newSlaveInstance($port)
     {
+        if ($this->slaves->getByPort($port) !== null) {
+            throw new \Exception(sprintf("Port %d is already occupied.", $port));
+        }
+
         if ($this->status === self::STATE_SHUTDOWN) {
             // during shutdown phase all connections are closed and as result new
             // instances are created - which is forbidden during this phase
