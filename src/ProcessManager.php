@@ -3,6 +3,8 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use Evenement\EventEmitterInterface;
+use Evenement\EventEmitterTrait;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\Timer\TimerInterface;
@@ -16,9 +18,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
 
-class ProcessManager
+class ProcessManager implements EventEmitterInterface
 {
     use ProcessCommunicationTrait;
+
+    /*
+     * Available event types:
+     * ready    fired when the server has reached a "ready" state.
+     */
+    use EventEmitterTrait;
 
     /*
      * Load balander started, waiting for slaves to come up
@@ -130,19 +138,6 @@ class ProcessManager
     const CONTROLLER_PORT = 5500;
 
     /**
-     * Event IDs
-     */
-    const EVENT_ALL_WORKERS_READY = 0;
-
-    /**
-     * Event listeners
-     *
-     * @var array
-     */
-    private $onceListeners = [];
-    private $listeners = [];
-
-    /**
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
@@ -196,50 +191,6 @@ class ProcessManager
                     $this->quit();
                 }
             });
-        }
-    }
-
-    /**
-     * Add a one-time listener for a specific event ID
-     *
-     * @param int $eventId
-     * @param callable $listener
-     */
-    protected function addOnceListener($eventId, $listener)
-    {
-        $this->onceListeners[$eventId][] = $listener;
-    }
-
-    /**
-     * Add a listener for a specific event ID
-     *
-     * @param int $eventId
-     * @param callable $listener
-     */
-    protected function addListener($eventId, $listener)
-    {
-        $this->listeners[$eventId][] = $listener;
-    }
-
-    /**
-     * Fire event listeners for a given event ID
-     *
-     * @param int $eventId
-     */
-    protected function fireListeners($eventId)
-    {
-        if (array_key_exists($eventId, $this->onceListeners)) {
-            foreach ($this->onceListeners[$eventId] as $listener) {
-                $listener();
-            }
-
-            $this->onceListeners[$eventId] = [];
-        }
-
-        if (array_key_exists($eventId, $this->listeners)) {
-            foreach ($this->listeners[$eventId] as $listener) {
-                $listener();
-            }
         }
     }
 
@@ -323,7 +274,7 @@ class ProcessManager
 
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
 
-        $this->addOnceListener(self::EVENT_ALL_WORKERS_READY, function () {
+        $this->once('ready', function () {
             $this->output->writeln(
                 sprintf(
                     "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
@@ -580,7 +531,7 @@ class ProcessManager
 
         $this->createSlaves();
 
-        $this->addOnceListener(ProcessManager::EVENT_ALL_WORKERS_READY, function () {
+        $this->once('ready', function() {
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln("All workers ready, going to reload.");
             }
@@ -590,7 +541,7 @@ class ProcessManager
 
         // If no new workers are spawned, make sure this event is fired
         if ($this->allSlavesReady()) {
-            $this->fireListeners(ProcessManager::EVENT_ALL_WORKERS_READY);
+            $this->emit('ready');
         }
     }
 
@@ -671,7 +622,7 @@ class ProcessManager
             }
 
             $this->status = self::STATE_RUNNING;
-            $this->fireListeners(ProcessManager::EVENT_ALL_WORKERS_READY);
+            $this->emit('ready');
         }
     }
 
