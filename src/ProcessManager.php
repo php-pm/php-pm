@@ -147,6 +147,7 @@ class ProcessManager implements EventEmitterInterface
     {
         $this->output = $output;
         $this->config = $config;
+        $this->setSocketPath($config->getSocketPath());
 
         $this->slaves = new SlavePool(); // create early, used during shutdown
 
@@ -218,7 +219,6 @@ class ProcessManager implements EventEmitterInterface
         if (file_exists($this->config->getPIDFile())) {
             unlink($this->config->getPIDFile());
         }
-        exit;
     }
 
     /**
@@ -254,9 +254,10 @@ class ProcessManager implements EventEmitterInterface
         Debug::enable();
 
         // make whatever is necessary to disable all stuff that could buffer output
-        ini_set('zlib.output_compression', 0);
-        ini_set('output_buffering', 0);
-        ini_set('implicit_flush', 1);
+        // nb: suppressed for unit tests
+        @ini_set('zlib.output_compression', 0);
+        @ini_set('output_buffering', 0);
+        @ini_set('implicit_flush', 1);
         ob_implicit_flush(1);
 
         $this->loop = Factory::create();
@@ -531,7 +532,7 @@ class ProcessManager implements EventEmitterInterface
 
         $this->createSlaves();
 
-        $this->once('ready', function() {
+        $this->once('ready', function () {
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln("All workers ready, going to reload.");
             }
@@ -573,7 +574,10 @@ class ProcessManager implements EventEmitterInterface
 
         try {
             $slave = $this->slaves->getByPort($port);
-            $slave->register($pid, $conn);
+
+            if ($slave) {
+                $slave->register($pid, $conn);
+            }
         } catch (\Exception $e) {
             $this->output->writeln(sprintf(
                 '<error>Worker #%d wanted to register on master which was not expected.</error>',
@@ -1167,5 +1171,31 @@ EOF;
         if (is_int($pid)) {
             posix_kill($pid, SIGKILL); // make sure it's really dead
         }
+    }
+
+    /**
+     * Get the server event loop instance
+     *
+     * @return LoopInterface
+     */
+    public function getLoop()
+    {
+        return $this->loop;
+    }
+
+    /**
+     * @return Configuration
+     */
+    public function getConfig()
+    {
+        return $this->config;
+    }
+
+    /**
+     * @return SlavePool
+     */
+    public function getSlavePool()
+    {
+        return $this->slaves;
     }
 }
