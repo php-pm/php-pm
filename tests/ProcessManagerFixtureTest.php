@@ -4,6 +4,7 @@ namespace PHPPM\Tests;
 
 use PHPPM\ProcessManager;
 use PHPPM\Slave;
+use React\Socket\Connection;
 
 class ProcessManagerFixtureTest extends PhpPmFixtureTestCase
 {

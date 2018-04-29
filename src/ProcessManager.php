@@ -574,10 +574,7 @@ class ProcessManager implements EventEmitterInterface
 
         try {
             $slave = $this->slaves->getByPort($port);
-
-            if ($slave) {
-                $slave->register($pid, $conn);
-            }
+            $slave->register($pid, $conn);
         } catch (\Exception $e) {
             $this->output->writeln(sprintf(
                 '<error>Worker #%d wanted to register on master which was not expected.</error>',
@@ -611,6 +608,7 @@ class ProcessManager implements EventEmitterInterface
                 'Not your fault, please create a ticket at github.com/php-pm/php-pm with ' .
                 'the output of `ppm start -vv`.</error>'
             );
+            $conn->close();
             return;
         }
 
@@ -1048,8 +1046,10 @@ class ProcessManager implements EventEmitterInterface
      */
     protected function newSlaveInstance($port)
     {
-        if ($this->slaves->getByPort($port) !== null) {
+        try {
+            $this->slaves->getByPort($port);
             throw new \Exception(sprintf("Port %d is already occupied.", $port));
+        } catch (\Exception $ignored) {
         }
 
         if ($this->status === self::STATE_SHUTDOWN) {
