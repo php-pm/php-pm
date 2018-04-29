@@ -1,0 +1,11 @@
+{
+  "bridge": "PHPPM\\Bridges\\StaticBridge",
+  "host": "127.0.0.1",
+  "port": 5002,
+  "workers": 1,
+  "logging": 1,
+  "debug": 1,
+  "app-env": "dev",
+  "max-requests": 10,
+  "static-directory": "webroot"
+}

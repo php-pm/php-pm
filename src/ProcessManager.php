@@ -3,6 +3,8 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
+use Evenement\EventEmitterInterface;
+use Evenement\EventEmitterTrait;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\Timer\TimerInterface;
@@ -16,9 +18,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Debug\Debug;
 use Symfony\Component\Process\ProcessUtils;
 
-class ProcessManager
+class ProcessManager implements EventEmitterInterface
 {
     use ProcessCommunicationTrait;
+
+    /*
+     * Available event types:
+     * ready    fired when the server has reached a "ready" state.
+     */
+    use EventEmitterTrait;
 
     /*
      * Load balander started, waiting for slaves to come up
@@ -57,21 +65,14 @@ class ProcessManager
     protected $output;
 
     /**
-     * Maximum requests per worker before it's recycled
-     *
-     * @var int
+     * @var Configuration
      */
-    protected $maxRequests = 2000;
+    protected $config;
 
     /**
      * @var SlavePool
      */
     protected $slaves;
-
-    /**
-     * @var string
-     */
-    protected $controllerHost;
 
     /**
      * @var ServerInterface
@@ -82,51 +83,6 @@ class ProcessManager
      * @var ServerInterface
      */
     protected $web;
-
-    /**
-     * @var int
-     */
-    protected $slaveCount;
-
-    /**
-     * @var string
-     */
-    protected $bridge;
-
-    /**
-     * @var string
-     */
-    protected $appBootstrap;
-
-    /**
-     * @var string|null
-     */
-    protected $appenv;
-
-    /**
-     * @var bool
-     */
-    protected $debug = false;
-
-    /**
-     * @var bool
-     */
-    protected $logging = true;
-
-    /**
-     * @var string
-     */
-    protected $staticDirectory = '';
-
-    /**
-     * @var string
-     */
-    protected $host = '127.0.0.1';
-
-    /**
-     * @var int
-     */
-    protected $port = 8080;
 
     /**
      * @var bool
@@ -141,16 +97,16 @@ class ProcessManager
     protected $inRestart = false;
 
     /**
-     * The number of seconds to wait before force closing a worker during a reload.
+     * The hot code reload timer instance, used if debugging is enabled.
      *
-     * @var int
+     * @var TimerInterface|null
      */
-    protected $reloadTimeout = 30;
+    protected $debugReloadTimer;
 
     /**
      * Keep track of a single reload timer to prevent multiple reloads spawning several overlapping timers.
      *
-     * @var TimerInterface
+     * @var TimerInterface|null
      */
     protected $reloadTimeoutTimer;
 
@@ -160,14 +116,6 @@ class ProcessManager
      * @var Slave[]
      */
     protected $slavesToReload = [];
-
-    /**
-     * Full path to the php-cgi executable. If not set, we try to determine the
-     * path automatically.
-     *
-     * @var string
-     */
-    protected $phpCgiExecutable = '';
 
     /**
      * @var null|int
@@ -185,18 +133,6 @@ class ProcessManager
     protected $handledRequests = 0;
 
     /**
-     * Flag controlling populating $_SERVER var for older applications (not using full request-response flow)
-     *
-     * @var bool
-     */
-    protected $populateServer = true;
-
-    /**
-     * Location of the file where we're going to store the PID of the master process
-     */
-    protected $pidfile;
-
-    /**
      * Controller port
      */
     const CONTROLLER_PORT = 5500;
@@ -205,17 +141,14 @@ class ProcessManager
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
-     * @param int             $port
-     * @param string          $host
-     * @param int             $slaveCount
+     * @param Configuration   $config
      */
-    public function __construct(OutputInterface $output, $port = 8080, $host = '127.0.0.1', $slaveCount = 8)
+    public function __construct(OutputInterface $output, Configuration $config)
     {
         $this->output = $output;
-        $this->host = $host;
-        $this->port = $port;
+        $this->config = $config;
+        $this->setSocketPath($config->getSocketPath());
 
-        $this->slaveCount = $slaveCount;
         $this->slaves = new SlavePool(); // create early, used during shutdown
 
         register_shutdown_function([$this, 'shutdown']);
@@ -235,7 +168,7 @@ class ProcessManager
         $this->output->writeln("<info>Server is shutting down.</info>");
         $this->status = self::STATE_SHUTDOWN;
 
-        $remainingSlaves = $this->slaveCount;
+        $remainingSlaves = count($this->slaves->getByStatus(Slave::ANY));
 
         if ($remainingSlaves === 0) {
             // if for some reason there are no workers, the close callback won't do anything, so just quit.
@@ -265,7 +198,7 @@ class ProcessManager
     /**
      * To be called after all workers have been terminated and the event loop is no longer in use.
      */
-    private function quit()
+    protected function quit()
     {
         $this->output->writeln('Stopping the process manager.');
 
@@ -283,156 +216,34 @@ class ProcessManager
             $this->loop->stop();
         }
 
-        unlink($this->pidfile);
-        exit;
+        if (file_exists($this->config->getPIDFile())) {
+            unlink($this->config->getPIDFile());
+        }
     }
 
     /**
-     * @param bool $populateServer
+     * Starts or stops the file watcher, which reloads workers if files are discovered to change.
+     *
+     * This is controlled by the debug configuration option, which may be changed at runtime.
      */
-    public function setPopulateServer($populateServer)
+    protected function prepareFileWatcher()
     {
-        $this->populateServer = $populateServer;
-    }
+        if ($this->config->isDebug() && !$this->debugReloadTimer) {
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln('Debug mode is active: hot code reloading is now enabled.');
+            }
 
-    /**
-     * @return bool
-     */
-    public function isPopulateServer()
-    {
-        return $this->populateServer;
-    }
+            $this->debugReloadTimer = $this->loop->addPeriodicTimer(0.5, function () {
+                $this->checkChangedFiles();
+            });
+        } elseif (!$this->config->isDebug() && $this->debugReloadTimer) {
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln('Debug mode is inactive: hot code reloading is now disabled.');
+            }
 
-    /**
-     * @param int $maxRequests
-     */
-    public function setMaxRequests($maxRequests)
-    {
-        $this->maxRequests = $maxRequests;
-    }
-
-    /**
-     * @param string $phpCgiExecutable
-     */
-    public function setPhpCgiExecutable($phpCgiExecutable)
-    {
-        $this->phpCgiExecutable = $phpCgiExecutable;
-    }
-
-    /**
-     * @param string $bridge
-     */
-    public function setBridge($bridge)
-    {
-        $this->bridge = $bridge;
-    }
-
-    /**
-     * @return string
-     */
-    public function getBridge()
-    {
-        return $this->bridge;
-    }
-
-    /**
-     * @param string $appBootstrap
-     */
-    public function setAppBootstrap($appBootstrap)
-    {
-        $this->appBootstrap = $appBootstrap;
-    }
-
-    /**
-     * @return string
-     */
-    public function getAppBootstrap()
-    {
-        return $this->appBootstrap;
-    }
-
-    /**
-     * @param string|null $appenv
-     */
-    public function setAppEnv($appenv)
-    {
-        $this->appenv = $appenv;
-    }
-
-    /**
-     * @return ?string
-     */
-    public function getAppEnv()
-    {
-        return $this->appenv;
-    }
-
-    /**
-     * @return boolean
-     */
-    public function isLogging()
-    {
-        return $this->logging;
-    }
-
-    /**
-     * @param boolean $logging
-     */
-    public function setLogging($logging)
-    {
-        $this->logging = $logging;
-    }
-
-    /**
-     * @return string
-     */
-    public function getStaticDirectory()
-    {
-        return $this->staticDirectory;
-    }
-
-    /**
-     * @param string $staticDirectory
-     */
-    public function setStaticDirectory($staticDirectory)
-    {
-        $this->staticDirectory = $staticDirectory;
-    }
-
-    public function setPIDFile($pidfile)
-    {
-        $this->pidfile = $pidfile;
-    }
-    /**
-     * @return boolean
-     */
-    public function isDebug()
-    {
-        return $this->debug;
-    }
-
-    /**
-     * @param boolean $debug
-     */
-    public function setDebug($debug)
-    {
-        $this->debug = $debug;
-    }
-
-    /**
-     * @return int
-     */
-    public function getReloadTimeout()
-    {
-        return $this->reloadTimeout;
-    }
-
-    /**
-     * @param int $reloadTimeout
-     */
-    public function setReloadTimeout($reloadTimeout)
-    {
-        $this->reloadTimeout = $reloadTimeout;
+            $this->debugReloadTimer->cancel();
+            $this->debugReloadTimer = null;
+        }
     }
 
     /**
@@ -443,37 +254,45 @@ class ProcessManager
         Debug::enable();
 
         // make whatever is necessary to disable all stuff that could buffer output
-        ini_set('zlib.output_compression', 0);
-        ini_set('output_buffering', 0);
-        ini_set('implicit_flush', 1);
+        // nb: suppressed for unit tests
+        @ini_set('zlib.output_compression', 0);
+        @ini_set('output_buffering', 0);
+        @ini_set('implicit_flush', 1);
         ob_implicit_flush(1);
 
         $this->loop = Factory::create();
         $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
         $this->controller->on('connection', [$this, 'onSlaveConnection']);
 
-        $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
-        $this->web->on('connection', [$this, 'onRequest']);
+        $this->startListening();
 
         $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
         $pcntl->on(SIGTERM, [$this, 'shutdown']);
         $pcntl->on(SIGINT, [$this, 'shutdown']);
         $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
         $pcntl->on(SIGUSR1, [$this, 'restartSlaves']);
-        $pcntl->on(SIGUSR2, [$this, 'reloadSlaves']);
-
-        if ($this->isDebug()) {
-            $this->loop->addPeriodicTimer(0.5, function () {
-                $this->checkChangedFiles();
-            });
-        }
+        $pcntl->on(SIGUSR2, [$this, 'reload']);
 
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
 
-        $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
+        $this->once('ready', function () {
+            $this->output->writeln(
+                sprintf(
+                    "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
+                    $this->config->getSlaveCount(),
+                    self::CONTROLLER_PORT+1,
+                    $this->config->getHost(),
+                    $this->config->getPort()
+                )
+            );
+        });
+
+        $this->output->writeln("<info>Starting PHP-PM with {$this->config->getSlaveCount()} workers, using {$loopClass} ...</info>");
         $this->writePid();
 
         $this->createSlaves();
+
+        $this->prepareFileWatcher();
 
         $this->loop->run();
     }
@@ -489,7 +308,7 @@ class ProcessManager
     public function writePid()
     {
         $pid = getmypid();
-        file_put_contents($this->pidfile, $pid);
+        file_put_contents($this->config->getPIDFile(), $pid);
     }
 
     /**
@@ -657,7 +476,89 @@ class ProcessManager
 
         $conn->end(json_encode([]));
 
-        $this->reloadSlaves();
+        $this->reload();
+    }
+
+    /**
+     * Perform a reload. Reloads the configuration and performs an in-place reload of each worker.
+     */
+    public function reload()
+    {
+        $newConfig = Configuration::loadFromPath($this->config->getConfigPath());
+        $newConfig->setArguments($this->config->getArguments());
+
+        $diff = array_diff_assoc($this->config->toArray(), $newConfig->toArray());
+
+        if ($this->output->isVeryVerbose()) {
+            foreach ($diff as $key => $value) {
+                $this->output->writeln(
+                    sprintf(
+                        "Setting %s modified: %s -> %s",
+                        $key,
+                        $this->config->getOption($key),
+                        $newConfig->getOption($key)
+                    )
+                );
+            }
+        }
+
+        // the following config properties will not work with a reload... yet
+        $badPropKeys = ['pidfile', 'socket-path', 'host', 'port'];
+
+        $badProps = array_filter(array_keys($diff), function ($key) use ($badPropKeys) {
+            return in_array($key, $badPropKeys);
+        });
+
+        if ($badProps) {
+            $this->output->writeln(
+                sprintf(
+                    "<error>The following immutable configuration values have changed during runtime: %s</error>",
+                    implode(', ', $badProps)
+                )
+            );
+            $this->output->writeln(
+                "<error>PHP-PM will continue to run, however the previous configuration values will be used.</error>"
+            );
+        }
+
+        $this->config = $newConfig;
+
+        $this->prepareFileWatcher();
+
+        // Attempt to bring manager out of emergency mode
+        if ($this->status === self::STATE_EMERGENCY) {
+            $this->restartSlaves();
+        }
+
+        $this->createSlaves();
+
+        $this->once('ready', function () {
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln("All workers ready, going to reload.");
+            }
+
+            $this->reloadSlaves();
+        });
+
+        // If no new workers are spawned, make sure this event is fired
+        if ($this->allSlavesReady()) {
+            $this->emit('ready');
+        }
+    }
+
+    /**
+     * Bind to the host:port configuration to accept web requests.
+     *
+     * @throws \RuntimeException if listener cannot be established
+     */
+    protected function startListening()
+    {
+        if ($this->web !== null) {
+            @$this->web->close();
+        }
+
+        $this->web = new Server(sprintf('%s:%d', $this->config->getHost(), $this->config->getPort()), $this->loop);
+        $this->web->on('connection', [$this, 'onRequest']);
     }
 
     /**
@@ -707,6 +608,7 @@ class ProcessManager
                 'Not your fault, please create a ticket at github.com/php-pm/php-pm with ' .
                 'the output of `ppm start -vv`.</error>'
             );
+            $conn->close();
             return;
         }
 
@@ -719,19 +621,10 @@ class ProcessManager
         if ($this->allSlavesReady()) {
             if ($this->status === self::STATE_EMERGENCY) {
                 $this->output->writeln("<info>Emergency survived. Workers up and running again.</info>");
-            } else {
-                $this->output->writeln(
-                    sprintf(
-                        "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
-                        $this->slaveCount,
-                        self::CONTROLLER_PORT+1,
-                        $this->host,
-                        $this->port
-                    )
-                );
             }
 
             $this->status = self::STATE_RUNNING;
+            $this->emit('ready');
         }
     }
 
@@ -797,7 +690,7 @@ class ProcessManager
      */
     protected function bootstrapFailed($port)
     {
-        if ($this->isDebug()) {
+        if ($this->config->isDebug()) {
             $this->output->writeln('');
 
             if ($this->status !== self::STATE_EMERGENCY) {
@@ -895,25 +788,42 @@ class ProcessManager
     }
 
     /**
-     * Populate slave pool
+     * Populate the slave pool, or remove unwanted slaves if the slave pool has more workers than is necessary.
+     * This allows a reload to adjust the amount of workers.
      *
      * @return void
      */
     public function createSlaves()
     {
-        for ($i = 1; $i <= $this->slaveCount; $i++) {
-            $this->newSlaveInstance(self::CONTROLLER_PORT + $i);
+        $current = count($this->slaves->getByStatus(Slave::ANY));
+        $diff = $this->config->getSlaveCount() - $current;
+
+        if ($diff < 0) {
+            // more workers in pool than in config -- shut down this many workers.
+            $this->output->writeln(sprintf("Shutting down %d worker(s).", abs($diff)));
+
+            for ($i = $current + $diff + 1; $i <= $current; $i++) {
+                $slave = $this->slaves->getByPort(self::CONTROLLER_PORT + $i);
+                $this->closeSlave($slave, true);
+            }
+        } elseif ($diff > 0) {
+            // more workers in config than pool -- spawn this many workers.
+            $this->output->writeln(sprintf("Spawning %d new worker(s).", $diff));
+
+            for ($i = $current + 1; $i <= $diff + $current; $i++) {
+                $this->newSlaveInstance(self::CONTROLLER_PORT + $i);
+            }
         }
     }
 
     /**
-     * Close a slave
+     * Mark a slave as closed, and remove it from the pool.
      *
      * @param Slave $slave
      *
      * @return void
      */
-    protected function closeSlave($slave)
+    protected function removeSlave($slave)
     {
         $slave->close();
         $this->slaves->remove($slave);
@@ -923,6 +833,64 @@ class ProcessManager
             $connection = $slave->getConnection();
             $connection->removeAllListeners('close');
             $connection->close();
+        }
+    }
+
+    /**
+     * Attempt to close a slave. Returns a bool; if true, the slave successfully closed in this step. If false,
+     * graceful was set to true, and we are waiting for the slave to finish its current task.
+     *
+     * If graceful is true, this function should be used in conjunction with the reload timeout timer:
+     * @see startReloadTimeoutTimer
+     *
+     * @param Slave         $slave          The slave instance
+     * @param bool          $graceful       Whether we should wait for the slave to end its current task
+     * @param callable|null $onSlaveClosed  The callable to be fired when the slave is closed, with the Slave as the
+     *                                      argument. Defaults to a no-op
+     *
+     * @return bool
+     */
+    protected function closeSlave($slave, $graceful = false, callable $onSlaveClosed = null)
+    {
+        if (!$onSlaveClosed) {
+            $onSlaveClosed = function ($slave) {
+            };
+        }
+
+        /*
+         * Attach the callable to the connection close event, because locked workers are closed via RequestHandler.
+         * For now, we still need to call onSlaveClosed() in other circumstances as ProcessManager->removeSlave() removes
+         * all close handlers.
+         */
+        $connection = $slave->getConnection();
+
+        if ($connection) {
+            $connection->on('close', function () use ($onSlaveClosed, $slave) {
+                $onSlaveClosed($slave);
+            });
+        }
+
+        if ($graceful && $slave->getStatus() === Slave::BUSY) {
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(sprintf('Waiting for worker #%d to finish', $slave->getPort()));
+            }
+
+            $slave->lock();
+            return false;
+        } elseif ($graceful && $slave->getStatus() === Slave::LOCKED) {
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(
+                    sprintf(
+                        'Still waiting for worker #%d to finish from an earlier reload',
+                        $slave->getPort()
+                    )
+                );
+            }
+            return false;
+        } else {
+            $this->removeSlave($slave);
+            $onSlaveClosed($slave);
+            return true;
         }
     }
 
@@ -945,7 +913,29 @@ class ProcessManager
                 );
             }
 
-            $this->newSlaveInstance($slave->getPort());
+            /**
+             * todo: onSlaveClosed() will respawn a worker if it was busy during a reload. onSlaveClosed is used for
+             * both workers that have reached max-requests, and workers that have been put in a locked state.
+             *
+             * We can't remove the close listeners from the locked workers, as we rely on them to know if the
+             * worker is closed for a reload.
+             *
+             * For now, wrap the attempt to create a new instance in a try-catch, since it will test the port validity.
+             *
+             * @see onSlaveClosed
+             */
+            try {
+                $this->newSlaveInstance($slave->getPort());
+            } catch (\Exception $e) {
+                if ($this->output->isVeryVerbose()) {
+                    $this->output->writeln(
+                        sprintf(
+                            "Attempted to reload worker #%d, but port is occupied. Most likely created already.",
+                            $slave->getPort()
+                        )
+                    );
+                }
+            }
         });
     }
 
@@ -959,12 +949,11 @@ class ProcessManager
      * in seconds will be killed.
      *
      * @param bool $graceful
-     * @param callable $onSlaveClosed A closure that is called for each worker.
+     * @param callable $onSlaveClosed A closure that is called for each worker. Defaults to a no-op
      */
     public function closeSlaves($graceful = false, $onSlaveClosed = null)
     {
         if (!$onSlaveClosed) {
-            // create a default no-op if callable is undefined
             $onSlaveClosed = function ($slave) {
             };
         }
@@ -978,52 +967,33 @@ class ProcessManager
 
         foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
             /** @var Slave $slave */
+            $closed = $this->closeSlave($slave, $graceful, $onSlaveClosed);
 
-            /*
-             * Attach the callable to the connection close event, because locked workers are closed via RequestHandler.
-             * For now, we still need to call onClosed() in other circumstances as ProcessManager->closeSlave() removes
-             * all close handlers.
-             */
-            $connection = $slave->getConnection();
-
-            if ($connection) {
-                // todo: connection has to be null-checked, because of race conditions with many workers. fixed in #366
-                $connection->on('close', function () use ($onSlaveClosed, $slave) {
-                    $onSlaveClosed($slave);
-                });
-            }
-
-            if ($graceful && $slave->getStatus() === Slave::BUSY) {
-                if ($this->output->isVeryVerbose()) {
-                    $this->output->writeln(sprintf('Waiting for worker #%d to finish', $slave->getPort()));
-                }
-
-                $slave->lock();
+            if (!$closed) {
                 $this->slavesToReload[$slave->getPort()] = $slave;
-            } elseif ($graceful && $slave->getStatus() === Slave::LOCKED) {
-                if ($this->output->isVeryVerbose()) {
-                    $this->output->writeln(
-                        sprintf(
-                            'Still waiting for worker #%d to finish from an earlier reload',
-                            $slave->getPort()
-                        )
-                    );
-                }
-                $this->slavesToReload[$slave->getPort()] = $slave;
-            } else {
-                $this->closeSlave($slave);
-                $onSlaveClosed($slave);
             }
         }
 
         $this->filesLastMTime = [];
         $this->filesLastMd5 = [];
 
+        $this->startReloadTimeoutTimer($onSlaveClosed);
+    }
+
+    /**
+     * Start the slave reload timeout timer. This will force close any workers that remain in the array.
+     *
+     * @see slavesToReload
+     *
+     * @param callable|null $onSlaveClosed
+     */
+    protected function startReloadTimeoutTimer(callable $onSlaveClosed = null)
+    {
         if ($this->reloadTimeoutTimer !== null) {
             $this->reloadTimeoutTimer->cancel();
         }
 
-        $this->reloadTimeoutTimer = $this->loop->addTimer($this->reloadTimeout, function () use ($onSlaveClosed) {
+        $this->reloadTimeoutTimer = $this->loop->addTimer($this->config->getReloadTimeout(), function () use ($onSlaveClosed) {
             if ($this->slavesToReload && $this->output->isVeryVerbose()) {
                 $this->output->writeln('Cleaning up workers that exceeded the graceful reload timeout.');
             }
@@ -1036,8 +1006,7 @@ class ProcessManager
                     )
                 );
 
-                $this->closeSlave($slave);
-                $onSlaveClosed($slave);
+                $this->closeSlave($slave, false, $onSlaveClosed);
             }
         });
     }
@@ -1064,22 +1033,25 @@ class ProcessManager
      */
     protected function allSlavesReady()
     {
-        if ($this->status === self::STATE_STARTING || $this->status === self::STATE_EMERGENCY) {
-            $readySlaves = $this->slaves->getByStatus(Slave::READY);
-            $busySlaves = $this->slaves->getByStatus(Slave::BUSY);
-            return count($readySlaves) + count($busySlaves) === $this->slaveCount;
-        }
-
-        return false;
+        $readySlaves = $this->slaves->getByStatus(Slave::READY);
+        $busySlaves = $this->slaves->getByStatus(Slave::BUSY);
+        return count($readySlaves) + count($busySlaves) === $this->config->getSlaveCount();
     }
 
     /**
      * Creates a new ProcessSlave instance.
      *
      * @param int $port
+     * @throws \Exception if attempted to create a slave on an occupied port.
      */
     protected function newSlaveInstance($port)
     {
+        try {
+            $this->slaves->getByPort($port);
+            throw new \Exception(sprintf("Port %d is already occupied.", $port));
+        } catch (\Exception $ignored) {
+        }
+
         if ($this->status === self::STATE_SHUTDOWN) {
             // during shutdown phase all connections are closed and as result new
             // instances are created - which is forbidden during this phase
@@ -1090,19 +1062,18 @@ class ProcessManager
             $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
-        $socketpath = var_export($this->getSocketPath(), true);
-        $bridge = var_export($this->getBridge(), true);
-        $bootstrap = var_export($this->getAppBootstrap(), true);
+        $socketpath = var_export($this->config->getSocketPath(), true);
+        $bridge = var_export($this->config->getBridge(), true);
+        $bootstrap = var_export($this->config->getAppBootstrap(), true);
 
         $config = [
             'port' => $port,
             'session_path' => session_save_path(),
-
-            'app-env' => $this->getAppEnv(),
-            'debug' => $this->isDebug(),
-            'logging' => $this->isLogging(),
-            'static-directory' => $this->getStaticDirectory(),
-            'populate-server-var' => $this->isPopulateServer()
+            'app-env' => $this->config->getAppEnv(),
+            'debug' => $this->config->isDebug(),
+            'logging' => $this->config->isLogging(),
+            'static-directory' => $this->config->getStaticDirectory(),
+            'populate-server-var' => $this->config->isPopulateServer()
         ];
 
         $config = var_export($config, true);
@@ -1149,10 +1120,10 @@ EOF;
         // e.g. headers_sent() returns always true, although wrong.
         //For version 2.x and 3.x of \Symfony\Component\Process\Process package
         if (method_exists('\Symfony\Component\Process\ProcessUtils', 'escapeArgument')) {
-            $commandline = 'exec ' . $this->phpCgiExecutable . ' -C ' . ProcessUtils::escapeArgument($file);
+            $commandline = 'exec ' . $this->config->getPhpCgiExecutable() . ' -C ' . ProcessUtils::escapeArgument($file);
         } else {
             //For version 4.x of \Symfony\Component\Process\Process package
-            $commandline = ['exec', $this->phpCgiExecutable, '-C', $file];
+            $commandline = ['exec', $this->config->getPhpCgiExecutable(), '-C', $file];
             $processInstance = new \Symfony\Component\Process\Process($commandline);
             $commandline = $processInstance->getCommandLine();
         }
@@ -1160,7 +1131,7 @@ EOF;
         // use exec to omit wrapping shell
         $process = new Process($commandline);
 
-        $slave = new Slave($port, $this->maxRequests);
+        $slave = new Slave($port, $this->config->getMaxRequests());
         $slave->attach($process);
         $this->slaves->add($slave);
 
@@ -1200,5 +1171,31 @@ EOF;
         if (is_int($pid)) {
             posix_kill($pid, SIGKILL); // make sure it's really dead
         }
+    }
+
+    /**
+     * Get the server event loop instance
+     *
+     * @return LoopInterface
+     */
+    public function getLoop()
+    {
+        return $this->loop;
+    }
+
+    /**
+     * @return Configuration
+     */
+    public function getConfig()
+    {
+        return $this->config;
+    }
+
+    /**
+     * @return SlavePool
+     */
+    public function getSlavePool()
+    {
+        return $this->slaves;
     }
 }
