@@ -8,7 +8,7 @@
         "symfony/console": "^2.6|^3.0|^4.0",
         "symfony/debug": "^2.6|^3.0|^4.0",
         "symfony/process": "^2.6|^3.0|^4.0",
-        "react/event-loop": "^0.4",
+        "react/event-loop": "^0.5",
         "react/stream": "^0.7.1",
         "react/http": "^0.8",
         "react/socket": "^0.8.6",
