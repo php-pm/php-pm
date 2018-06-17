@@ -41,6 +41,7 @@ class StartCommand extends Command
         $handler->setLogging((boolean)$config['logging']);
         $handler->setAppBootstrap($config['bootstrap']);
         $handler->setMaxRequests($config['max-requests']);
+        $handler->setTtl($config['ttl']);
         $handler->setPhpCgiExecutable($config['cgi-path']);
         $handler->setSocketPath($config['socket-path']);
         $handler->setPIDFile($config['pidfile']);

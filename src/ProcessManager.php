@@ -64,6 +64,13 @@ class ProcessManager
     protected $maxRequests = 2000;
 
     /**
+     * Worker time to live
+     *
+     * @var int|null
+     */
+    protected $ttl;
+
+    /**
      * @var SlavePool
      */
     protected $slaves;
@@ -309,6 +316,14 @@ class ProcessManager
     public function setMaxRequests($maxRequests)
     {
         $this->maxRequests = $maxRequests;
+    }
+
+    /**
+     * @param int $ttl
+     */
+    public function setTtl($ttl)
+    {
+        $this->ttl = $ttl;
     }
 
     /**
@@ -1160,7 +1175,7 @@ EOF;
         // use exec to omit wrapping shell
         $process = new Process($commandline);
 
-        $slave = new Slave($port, $this->maxRequests);
+        $slave = new Slave($port, $this->maxRequests, $this->ttl);
         $slave->attach($process);
         $this->slaves->add($slave);
 

@@ -137,6 +137,13 @@ class RequestHandler
      */
     public function slaveAvailable(Slave $slave)
     {
+        if ($slave->isExpired()) {
+            $slave->close();
+            $this->output->writeln(sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
+            $slave->getConnection()->close();
+            return;
+        }
+
         $this->redirectionTries++;
 
         // client went away while waiting for worker

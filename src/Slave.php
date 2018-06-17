@@ -58,10 +58,26 @@ class Slave
      */
     private $handledRequests = 0;
 
-    public function __construct($port, $maxRequests)
+    /**
+     * Time to live
+     *
+     * @var int|null
+     */
+    private $ttl;
+
+    /**
+     * Start timestamp
+     *
+     * @var int
+     */
+    private $startedAt;
+
+    public function __construct($port, $maxRequests, $ttl = null)
     {
         $this->port = $port;
         $this->maxRequests = $maxRequests;
+        $this->ttl = $ttl;
+        $this->startedAt = time();
 
         $this->status = self::CREATED;
     }
@@ -237,6 +253,14 @@ class Slave
     public function getMaxRequests()
     {
         return $this->maxRequests;
+    }
+
+    /**
+     * @return int|null
+     */
+    public function isExpired()
+    {
+        return null !== $this->ttl && time() >= ($this->startedAt + $this->ttl);
     }
 
     /**
