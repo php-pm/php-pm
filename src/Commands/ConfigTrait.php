@@ -25,6 +25,7 @@ trait ConfigTrait
             ->addOption('logging', null, InputOption::VALUE_REQUIRED, 'Enable/Disable http logging to stdout. 1|0', 1)
             ->addOption('static-directory', null, InputOption::VALUE_REQUIRED, 'Static files root directory, if not provided static files will not be served', '')
             ->addOption('max-requests', null, InputOption::VALUE_REQUIRED, 'Max requests per worker until it will be restarted', 1000)
+            ->addOption('ttl', null, InputOption::VALUE_REQUIRED, 'Time to live for a worker until it will be restarted', null)
             ->addOption('populate-server-var', null, InputOption::VALUE_REQUIRED, 'If a worker application uses $_SERVER var it needs to be populated by request data 1|0', 1)
             ->addOption('bootstrap', null, InputOption::VALUE_REQUIRED, 'Class responsible for bootstrapping the application', 'PHPPM\Bootstraps\Symfony')
             ->addOption('cgi-path', null, InputOption::VALUE_REQUIRED, 'Full path to the php-cgi executable', false)
@@ -95,6 +96,7 @@ trait ConfigTrait
         $config['static-directory'] = $this->optionOrConfigValue($input, 'static-directory', $config);
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
+        $config['ttl'] = (int)$this->optionOrConfigValue($input, 'ttl', $config);
         $config['populate-server-var'] = (boolean)$this->optionOrConfigValue($input, 'populate-server-var', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
         $config['pidfile'] = $this->optionOrConfigValue($input, 'pidfile', $config);
