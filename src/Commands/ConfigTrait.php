@@ -96,6 +96,7 @@ trait ConfigTrait
         $config['static-directory'] = $this->optionOrConfigValue($input, 'static-directory', $config);
         $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
         $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
+        $config['ttl'] = (int)$this->optionOrConfigValue($input, 'ttl', $config);
         $config['populate-server-var'] = (boolean)$this->optionOrConfigValue($input, 'populate-server-var', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
         $config['pidfile'] = $this->optionOrConfigValue($input, 'pidfile', $config);

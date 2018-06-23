@@ -76,7 +76,7 @@ class Slave
     {
         $this->port = $port;
         $this->maxRequests = $maxRequests;
-        $this->ttl = $ttl;
+        $this->ttl = ((int) $ttl < 1) ? null : $ttl;
         $this->startedAt = time();
 
         $this->status = self::CREATED;
@@ -256,7 +256,9 @@ class Slave
     }
 
     /**
-     * @return int|null
+     * If TTL was defined, make sure slave is still allowed to run
+     *
+     * @return bool
      */
     public function isExpired()
     {
