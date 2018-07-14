@@ -875,7 +875,15 @@ class ProcessManager
                 continue;
             }
 
-            if ($knownMTime !== filemtime($filePath) && $this->filesLastMd5[$filePath] !== md5_file($filePath, true)) {
+            $actualFileTime = filemtime($filePath);
+            $actualFileHash = md5_file($filePath);
+
+            if ($knownMTime !== $actualFileTime && $this->filesLastMd5[$filePath] !== $actualFileHash) {
+
+                // update tracked entry metadata
+                $this->filesLastMd5[$filePath] = $actualFileHash;
+                $this->filesLastMTime[$filePath] = $actualFileTime;
+
                 $this->output->writeln(
                     sprintf("<info>[%s] File %s has changed.</info>", date('d/M/Y:H:i:s O'), $filePath)
                 );
@@ -1030,7 +1038,7 @@ class ProcessManager
                 $onSlaveClosed($slave);
             }
         }
-        
+
         if ($this->reloadTimeoutTimer !== null) {
             $this->reloadTimeoutTimer->cancel();
         }
