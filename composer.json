@@ -11,7 +11,7 @@
         "react/event-loop": "^0.4",
         "react/stream": "^0.7.1",
         "react/http": "^0.8",
-        "react/socket": "^0.8.6",
+        "react/socket": "^1.0",
         "react/child-process": "^0.5",
         "mkraemer/react-pcntl": "^2.0|^3.0",
         "monolog/monolog": "^1.3",
