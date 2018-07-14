@@ -944,11 +944,11 @@ class ProcessManager
     /**
      * Reload slaves in-place, allowing busy workers to finish what they are doing.
      */
-    public function reloadSlaves($gracefull = true)
+    public function reloadSlaves($graceful = true)
     {
         $this->output->writeln('<info>Reloading all workers gracefully</info>');
 
-        $this->closeSlaves($gracefull, function ($slave) {
+        $this->closeSlaves($graceful, function ($slave) {
             /** @var $slave Slave */
 
             if ($this->output->isVeryVerbose()) {
