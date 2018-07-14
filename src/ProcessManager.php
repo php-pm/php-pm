@@ -833,7 +833,7 @@ class ProcessManager
                 );
             }
 
-            $this->closeSlaves();
+            $this->reloadSlaves(false);
         } else {
             $this->output->writeln(
                 sprintf(
@@ -944,11 +944,11 @@ class ProcessManager
     /**
      * Reload slaves in-place, allowing busy workers to finish what they are doing.
      */
-    public function reloadSlaves()
+    public function reloadSlaves($graceful = true)
     {
         $this->output->writeln('<info>Reloading all workers gracefully</info>');
 
-        $this->closeSlaves(true, function ($slave) {
+        $this->closeSlaves($graceful, function ($slave) {
             /** @var $slave Slave */
 
             if ($this->output->isVeryVerbose()) {
@@ -1030,10 +1030,7 @@ class ProcessManager
                 $onSlaveClosed($slave);
             }
         }
-
-        $this->filesLastMTime = [];
-        $this->filesLastMd5 = [];
-
+        
         if ($this->reloadTimeoutTimer !== null) {
             $this->reloadTimeoutTimer->cancel();
         }
