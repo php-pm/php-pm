@@ -123,7 +123,7 @@ class RequestHandler
             $slave = array_shift($available);
 
             // slave available -> connect
-            if (!$this->slaveAvailable($slave)) {
+            if (!$this->tryOccupySlave($slave)) {
                 return $this->getNextSlave();
             }
         } else {
@@ -138,7 +138,7 @@ class RequestHandler
      * @param Slave $slave available slave instance
      * @return bool Slave is available
      */
-    public function slaveAvailable(Slave $slave)
+    public function tryOccupySlave(Slave $slave)
     {
         if ($slave->isExpired()) {
             $slave->close();
