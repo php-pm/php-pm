@@ -9,7 +9,7 @@
         "symfony/debug": "^2.6|^3.0|^4.0",
         "symfony/process": "^2.6|^3.0|^4.0",
         "react/event-loop": "^0.4",
-        "react/stream": "^0.7.1",
+        "react/stream": "^1.0",
         "react/http": "^0.8",
         "react/socket": "^1.0",
         "react/child-process": "^0.5",
