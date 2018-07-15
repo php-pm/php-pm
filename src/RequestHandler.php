@@ -123,7 +123,9 @@ class RequestHandler
             $slave = array_shift($available);
 
             // slave available -> connect
-            $this->slaveAvailable($slave);
+            if (!$this->tryOccupySlave($slave)) {
+                return $this->getNextSlave();
+            }
         } else {
             // keep retrying until slave becomes available
             $this->loop->futureTick([$this, 'getNextSlave']);
@@ -134,21 +136,22 @@ class RequestHandler
      * Slave available handler
      *
      * @param Slave $slave available slave instance
+     * @return bool Slave is available
      */
-    public function slaveAvailable(Slave $slave)
+    public function tryOccupySlave(Slave $slave)
     {
         if ($slave->isExpired()) {
             $slave->close();
             $this->output->writeln(sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
             $slave->getConnection()->close();
-            return;
+            return false;
         }
 
         $this->redirectionTries++;
 
         // client went away while waiting for worker
         if (!$this->connectionOpen) {
-            return;
+            return false;
         }
 
         $this->slave = $slave;
@@ -168,6 +171,7 @@ class RequestHandler
             [$this, 'slaveConnected'],
             [$this, 'slaveConnectFailed']
         );
+        return true;
     }
 
     /**
