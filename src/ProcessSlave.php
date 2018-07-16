@@ -193,11 +193,18 @@ class ProcessSlave
         if ($this->server) {
             @$this->server->close();
         }
-        if ($this->loop) {
-            $this->loop->stop();
-        }
 
-        exit;
+        if ($this->loop) {
+            $this->loop->futureTick(function () {
+                // watch source files with potentially fatal error for changes
+                $this->sendCurrentFiles();
+                $this->loop->stop();
+                exit;
+            });
+        }
+        else {
+            exit;
+        }
     }
 
     /**
