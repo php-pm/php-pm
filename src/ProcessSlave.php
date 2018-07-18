@@ -4,7 +4,6 @@ declare(ticks = 1);
 namespace PHPPM;
 
 use Evenement\EventEmitterInterface;
-use MKraemer\ReactPCNTL\PCNTL;
 use PHPPM\Bridges\BridgeInterface;
 use PHPPM\Debug\BufferingLogger;
 use Psr\Http\Message\ResponseInterface;
@@ -188,24 +187,23 @@ class ProcessSlave
 
         $this->inShutdown = true;
 
-        if ($this->loop) {
-            $this->sendCurrentFiles();
-            $this->loop->tick();
-        }
-
         if ($this->controller && $this->controller->isWritable()) {
             $this->controller->close();
         }
         if ($this->server) {
             @$this->server->close();
         }
-        if ($this->loop) {
-            $this->sendCurrentFiles();
-            $this->loop->tick();
-            @$this->loop->stop();
+
+        if (!$this->loop) {
+            exit;
         }
 
-        exit;
+        $this->loop->futureTick(function () {
+            // watch source files with potentially fatal error for changes
+            $this->sendCurrentFiles();
+            $this->loop->stop();
+            exit;
+        });
     }
 
     /**
@@ -300,9 +298,8 @@ class ProcessSlave
             function ($controller) {
                 $this->controller = $controller;
 
-                $pcntl = new PCNTL($this->loop);
-                $pcntl->on(SIGTERM, [$this, 'shutdown']);
-                $pcntl->on(SIGINT, [$this, 'shutdown']);
+                $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
+                $this->loop->addSignal(SIGINT, [$this, 'shutdown']);
                 register_shutdown_function([$this, 'shutdown']);
 
                 $this->bindProcessMessage($this->controller);

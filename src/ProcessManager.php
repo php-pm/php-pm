@@ -5,7 +5,7 @@ namespace PHPPM;
 
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
-use React\EventLoop\Timer\TimerInterface;
+use React\EventLoop\TimerInterface;
 use React\Socket\Server;
 use React\Socket\UnixServer;
 use React\Socket\Connection;
@@ -286,7 +286,6 @@ class ProcessManager
         }
 
         if ($this->loop) {
-            $this->loop->tick();
             $this->loop->stop();
         }
 
@@ -470,12 +469,11 @@ class ProcessManager
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
         $this->web->on('connection', [$this, 'onRequest']);
 
-        $pcntl = new \MKraemer\ReactPCNTL\PCNTL($this->loop);
-        $pcntl->on(SIGTERM, [$this, 'shutdown']);
-        $pcntl->on(SIGINT, [$this, 'shutdown']);
-        $pcntl->on(SIGCHLD, [$this, 'handleSigchld']);
-        $pcntl->on(SIGUSR1, [$this, 'restartSlaves']);
-        $pcntl->on(SIGUSR2, [$this, 'reloadSlaves']);
+        $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
+        $this->loop->addSignal(SIGINT, [$this, 'shutdown']);
+        $this->loop->addSignal(SIGCHLD, [$this, 'handleSigchld']);
+        $this->loop->addSignal(SIGUSR1, [$this, 'restartSlaves']);
+        $this->loop->addSignal(SIGUSR2, [$this, 'reloadSlaves']);
 
         if ($this->isDebug()) {
             $this->loop->addPeriodicTimer(0.5, function () {
@@ -1040,7 +1038,7 @@ class ProcessManager
         }
 
         if ($this->reloadTimeoutTimer !== null) {
-            $this->reloadTimeoutTimer->cancel();
+            $this->loop->cancelTimer($this->reloadTimeoutTimer);
         }
 
         $this->reloadTimeoutTimer = $this->loop->addTimer($this->reloadTimeout, function () use ($onSlaveClosed) {
