@@ -35,13 +35,13 @@ jobs:
       php: 7.1
       install:
         - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
-        - composer require "phpstan/phpstan:^0.9" "friendsofphp/php-cs-fixer:^2.8"
+        - composer require "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8"
       script:
         # Static analyzer check
         - ./vendor/bin/phpstan analyze -c .phpstan.neon --level=4 --no-progress src
         # Check the code style
         - IFS=$'\n'; COMMIT_SCA_FILES=($(git diff --name-only --diff-filter=ACMRTUXB "${TRAVIS_COMMIT_RANGE}")); unset IFS
-        - ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}"
+        - ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --diff --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}"
 
 # Cache package sources
 cache:
