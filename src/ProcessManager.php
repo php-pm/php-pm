@@ -47,7 +47,7 @@ class ProcessManager
     protected $status = self::STATE_STARTING;
 
     /**
-     * @var LoopInterface
+     * @var LoopInterface|null
      */
     protected $loop;
 
@@ -81,12 +81,12 @@ class ProcessManager
     protected $controllerHost;
 
     /**
-     * @var ServerInterface
+     * @var ServerInterface|null
      */
     protected $controller;
 
     /**
-     * @var ServerInterface
+     * @var ServerInterface|null
      */
     protected $web;
 
@@ -1165,7 +1165,7 @@ EOF;
         // we can not use -q since this disables basically all header support
         // but since this is necessary at least in Symfony we can not use it.
         // e.g. headers_sent() returns always true, although wrong.
-        //For version 2.x and 3.x of \Symfony\Component\Process\Process package
+        // For version 2.x and 3.x of \Symfony\Component\Process\Process package
         if (method_exists('\Symfony\Component\Process\ProcessUtils', 'escapeArgument')) {
             $commandline = 'exec ' . $this->phpCgiExecutable . ' -C ' . ProcessUtils::escapeArgument($file);
         } else {

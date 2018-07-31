@@ -34,19 +34,19 @@ class ProcessSlave
     /**
      * The HTTP Server.
      *
-     * @var ServerInterface
+     * @var ServerInterface|null
      */
     protected $server;
 
     /**
-     * @var LoopInterface
+     * @var LoopInterface|null
      */
     protected $loop;
 
     /**
      * ProcessManager master process connection
      *
-     * @var ConnectionInterface
+     * @var ConnectionInterface|null
      */
     protected $controller;
 
@@ -83,7 +83,7 @@ class ProcessSlave
     protected $inShutdown = false;
 
     /**
-     * @var BufferingLogger|\Symfony\Component\Debug\BufferingLogger
+     * @var BufferingLogger|\Symfony\Component\Debug\BufferingLogger|null
      */
     protected $errorLogger;
 
@@ -215,7 +215,7 @@ class ProcessSlave
     }
 
     /**
-     * @return BridgeInterface
+     * @return BridgeInterface|null
      */
     protected function getBridge()
     {

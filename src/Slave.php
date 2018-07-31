@@ -42,6 +42,10 @@ class Slave
 
     private $process;
     private $pid;
+
+    /**
+     * @var ConnectionInterface
+     */
     private $connection; // slave incoming
 
     /**
@@ -208,7 +212,7 @@ class Slave
     /**
      * Get slave incoming connection
      *
-     * @return ConnectionInterface slave connection
+     * @return ConnectionInterface|null slave connection
      */
     public function getConnection()
     {

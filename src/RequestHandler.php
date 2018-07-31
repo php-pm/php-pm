@@ -23,7 +23,7 @@ class RequestHandler
     private $incoming;
 
     /**
-     * @var ConnectionInterface
+     * @var ConnectionInterface|null
      */
     private $connection;
 
