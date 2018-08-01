@@ -135,7 +135,7 @@ class RequestHandler
             }
         } else {
             // keep retrying until slave becomes available, unless timeout has been exceeded
-            if(time() < ($this->requestSentAt + $this->timeout)) {
+            if (time() < ($this->requestSentAt + $this->timeout)) {
                 $this->loop->futureTick([$this, 'getNextSlave']);
             } else {
                 // Return a "503 Service Unavailable" response
@@ -146,7 +146,8 @@ class RequestHandler
         }
     }
 
-    private function createErrorResponse($code, $text) {
+    private function createErrorResponse($code, $text)
+    {
         return sprintf(
             'HTTP/1.1 %s'."\n".
             'Date: %s'."\n".
@@ -231,7 +232,7 @@ class RequestHandler
         });
 
         // relay data to client
-        $this->connection->pipe($this->incoming, array('end' => false));
+        $this->connection->pipe($this->incoming, ['end' => false]);
     }
 
     /**
@@ -246,8 +247,8 @@ class RequestHandler
         });
 
         // Return a "502 Bad Gateway" response if the response was empty
-        if($this->lastOutgoingData == '') {
-            $this->output->writeln('Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?');
+        if ($this->lastOutgoingData == '') {
+            $this->output->writeln('Script did not return a valid HTTP response. Maybe it has called exit() prematurely?');
             $this->incoming->write($this->createErrorResponse('502 Bad Gateway', 'Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?'));
         }
         $this->incoming->end();
