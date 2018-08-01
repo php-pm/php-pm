@@ -102,7 +102,7 @@ class RequestHandler
         $this->incoming->on('close', function () {
             $this->connectionOpen = false;
         });
-        if($this->maxExecutionTime > 0) {
+        if ($this->maxExecutionTime > 0) {
             $this->maxExecutionTimer = $this->loop->addTimer($this->maxExecutionTime, [$this, 'maxExecutionTimeExceeded']);
         }
 
@@ -291,7 +291,7 @@ class RequestHandler
             $this->incoming->write($this->createErrorResponse('502 Bad Gateway', 'Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?'));
         }
         $this->incoming->end();
-        if($this->maxExecutionTime > 0) {
+        if ($this->maxExecutionTime > 0) {
             $this->loop->cancelTimer($this->maxExecutionTimer);
         }
 
