@@ -264,9 +264,8 @@ class RequestHandler
             return false;
         }
 
-        $response = $this->createErrorResponse('504 Gateway Timeout', 'Maximum execution time exceeded');
-        $this->incoming->write($response);
-        $this->lastOutgoingData = $response;
+        $this->incoming->write($this->createErrorResponse('504 Gateway Timeout', 'Maximum execution time exceeded'));
+        $this->lastOutgoingData = 'not empty'; // Avoid triggering 502
 
         // mark slave as closed
         $this->slave->close();
