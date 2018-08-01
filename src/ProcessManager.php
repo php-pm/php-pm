@@ -64,6 +64,13 @@ class ProcessManager
     protected $maxRequests = 2000;
 
     /**
+     * Maximum amount of time a request is allowed to execute before shutting down
+     *
+     * @var int
+     */
+    protected $maxExecutionTime = 30;
+
+    /**
      * Worker time to live
      *
      * @var int|null
@@ -318,6 +325,14 @@ class ProcessManager
     }
 
     /**
+     * @param int $maxExecutionTime
+     */
+    public function setMaxExecutionTime($maxExecutionTime)
+    {
+        $this->maxExecutionTime = $maxExecutionTime;
+    }
+
+    /**
      * @param int $ttl
      */
     public function setTtl($ttl)
@@ -514,7 +529,7 @@ class ProcessManager
     {
         $this->handledRequests++;
 
-        $handler = new RequestHandler($this->socketPath, $this->loop, $this->output, $this->slaves);
+        $handler = new RequestHandler($this->socketPath, $this->loop, $this->output, $this->slaves, $this->maxExecutionTime);
         $handler->handle($incoming);
     }
 
