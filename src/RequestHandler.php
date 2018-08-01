@@ -18,6 +18,11 @@ class RequestHandler
     protected $start;
 
     /**
+     * @var float
+     */
+    protected $requestSentAt;
+
+    /**
      * @var ConnectionInterface
      */
     private $incoming;
@@ -57,6 +62,7 @@ class RequestHandler
     private $connectionOpen = true;
     private $redirectionTries = 0;
     private $incomingBuffer = '';
+    private $lastOutgoingData = ''; // Used to track abnormal responses
 
     public function __construct($socketPath, LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
     {
@@ -82,6 +88,7 @@ class RequestHandler
         });
 
         $this->start = microtime(true);
+        $this->requestSentAt = microtime(true);
         $this->getNextSlave();
     }
 
@@ -127,9 +134,32 @@ class RequestHandler
                 return $this->getNextSlave();
             }
         } else {
-            // keep retrying until slave becomes available
-            $this->loop->futureTick([$this, 'getNextSlave']);
+            // keep retrying until slave becomes available, unless timeout has been exceeded
+            if (time() < ($this->requestSentAt + $this->timeout)) {
+                $this->loop->futureTick([$this, 'getNextSlave']);
+            } else {
+                // Return a "503 Service Unavailable" response
+                $this->output->writeln(sprintf('No slaves available to handle the request and timeout %d seconds exceeded', $this->timeout));
+                $this->incoming->write($this->createErrorResponse('503 Service Temporarily Unavailable', 'Service Temporarily Unavailable'));
+                $this->incoming->end();
+            }
         }
+    }
+
+    private function createErrorResponse($code, $text)
+    {
+        return sprintf(
+            'HTTP/1.1 %s'."\n".
+            'Date: %s'."\n".
+            'Content-Type: text/plain'."\n".
+            'Content-Length: %s'."\n".
+            "\n".
+            '%s',
+            $code,
+            gmdate('D, d M Y H:i:s T'),
+            strlen($text),
+            $text
+        );
     }
 
     /**
@@ -196,8 +226,13 @@ class RequestHandler
         // update slave availability
         $this->connection->on('close', [$this, 'slaveClosed']);
 
+        // keep track of the last sent data to detect if slave exited abnormally
+        $this->connection->on('data', function ($data) {
+            $this->lastOutgoingData = $data;
+        });
+
         // relay data to client
-        $this->connection->pipe($this->incoming);
+        $this->connection->pipe($this->incoming, ['end' => false]);
     }
 
     /**
@@ -211,6 +246,11 @@ class RequestHandler
             return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
         });
 
+        // Return a "502 Bad Gateway" response if the response was empty
+        if ($this->lastOutgoingData == '') {
+            $this->output->writeln('Script did not return a valid HTTP response. Maybe it has called exit() prematurely?');
+            $this->incoming->write($this->createErrorResponse('502 Bad Gateway', 'Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?'));
+        }
         $this->incoming->end();
 
         if ($this->slave->getStatus() === Slave::LOCKED) {

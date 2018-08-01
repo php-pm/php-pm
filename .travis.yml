@@ -25,6 +25,16 @@ script:
   - curl -v -f "http://127.0.0.1:8080"
   - bin/ppm status
   - bin/ppm stop
+  # Trigger 502 error by triggering an exit() in the worker
+  - bin/ppm start --workers=1 --bridge=PHPPM\\Tests\\TestBridge --static-directory=web --max-requests=1 -v &
+  - sleep 5
+  - bash -c 'if [[ $(curl --write-out %{http_code} --silent --output /dev/null "http://127.0.0.1:8080/test?exit_prematurely=1") == "502" ]]; then exit 0; else exit 1; fi'
+  - bin/ppm status
+  # Trigger 503 error by tying up the worker and making a second request
+  - curl -f --silent "http://127.0.0.1:8080/test?sleep=10000" &
+  - bash -c 'if [[ $(curl --write-out %{http_code} --silent --output /dev/null "http://127.0.0.1:8080") == "503" ]]; then exit 0; else exit 1; fi'
+  - bin/ppm status
+  - bin/ppm stop
 
 matrix:
   fast_finish: true
