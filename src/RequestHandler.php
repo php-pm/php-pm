@@ -3,6 +3,7 @@
 namespace PHPPM;
 
 use React\EventLoop\LoopInterface;
+use React\EventLoop\TimerInterface;
 use React\Socket\UnixConnector;
 use React\Socket\TimeoutConnector;
 use React\Socket\ConnectionInterface;
@@ -55,6 +56,20 @@ class RequestHandler
     private $timeout = 10;
 
     /**
+     * Max amount of time a script is allowed to run in the worker before closing.
+     *
+     * @var int
+     */
+    private $maxExecutionTime;
+
+    /**
+     * Timer that handles stopping the worker if script has excceed the max execution time
+     *
+     * @var TimerInterface
+     */
+    private $maxExecutionTimer;
+
+    /**
      * @var Slave instance
      */
     private $slave;
@@ -64,13 +79,14 @@ class RequestHandler
     private $incomingBuffer = '';
     private $lastOutgoingData = ''; // Used to track abnormal responses
 
-    public function __construct($socketPath, LoopInterface $loop, OutputInterface $output, SlavePool $slaves)
+    public function __construct($socketPath, LoopInterface $loop, OutputInterface $output, SlavePool $slaves, $maxExecutionTime)
     {
         $this->setSocketPath($socketPath);
 
         $this->loop = $loop;
         $this->output = $output;
         $this->slaves = $slaves;
+        $this->maxExecutionTime = $maxExecutionTime;
     }
 
     /**
@@ -86,6 +102,9 @@ class RequestHandler
         $this->incoming->on('close', function () {
             $this->connectionOpen = false;
         });
+        if ($this->maxExecutionTime > 0) {
+            $this->maxExecutionTimer = $this->loop->addTimer($this->maxExecutionTime, [$this, 'maxExecutionTimeExceeded']);
+        }
 
         $this->start = microtime(true);
         $this->requestSentAt = microtime(true);
@@ -236,6 +255,25 @@ class RequestHandler
     }
 
     /**
+     * Stop the worker if the max execution time has been exceeded and return 504
+     */
+    public function maxExecutionTimeExceeded()
+    {
+        // client went away while waiting for worker
+        if (!$this->connectionOpen) {
+            return false;
+        }
+
+        $this->incoming->write($this->createErrorResponse('504 Gateway Timeout', 'Maximum execution time exceeded'));
+        $this->lastOutgoingData = 'not empty'; // Avoid triggering 502
+
+        // mark slave as closed
+        $this->slave->close();
+        $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Closing worker.', $this->maxExecutionTime));
+        $this->slave->getConnection()->close();
+    }
+
+    /**
      * Handle slave disconnected
      *
      * Typically called after slave has finished handling request
@@ -252,6 +290,9 @@ class RequestHandler
             $this->incoming->write($this->createErrorResponse('502 Bad Gateway', 'Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?'));
         }
         $this->incoming->end();
+        if ($this->maxExecutionTime > 0) {
+            $this->loop->cancelTimer($this->maxExecutionTimer);
+        }
 
         if ($this->slave->getStatus() === Slave::LOCKED) {
             // slave was locked, so mark as closed now.
