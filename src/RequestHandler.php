@@ -76,6 +76,7 @@ class RequestHandler
 
     private $connectionOpen = true;
     private $redirectionTries = 0;
+    private $maxRedirectionTries = 3;
     private $incomingBuffer = '';
     private $lastOutgoingData = ''; // Used to track abnormal responses
 
@@ -149,7 +150,7 @@ class RequestHandler
             $slave = array_shift($available);
 
             // slave available -> connect
-            if (!$this->tryOccupySlave($slave)) {
+            if (!$this->tryOccupySlave($slave) && !$this->redirectionTries > $this->maxRedirectionTries) {
                 return $this->getNextSlave();
             }
         } else {
