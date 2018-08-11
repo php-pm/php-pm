@@ -142,26 +142,30 @@ class RequestHandler
      */
     public function getNextSlave()
     {
-        $available = $this->slaves->getByStatus(Slave::READY);
+        // client went away while waiting for worker
+        if (!$this->connectionOpen) {
+            return;
+        }
 
+        $available = $this->slaves->getByStatus(Slave::READY);
         if (count($available)) {
             // pick first slave
             $slave = array_shift($available);
 
             // slave available -> connect
-            if (!$this->tryOccupySlave($slave)) {
-                return $this->getNextSlave();
+            if ($this->tryOccupySlave($slave)) {
+                return;
             }
+        }
+
+        // keep retrying until slave becomes available, unless timeout has been exceeded
+        if (time() < ($this->requestSentAt + $this->timeout)) {
+            $this->loop->futureTick([$this, 'getNextSlave']);
         } else {
-            // keep retrying until slave becomes available, unless timeout has been exceeded
-            if (time() < ($this->requestSentAt + $this->timeout)) {
-                $this->loop->futureTick([$this, 'getNextSlave']);
-            } else {
-                // Return a "503 Service Unavailable" response
-                $this->output->writeln(sprintf('No slaves available to handle the request and timeout %d seconds exceeded', $this->timeout));
-                $this->incoming->write($this->createErrorResponse('503 Service Temporarily Unavailable', 'Service Temporarily Unavailable'));
-                $this->incoming->end();
-            }
+            // Return a "503 Service Unavailable" response
+            $this->output->writeln(sprintf('No slaves available to handle the request and timeout %d seconds exceeded', $this->timeout));
+            $this->incoming->write($this->createErrorResponse('503 Service Temporarily Unavailable', 'Service Temporarily Unavailable'));
+            $this->incoming->end();
         }
     }
 
@@ -197,11 +201,6 @@ class RequestHandler
         }
 
         $this->redirectionTries++;
-
-        // client went away while waiting for worker
-        if (!$this->connectionOpen) {
-            return false;
-        }
 
         $this->slave = $slave;
 
