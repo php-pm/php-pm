@@ -71,6 +71,13 @@ class ProcessManager
     protected $maxExecutionTime = 30;
 
     /**
+     * Maximum amount of memory a worker is allowed to consume before shutting down
+     *
+     * @var int
+     */
+    protected $memoryLimit = 256;
+
+    /**
      * Worker time to live
      *
      * @var int|null
@@ -330,6 +337,22 @@ class ProcessManager
     public function setMaxExecutionTime($maxExecutionTime)
     {
         $this->maxExecutionTime = $maxExecutionTime;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMemoryLimit()
+    {
+        return $this->memoryLimit;
+    }
+
+    /**
+     * @param int $memoryLimit
+     */
+    public function setMemoryLimit($memoryLimit)
+    {
+        $this->memoryLimit = $memoryLimit;
     }
 
     /**
@@ -1134,6 +1157,7 @@ class ProcessManager
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
+            'memory-limit' => $this->getMemoryLimit(),
             'static-directory' => $this->getStaticDirectory(),
             'populate-server-var' => $this->isPopulateServer()
         ];

@@ -147,6 +147,14 @@ class ProcessSlave
     }
 
     /**
+     * @return int
+     */
+    public function getMemoryLimit()
+    {
+        return $this->config['memory-limit'];
+    }
+
+    /**
      * Shuts down the event loop. This basically exits the process.
      */
     public function shutdown()
@@ -441,6 +449,16 @@ class ProcessSlave
             );
             $this->shutdown();
         }
+        // Enforce memory limit
+        $this->loop->futureTick(function() {
+            $usedMemory = round(memory_get_usage(true)/1048576,2); // Convert to MB
+            if($usedMemory >= $this->getMemoryLimit()) {
+                error_log(
+                    sprintf('Restart worker because it reached memory limit of %d', $this->getMemoryLimit())
+                );
+                $this->shutdown();
+            }
+        });
         return $response;
     }
 
