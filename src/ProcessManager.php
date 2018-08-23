@@ -340,14 +340,6 @@ class ProcessManager
     }
 
     /**
-     * @return int
-     */
-    public function getMemoryLimit()
-    {
-        return $this->memoryLimit;
-    }
-
-    /**
      * @param int $memoryLimit
      */
     public function setMemoryLimit($memoryLimit)
@@ -842,6 +834,22 @@ class ProcessManager
     }
 
     /**
+     * Receive stats from the worker such as current memory use
+     *
+     * @param array      $data
+     * @param ConnectionInterface $conn
+     */
+    protected function commandStats(array $data, ConnectionInterface $conn)
+    {
+        try {
+            $slave = $this->slaves->getByConnection($conn);
+            $slave->setUsedMemory($data['memory_usage']);
+        } catch (\Exception $e) {
+            // silent
+        }
+    }
+
+    /**
      * Handles failed application bootstraps.
      *
      * @param int $port
@@ -1157,7 +1165,6 @@ class ProcessManager
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
-            'memory-limit' => $this->getMemoryLimit(),
             'static-directory' => $this->getStaticDirectory(),
             'populate-server-var' => $this->isPopulateServer()
         ];
@@ -1217,7 +1224,7 @@ EOF;
         // use exec to omit wrapping shell
         $process = new Process($commandline);
 
-        $slave = new Slave($port, $this->maxRequests, $this->ttl);
+        $slave = new Slave($port, $this->maxRequests, $this->memoryLimit, $this->ttl);
         $slave->attach($process);
         $this->slaves->add($slave);
 
