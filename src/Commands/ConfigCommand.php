@@ -20,10 +20,11 @@ class ConfigCommand extends Command
 
         $this
             ->setName('config')
-            ->addOption('show-option', null, InputOption::VALUE_REQUIRED, 'Instead of writing the config, only show the given option.', '')
+            ->addOption('show-option', null, InputOption::VALUE_REQUIRED, 'Instead of writing the config, only show the given option.')
             ->setDescription('Configure config file, default - ppm.json');
 
-        $this->configurePPMOptions($this);
+        $this->configureStartupAndAccessOptions($this);
+        $this->configureConfigOptions($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -34,8 +35,12 @@ class ConfigCommand extends Command
         }
         $config = $this->loadConfig($input, $output);
 
-        if ($input->getOption('show-option')) {
-            echo $config[$input->getOption('show-option')];
+        if ($option = $input->getOption('show-option')) {
+            if (!$input->hasOption($option)) {
+                throw new \InvalidArgumentException(sprintf('Invalid option %s', $option));
+            }
+
+            echo $config[$option];
             exit(0);
         }
 
