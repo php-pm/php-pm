@@ -60,7 +60,7 @@ class Slave
      *
      * @var int
      */
-    private $memoryLimit = 256;
+    private $memoryLimit = -1;
 
     /**
      * Number of handled requests

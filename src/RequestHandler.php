@@ -316,7 +316,7 @@ class RequestHandler
             }
             // Enforce memory limit
             $memoryLimit = $this->slave->getMemoryLimit();
-            if ($this->slave->getUsedMemory() >= $memoryLimit) {
+            if ($memoryLimit > 0 && $this->slave->getUsedMemory() >= $memoryLimit) {
                 $this->slave->close();
                 $this->output->writeln(sprintf('Restart worker #%d because it reached memory limit of %d', $this->slave->getPort(), $memoryLimit));
                 $connection->close();

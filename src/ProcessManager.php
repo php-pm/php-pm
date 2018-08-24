@@ -75,7 +75,7 @@ class ProcessManager
      *
      * @var int
      */
-    protected $memoryLimit = 256;
+    protected $memoryLimit = -1;
 
     /**
      * Worker time to live
@@ -844,6 +844,15 @@ class ProcessManager
         try {
             $slave = $this->slaves->getByConnection($conn);
             $slave->setUsedMemory($data['memory_usage']);
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(
+                    sprintf(
+                        'Current memory usage for worker %d: %.2f MB',
+                        $slave->getPort(),
+                        $data['memory_usage']
+                    )
+                );
+            }
         } catch (\Exception $e) {
             // silent
         }

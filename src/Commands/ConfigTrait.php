@@ -26,7 +26,7 @@ trait ConfigTrait
             ->addOption('static-directory', null, InputOption::VALUE_REQUIRED, 'Static files root directory, if not provided static files will not be served', '')
             ->addOption('max-requests', null, InputOption::VALUE_REQUIRED, 'Max requests per worker until it will be restarted', 1000)
             ->addOption('max-execution-time', null, InputOption::VALUE_REQUIRED, 'Maximum amount of time a request is allowed to execute before shutting down', 30)
-            ->addOption('memory-limit', null, InputOption::VALUE_REQUIRED, 'Maximum amount of memory a worker is allowed to consume (in MB) before shutting down', 256)
+            ->addOption('memory-limit', null, InputOption::VALUE_REQUIRED, 'Maximum amount of memory a worker is allowed to consume (in MB) before shutting down', -1)
             ->addOption('ttl', null, InputOption::VALUE_REQUIRED, 'Time to live for a worker until it will be restarted', null)
             ->addOption('populate-server-var', null, InputOption::VALUE_REQUIRED, 'If a worker application uses $_SERVER var it needs to be populated by request data 1|0', 1)
             ->addOption('bootstrap', null, InputOption::VALUE_REQUIRED, 'Class responsible for bootstrapping the application', 'PHPPM\Bootstraps\Symfony')
