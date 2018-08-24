@@ -71,6 +71,13 @@ class ProcessManager
     protected $maxExecutionTime = 30;
 
     /**
+     * Maximum amount of memory a worker is allowed to consume before shutting down
+     *
+     * @var int
+     */
+    protected $memoryLimit = -1;
+
+    /**
      * Worker time to live
      *
      * @var int|null
@@ -330,6 +337,14 @@ class ProcessManager
     public function setMaxExecutionTime($maxExecutionTime)
     {
         $this->maxExecutionTime = $maxExecutionTime;
+    }
+
+    /**
+     * @param int $memoryLimit
+     */
+    public function setMemoryLimit($memoryLimit)
+    {
+        $this->memoryLimit = $memoryLimit;
     }
 
     /**
@@ -819,6 +834,31 @@ class ProcessManager
     }
 
     /**
+     * Receive stats from the worker such as current memory use
+     *
+     * @param array      $data
+     * @param ConnectionInterface $conn
+     */
+    protected function commandStats(array $data, ConnectionInterface $conn)
+    {
+        try {
+            $slave = $this->slaves->getByConnection($conn);
+            $slave->setUsedMemory($data['memory_usage']);
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(
+                    sprintf(
+                        'Current memory usage for worker %d: %.2f MB',
+                        $slave->getPort(),
+                        $data['memory_usage']
+                    )
+                );
+            }
+        } catch (\Exception $e) {
+            // silent
+        }
+    }
+
+    /**
      * Handles failed application bootstraps.
      *
      * @param int $port
@@ -1193,7 +1233,7 @@ EOF;
         // use exec to omit wrapping shell
         $process = new Process($commandline);
 
-        $slave = new Slave($port, $this->maxRequests, $this->ttl);
+        $slave = new Slave($port, $this->maxRequests, $this->memoryLimit, $this->ttl);
         $slave->attach($process);
         $this->slaves->add($slave);
 

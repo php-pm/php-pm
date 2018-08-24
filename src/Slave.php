@@ -56,11 +56,25 @@ class Slave
     private $maxRequests = 0;
 
     /**
+     * Maximum amount of memory the slave can consume
+     *
+     * @var int
+     */
+    private $memoryLimit = -1;
+
+    /**
      * Number of handled requests
      *
      * @var int
      */
     private $handledRequests = 0;
+
+    /**
+     * Amount of memory last consumed by the worker
+     *
+     * @var int
+     */
+    private $usedMemory = 0;
 
     /**
      * Time to live
@@ -76,10 +90,11 @@ class Slave
      */
     private $startedAt;
 
-    public function __construct($port, $maxRequests, $ttl = null)
+    public function __construct($port, $maxRequests, $memoryLimit, $ttl = null)
     {
         $this->port = $port;
         $this->maxRequests = $maxRequests;
+        $this->memoryLimit = $memoryLimit;
         $this->ttl = ((int) $ttl < 1) ? null : $ttl;
         $this->startedAt = time();
 
@@ -250,6 +265,24 @@ class Slave
     }
 
     /**
+     * Get the amount of memory the worker is currently consuming
+     *
+     * @return int amount of memory in MB
+     */
+    public function getUsedMemory()
+    {
+        return $this->usedMemory;
+    }
+
+    /**
+     * @param int $usedMemory
+     */
+    public function setUsedMemory($usedMemory)
+    {
+        $this->usedMemory = $usedMemory;
+    }
+
+    /**
      * Get maximum number of request slave can handle
      *
      * @return int handled requests
@@ -257,6 +290,16 @@ class Slave
     public function getMaxRequests()
     {
         return $this->maxRequests;
+    }
+
+    /**
+     * Get maximum amount of memory the slave can consume
+     *
+     * @return int amount of memory in MB
+     */
+    public function getMemoryLimit()
+    {
+        return $this->memoryLimit;
     }
 
     /**
