@@ -8,6 +8,10 @@ php:
   - 7.1
   - 7.2
 
+stages:
+  - lint
+  - test
+
 install:
   - composer validate
   - composer install
