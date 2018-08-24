@@ -33,8 +33,14 @@ script:
 
   ## Daemon mode
   - bin/ppm start --workers=1 --bridge=StaticBridge --static-directory=web --max-requests=1 -v -d
+  - sleep 5
   - curl -v -f "http://127.0.0.1:8080"
-  - bin/ppm status
+  - |
+    bin/ppm status | grep "total:\s1"
+  - bin/ppm reload --workers=2
+  - sleep 5
+  - |
+    bin/ppm status | grep "total:\s2"
   - bin/ppm stop
   - cat ppm.log
 
@@ -85,12 +91,6 @@ jobs:
         # Check the code style
         - IFS=$'\n'; COMMIT_SCA_FILES=($(git diff --name-only --diff-filter=ACMRTUXB "${TRAVIS_COMMIT_RANGE}")); unset IFS
         - ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --diff --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}"
-    - stage: dependencies
-      php: 7.0
-      install:
-        - composer install --prefer-lowest
-      script:
-        - ./vendor/bin/phpunit
 
 # Cache package sources
 cache:
