@@ -22,6 +22,8 @@ trait ConfigTrait
             ->addOption('workers', null, InputOption::VALUE_REQUIRED, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', 8)
             ->addOption('app-env', null, InputOption::VALUE_REQUIRED, 'The environment that your application will use to bootstrap (if any)', 'dev')
             ->addOption('debug', null, InputOption::VALUE_REQUIRED, 'Enable/Disable debugging so that your application is more verbose, enables also hot-code reloading. 1|0', 0)
+            ->addOption('daemonize', 'd', InputOption::VALUE_NONE, 'Run in background')
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Logfile (daemon mode only)', './ppm.log')
             ->addOption('logging', null, InputOption::VALUE_REQUIRED, 'Enable/Disable http logging to stdout. 1|0', 1)
             ->addOption('static-directory', null, InputOption::VALUE_REQUIRED, 'Static files root directory, if not provided static files will not be served', '')
             ->addOption('max-requests', null, InputOption::VALUE_REQUIRED, 'Max requests per worker until it will be restarted', 1000)

@@ -529,10 +529,22 @@ class ProcessManager
         $pid = pcntl_waitpid(-1, $status, WNOHANG);
     }
 
+    /**
+     * Write pid file
+     */
     public function writePid()
     {
         $pid = getmypid();
-        file_put_contents($this->pidfile, $pid);
+
+        if (file_exists($this->pidfile)) {
+            throw new \InvalidArgumentException(sprintf("PID file '%s' already exists", $this->pidfile));
+        }
+        if (!is_writable(dirname($this->pidfile))) {
+            throw new \InvalidArgumentException(sprintf("PID file '%s' not writable", $this->pidfile));
+        }
+        if (false === file_put_contents($this->pidfile, $pid)) {
+            throw new \Exception(sprintf("Failed writing PID file '%s'", $this->pidfile));
+        }
     }
 
     /**
@@ -1191,7 +1203,7 @@ set_time_limit(0);
 require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
-    
+
 if (!pcntl_installed()) {
     error_log(
         sprintf(

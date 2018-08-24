@@ -6,11 +6,13 @@ use PHPPM\ProcessManager;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class StartCommand extends Command
 {
     use ConfigTrait;
+    use DaemonTrait;
 
     /**
      * {@inheritdoc}
@@ -30,6 +32,20 @@ class StartCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        if ($input->getOption('daemonize')) {
+            $isChild = $this->daemonize();
+            if (!$isChild) {
+                if ($output->isVerbose()) {
+                    $output->writeln('Daemonized');
+                }
+                return null;
+            }
+
+            // children shouldn't hold onto parents input/output
+            $input  = $this->recreateInput($input);
+            $output = $this->recreateOutput($output, $input->getOption('logfile'));
+        }
+
         $config = $this->initializeConfig($input, $output);
 
         $handler = new ProcessManager($output, $config['port'], $config['host'], $config['workers']);
