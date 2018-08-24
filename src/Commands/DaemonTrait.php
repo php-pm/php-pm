@@ -3,7 +3,9 @@
 namespace PHPPM\Commands;
 
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\StreamOutput;
 
 trait DaemonTrait
 {
