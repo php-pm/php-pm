@@ -21,6 +21,9 @@ class TestBridge extends StaticBridge
         if(isset($params['sleep'])) {
             sleep($params['sleep']);
         }
+        if(isset($params['memory'])) { // Allocate MB
+            $longvar =  str_repeat('Lorem Ipsum', $params['memory']*1048576); // Create a multi-megabyte string
+        }
         return new Psr7\Response(404, ['Content-type' => 'text/plain'], 'Not found');
     }
 }
