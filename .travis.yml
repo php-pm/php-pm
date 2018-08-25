@@ -30,11 +30,13 @@ script:
   - sleep 5
   # Memory limit: Nothing should happen
   - curl -f --silent "http://127.0.0.1:8080/test?memory=0" &
+  - sleep 5
   - bash -c 'grep -q "because it reached memory limit of 5" /tmp/ppmout || exit 0'
   - bin/ppm status
   - sleep 5
   # Memory limit: Worker should restart
   - curl -f --silent "http://127.0.0.1:8080/test?memory=10" &
+  - sleep 5
   - bash -c 'grep -q "because it reached memory limit of 5" /tmp/ppmout && exit 0'
   - bin/ppm status
   - bin/ppm stop
