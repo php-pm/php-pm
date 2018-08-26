@@ -256,7 +256,7 @@ class ProcessManager
         $this->output->writeln("<info>Server is shutting down.</info>");
         $this->status = self::STATE_SHUTDOWN;
 
-        $remainingSlaves = $this->slaveCount;
+        $remainingSlaves = count($this->slaves->getByStatus(Slave::READY));
 
         if ($remainingSlaves === 0) {
             // if for some reason there are no workers, the close callback won't do anything, so just quit.
