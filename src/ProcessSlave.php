@@ -427,10 +427,21 @@ class ProcessSlave
         if ($bridge = $this->getBridge()) {
             try {
                 $response = $bridge->handle($request);
-            } catch (\Exception $exception) {
+            } catch (\Throwable $t) {
+                // PHP >= 7.0
                 error_log(
                     'An exception was thrown by the bridge. Force restart of the worker. The exception was: ' .
-                    (string)$exception
+                    (string)$t
+                );
+                $response = new Response(500, [], 'Unexpected error');
+
+                @ob_end_clean();
+                $this->shutdown();
+            } catch (\Exception $e) {
+                // PHP < 7.0
+                error_log(
+                    'An exception was thrown by the bridge. Force restart of the worker. The exception was: ' .
+                    (string)$e
                 );
                 $response = new Response(500, [], 'Unexpected error');
 
