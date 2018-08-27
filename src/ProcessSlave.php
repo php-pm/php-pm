@@ -425,7 +425,16 @@ class ProcessSlave
         }
 
         if ($bridge = $this->getBridge()) {
-            $response = $bridge->handle($request);
+            try {
+                $response = $bridge->handle($request);
+            } catch (\Exception $exception) {
+                error_log(
+                    'An exception was thrown by the bridge. Force restart of the worker. The exception was: ' .
+                    (string)$exception
+                );
+                @ob_end_clean();
+                $this->shutdown();
+            }
             $this->sendCurrentFiles();
         } else {
             $response = new Response(404, [], 'No Bridge defined');
