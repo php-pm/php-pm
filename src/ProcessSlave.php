@@ -432,6 +432,8 @@ class ProcessSlave
                     'An exception was thrown by the bridge. Force restart of the worker. The exception was: ' .
                     (string)$exception
                 );
+                $response = new Psr7\Response(500, ['Content-type' => 'text/plain'], 'Unexpected error');
+
                 @ob_end_clean();
                 $this->shutdown();
             }
