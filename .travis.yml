@@ -41,7 +41,7 @@ script:
   - bin/ppm status
   - bin/ppm stop
   ## Trigger 502 error by triggering an exit() in the worker
-  - bin/ppm start --workers=1 --bridge=PHPPM\\Tests\\TestBridge --static-directory=web --max-requests=1 --max-execution-time=15 -v &
+  - bin/ppm start --workers=1 --bridge=PHPPM\\Tests\\TestBridge --static-directory=web --max-requests=1 --max-execution-time=15 -v > /tmp/ppmout &
   - sleep 5
   - bash -c 'if [[ $(curl --write-out %{http_code} --silent --output /dev/null "http://127.0.0.1:8080/test?exit_prematurely=1") == "502" ]]; then exit 0; else exit 1; fi'
   - bin/ppm status
@@ -51,6 +51,11 @@ script:
   - bin/ppm status
   ## Trigger 504 error by making a sleep request and waiting until the timeout
   - bash -c 'if [[ $(curl --write-out %{http_code} --silent --output /dev/null "http://127.0.0.1:8080/test?sleep=10000") == "504" ]]; then exit 0; else exit 1; fi'
+  - bin/ppm status
+  ## Trigger 502 error by making the bridge throw an exception
+  - bash -c 'if [[ $(curl --write-out %{http_code} --silent --output /dev/null "http://127.0.0.1:8080/test?exception=1") == "502" ]]; then exit 0; else exit 1; fi'
+  - bash -c 'grep -q "An exception was thrown by the bridge. Forcing restart of the worker. The exception was" /tmp/ppmout && exit 0'
+  - bash -c 'grep -q "This is a very bad exception" /tmp/ppmout && exit 0'
   - bin/ppm status
   - bin/ppm stop
 

@@ -425,7 +425,29 @@ class ProcessSlave
         }
 
         if ($bridge = $this->getBridge()) {
-            $response = $bridge->handle($request);
+            try {
+                $response = $bridge->handle($request);
+            } catch (\Throwable $t) {
+                // PHP >= 7.0
+                error_log(
+                    'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
+                    (string)$t
+                );
+                $response = new Response(500, [], 'Unexpected error');
+
+                @ob_end_clean();
+                $this->shutdown();
+            } catch (\Exception $e) {
+                // PHP < 7.0
+                error_log(
+                    'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
+                    (string)$e
+                );
+                $response = new Response(500, [], 'Unexpected error');
+
+                @ob_end_clean();
+                $this->shutdown();
+            }
             $this->sendCurrentFiles();
         } else {
             $response = new Response(404, [], 'No Bridge defined');
@@ -436,7 +458,7 @@ class ProcessSlave
             //trying to send headers again will fail (headers already sent fatal). Its best to not even
             //try to send headers because this break the whole approach of php-pm using php-cgi.
             error_log(
-                'Headers have been sent, but not redirected to client. Force restart of a worker. ' .
+                'Headers have been sent, but not redirected to client. Forcing restart of the worker. ' .
                 'Make sure your application does not send headers on its own.'
             );
             $this->shutdown();

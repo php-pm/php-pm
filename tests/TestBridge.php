@@ -24,6 +24,9 @@ class TestBridge extends StaticBridge
         if(isset($params['memory'])) { // Allocate MB
             $longvar =  str_repeat('Lorem Ipsum', $params['memory']*1048576); // Create a multi-megabyte string
         }
+        if(isset($params['exception'])) {
+            throw new \Exception('This is a very bad exception');
+        }
         return new Psr7\Response(404, ['Content-type' => 'text/plain'], 'Not found');
     }
 }
