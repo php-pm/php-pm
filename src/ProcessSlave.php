@@ -433,20 +433,20 @@ class ProcessSlave
                     'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
                     (string)$t
                 );
+                $response = new Response(500, [], 'Unexpected error');
 
                 @ob_end_clean();
                 $this->shutdown();
-                return;
             } catch (\Exception $e) {
                 // PHP < 7.0
                 error_log(
                     'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
                     (string)$e
                 );
+                $response = new Response(500, [], 'Unexpected error');
 
                 @ob_end_clean();
                 $this->shutdown();
-                return;
             }
             $this->sendCurrentFiles();
         } else {
