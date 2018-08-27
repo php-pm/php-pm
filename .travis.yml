@@ -52,6 +52,9 @@ script:
   ## Trigger 504 error by making a sleep request and waiting until the timeout
   - bash -c 'if [[ $(curl --write-out %{http_code} --silent --output /dev/null "http://127.0.0.1:8080/test?sleep=10000") == "504" ]]; then exit 0; else exit 1; fi'
   - bin/ppm status
+  ## Trigger 500 error by making the bridge throw an exception
+  - bash -c 'if [[ $(curl --silent "http://127.0.0.1:8080/test?exception=1") == "Unexpected error" ]]; then exit 0; else exit 1; fi'
+  - bin/ppm status
   - bin/ppm stop
 
 matrix:
