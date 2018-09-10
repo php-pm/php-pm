@@ -149,7 +149,7 @@ class ProcessSlave
     /**
      * Shuts down the event loop. This basically exits the process.
      */
-    public function shutdown()
+    public function prepareShutdown()
     {
         if ($this->inShutdown) {
             return;
@@ -187,18 +187,28 @@ class ProcessSlave
 
         $this->inShutdown = true;
 
-        if ($this->server) {
-            @$this->server->close();
-        }
         if ($this->controller && $this->controller->isWritable()) {
             $this->controller->close();
         }
-
-        if (!$this->loop) {
-            exit;
+        if ($this->server) {
+            @$this->server->close();
         }
 
+        if (!$this->loop) {
+            return;
+        }
+
+        $this->sendCurrentFiles();
         $this->loop->stop();
+    }
+
+    /**
+     * Shuts down the event loop. This basically exits the process.
+     */
+    public function shutdown()
+    {
+        $this->prepareShutdown();
+        exit;
     }
 
     /**
@@ -295,13 +305,10 @@ class ProcessSlave
 
                 $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
                 $this->loop->addSignal(SIGINT, [$this, 'shutdown']);
-                register_shutdown_function([$this, 'shutdown']);
+                register_shutdown_function([$this, 'prepareShutdown']);
 
                 $this->bindProcessMessage($this->controller);
-                $this->controller->on('close', function () {
-                    $this->shutdown();
-                    exit;
-                });
+                $this->controller->on('close', [$this, 'shutdown']);
 
                 // port is the slave identifier
                 $port = $this->config['port'];
@@ -435,7 +442,6 @@ class ProcessSlave
 
                 @ob_end_clean();
                 $this->shutdown();
-                exit;
             } catch (\Exception $e) {
                 // PHP < 7.0
                 error_log(
@@ -446,7 +452,6 @@ class ProcessSlave
 
                 @ob_end_clean();
                 $this->shutdown();
-                exit;
             }
             $this->sendCurrentFiles();
         } else {
@@ -462,7 +467,6 @@ class ProcessSlave
                 'Make sure your application does not send headers on its own.'
             );
             $this->shutdown();
-            exit;
         }
         $this->sendMessage($this->controller, 'stats', ['memory_usage' => round(memory_get_peak_usage(true)/1048576, 2)]); // Convert memory usage to MB
         return $response;
