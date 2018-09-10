@@ -187,23 +187,18 @@ class ProcessSlave
 
         $this->inShutdown = true;
 
-        if ($this->controller && $this->controller->isWritable()) {
-            $this->controller->close();
-        }
         if ($this->server) {
             @$this->server->close();
+        }
+        if ($this->controller && $this->controller->isWritable()) {
+            $this->controller->close();
         }
 
         if (!$this->loop) {
             exit;
         }
 
-        $this->loop->futureTick(function () {
-            // watch source files with potentially fatal error for changes
-            $this->sendCurrentFiles();
-            $this->loop->stop();
-            exit;
-        });
+        $this->loop->stop();
     }
 
     /**
@@ -303,7 +298,10 @@ class ProcessSlave
                 register_shutdown_function([$this, 'shutdown']);
 
                 $this->bindProcessMessage($this->controller);
-                $this->controller->on('close', [$this, 'shutdown']);
+                $this->controller->on('close', function () {
+                    $this->shutdown();
+                    exit;
+                });
 
                 // port is the slave identifier
                 $port = $this->config['port'];
@@ -437,6 +435,7 @@ class ProcessSlave
 
                 @ob_end_clean();
                 $this->shutdown();
+                exit;
             } catch (\Exception $e) {
                 // PHP < 7.0
                 error_log(
@@ -447,6 +446,7 @@ class ProcessSlave
 
                 @ob_end_clean();
                 $this->shutdown();
+                exit;
             }
             $this->sendCurrentFiles();
         } else {
@@ -462,6 +462,7 @@ class ProcessSlave
                 'Make sure your application does not send headers on its own.'
             );
             $this->shutdown();
+            exit;
         }
         $this->sendMessage($this->controller, 'stats', ['memory_usage' => round(memory_get_peak_usage(true)/1048576, 2)]); // Convert memory usage to MB
         return $response;
