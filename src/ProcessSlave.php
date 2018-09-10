@@ -196,11 +196,9 @@ class ProcessSlave
             @$this->server->close();
         }
 
-        if (!$this->loop) {
-            return;
+        if ($this->loop) {
+            $this->loop->stop();
         }
-
-        $this->loop->stop();
     }
 
     /**
