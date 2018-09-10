@@ -187,6 +187,8 @@ class ProcessSlave
 
         $this->inShutdown = true;
 
+        $this->sendCurrentFiles();
+
         if ($this->controller && $this->controller->isWritable()) {
             $this->controller->close();
         }
@@ -198,7 +200,6 @@ class ProcessSlave
             return;
         }
 
-        $this->sendCurrentFiles();
         $this->loop->stop();
     }
 
