@@ -56,6 +56,7 @@ script:
   - bash -c 'if [[ $(curl --write-out %{http_code} --silent --output /dev/null "http://127.0.0.1:8080/test?exception=1") == "502" ]]; then exit 0; else exit 1; fi'
   - bash -c 'grep -q "An exception was thrown by the bridge. Forcing restart of the worker. The exception was" /tmp/ppmout && exit 0'
   - bash -c 'grep -q "This is a very bad exception" /tmp/ppmout && exit 0'
+  - bash -c 'grep -q "Shutdown function triggered" /tmp/ppmoutshutdownfunc && exit 0'
   - bin/ppm status
   - bin/ppm stop
 
