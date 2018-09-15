@@ -23,12 +23,16 @@
     },
     "autoload": {
         "psr-4": {
-            "PHPPM\\": "src",
-            "PHPPM\\Tests\\": "tests"
+            "PHPPM\\": "src"
         },
         "files": [
             "src/functions.php"
         ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PHPPM\\Tests\\": "tests"
+        }
     },
     "suggest": {
         "php-pm/httpkernel-adapter": "HttpKernel adapter for Symfony and Laravel frameworks"
