@@ -149,7 +149,7 @@ class ProcessSlave
     /**
      * Shuts down the event loop. This basically exits the process.
      */
-    public function shutdown()
+    public function prepareShutdown()
     {
         if ($this->inShutdown) {
             return;
@@ -187,6 +187,8 @@ class ProcessSlave
 
         $this->inShutdown = true;
 
+        $this->sendCurrentFiles();
+
         if ($this->controller && $this->controller->isWritable()) {
             $this->controller->close();
         }
@@ -194,16 +196,18 @@ class ProcessSlave
             @$this->server->close();
         }
 
-        if (!$this->loop) {
-            exit;
-        }
-
-        $this->loop->futureTick(function () {
-            // watch source files with potentially fatal error for changes
-            $this->sendCurrentFiles();
+        if ($this->loop) {
             $this->loop->stop();
-            exit;
-        });
+        }
+    }
+
+    /**
+     * Shuts down the event loop. This basically exits the process.
+     */
+    public function shutdown()
+    {
+        $this->prepareShutdown();
+        exit;
     }
 
     /**
@@ -300,7 +304,7 @@ class ProcessSlave
 
                 $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
                 $this->loop->addSignal(SIGINT, [$this, 'shutdown']);
-                register_shutdown_function([$this, 'shutdown']);
+                register_shutdown_function([$this, 'prepareShutdown']);
 
                 $this->bindProcessMessage($this->controller);
                 $this->controller->on('close', [$this, 'shutdown']);
