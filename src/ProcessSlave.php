@@ -189,6 +189,9 @@ class ProcessSlave
 
         $this->sendCurrentFiles();
 
+        // $this->controller->close() is no longer called here, because it prevented
+        // shutdown functions from triggering (see https://github.com/php-pm/php-pm/pull/432)
+
         if ($this->server) {
             @$this->server->close();
         }
