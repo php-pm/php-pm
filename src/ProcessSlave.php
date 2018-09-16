@@ -195,10 +195,6 @@ class ProcessSlave
      */
     public function shutdown()
     {
-        if ($this->inShutdown) {
-            return;
-        }
-
         $this->prepareShutdown();
 
         if ($this->controller && $this->controller->isWritable()) {
