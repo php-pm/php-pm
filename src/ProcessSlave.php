@@ -188,18 +188,6 @@ class ProcessSlave
         $this->inShutdown = true;
 
         $this->sendCurrentFiles();
-    }
-
-    /**
-     * Shuts down the event loop. This basically exits the process.
-     */
-    public function shutdown()
-    {
-        $this->prepareShutdown();
-
-        if ($this->controller && $this->controller->isWritable()) {
-            $this->controller->close();
-        }
 
         if ($this->server) {
             @$this->server->close();
@@ -208,7 +196,18 @@ class ProcessSlave
         if ($this->loop) {
             $this->loop->stop();
         }
+    }
 
+    /**
+     * Shuts down the event loop. This basically exits the process.
+     */
+    public function shutdown()
+    {
+        if ($this->inShutdown) {
+            return;
+        }
+
+        $this->prepareShutdown();
         exit;
     }
 
