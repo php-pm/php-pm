@@ -152,7 +152,7 @@ class ProcessSlave
     public function prepareShutdown()
     {
         if ($this->inShutdown) {
-            return;
+            return false;
         }
 
         if ($this->errorLogger && $logs = $this->errorLogger->cleanLogs()) {
@@ -189,6 +189,9 @@ class ProcessSlave
 
         $this->sendCurrentFiles();
 
+        if ($this->controller && $this->controller->isWritable()) {
+            $this->controller->close();
+        }
         if ($this->server) {
             @$this->server->close();
         }
@@ -196,6 +199,8 @@ class ProcessSlave
         if ($this->loop) {
             $this->loop->stop();
         }
+
+        return true;
     }
 
     /**
@@ -203,12 +208,9 @@ class ProcessSlave
      */
     public function shutdown()
     {
-        if ($this->inShutdown) {
-            return;
+        if ($this->prepareShutdown()) {
+            exit;
         }
-
-        $this->prepareShutdown();
-        exit;
     }
 
     /**
