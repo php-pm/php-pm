@@ -189,9 +189,6 @@ class ProcessSlave
 
         $this->sendCurrentFiles();
 
-        if ($this->controller && $this->controller->isWritable()) {
-            $this->controller->close();
-        }
         if ($this->server) {
             @$this->server->close();
         }
