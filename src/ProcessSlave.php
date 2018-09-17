@@ -148,6 +148,7 @@ class ProcessSlave
 
     /**
      * Shuts down the event loop. This basically exits the process.
+     * @return boolean
      */
     public function prepareShutdown()
     {
