@@ -523,37 +523,34 @@ class ProcessSlave
 
         $filePath = $this->getStaticDirectory() . $path;
 
-        if (!file_exists($filePath)) {
+        if (substr($filePath, -4) === '.php' || !is_file($filePath)) {
             return false;
         }
 
-        if (substr($filePath, -4) !== '.php' && is_file($filePath)) {
-            $mTime = filemtime($filePath);
+        $mTime = filemtime($filePath);
 
-            if ($request->hasHeader('If-Modified-Since')) {
-                $ifModifiedSince = $request->getHeaderLine('If-Modified-Since');
-                if ($ifModifiedSince && strtotime($ifModifiedSince) === $mTime) {
-                    // Client's cache IS current, so we just respond '304 Not Modified'.
-                    $response = new Response(304, [
-                        'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
-                    ]);
-                    return $response;
-                }
+        if ($request->hasHeader('If-Modified-Since')) {
+            $ifModifiedSince = $request->getHeaderLine('If-Modified-Since');
+            if ($ifModifiedSince && strtotime($ifModifiedSince) === $mTime) {
+                // Client's cache IS current, so we just respond '304 Not Modified'.
+                $response = new Response(304, [
+                    'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
+                ]);
+                return $response;
             }
-
-            $expires = 3600; //1 h
-            $response = new Response(200, [
-                'Content-Type' => $this->mimeContentType($filePath),
-                'Content-Length' => filesize($filePath),
-                'Pragma' => 'public',
-                'Cache-Control' => 'max-age=' . $expires,
-                'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
-                'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
-            ], new ReadableResourceStream(fopen($filePath, 'rb'), $this->loop));
-
-            return $response;
         }
-        return false;
+
+        $expires = 3600; //1 h
+        $response = new Response(200, [
+            'Content-Type' => $this->mimeContentType($filePath),
+            'Content-Length' => filesize($filePath),
+            'Pragma' => 'public',
+            'Cache-Control' => 'max-age=' . $expires,
+            'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
+            'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
+        ], new ReadableResourceStream(fopen($filePath, 'rb'), $this->loop));
+
+        return $response;
     }
 
     /**
@@ -686,7 +683,9 @@ class ProcessSlave
         $ext = strtolower(substr($filename, strrpos($filename, '.') + 1));
         if (isset($mimeTypes[$ext])) {
             return $mimeTypes[$ext];
-        } elseif (function_exists('finfo_open')) {
+        }
+
+        if (function_exists('finfo_open')) {
             $finfo = finfo_open(FILEINFO_MIME);
 
             //we need to suppress all stuff of this call due to https://bugs.php.net/bug.php?id=71615
