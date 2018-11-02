@@ -148,11 +148,12 @@ class ProcessSlave
 
     /**
      * Shuts down the event loop. This basically exits the process.
+     * @return boolean
      */
     public function prepareShutdown()
     {
         if ($this->inShutdown) {
-            return;
+            return false;
         }
 
         if ($this->errorLogger && $logs = $this->errorLogger->cleanLogs()) {
@@ -189,9 +190,9 @@ class ProcessSlave
 
         $this->sendCurrentFiles();
 
-        if ($this->controller && $this->controller->isWritable()) {
-            $this->controller->close();
-        }
+        // $this->controller->close() is no longer called here, because it prevented
+        // shutdown functions from triggering (see https://github.com/php-pm/php-pm/pull/432)
+
         if ($this->server) {
             @$this->server->close();
         }
@@ -199,6 +200,8 @@ class ProcessSlave
         if ($this->loop) {
             $this->loop->stop();
         }
+
+        return true;
     }
 
     /**
@@ -206,8 +209,9 @@ class ProcessSlave
      */
     public function shutdown()
     {
-        $this->prepareShutdown();
-        exit;
+        if ($this->prepareShutdown()) {
+            exit;
+        }
     }
 
     /**
