@@ -178,3 +178,7 @@ framework:
 ```
 
 More information at http://symfony.com/doc/current/cookbook/request/load_balancer_reverse_proxy.html.
+
+### Programmatically restarting Worker
+
+We provide the `X-PPM-Restart` HTTP Header to restart the current worker with content `worker` or `all`. You can send this header in the response from your application.
