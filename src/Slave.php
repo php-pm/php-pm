@@ -339,7 +339,7 @@ class Slave
                 $status = 'INVALID';
         }
 
-        return print_r([
+        return (string)print_r([
             'status' => $status,
             'port' => $this->port,
             'pid' => $this->pid
