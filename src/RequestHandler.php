@@ -102,13 +102,14 @@ class RequestHandler
         $this->incoming->on('close', function () {
             $this->connectionOpen = false;
         });
-        if ($this->maxExecutionTime > 0) {
-            $this->maxExecutionTimer = $this->loop->addTimer($this->maxExecutionTime, [$this, 'maxExecutionTimeExceeded']);
-        }
 
         $this->start = microtime(true);
         $this->requestSentAt = microtime(true);
         $this->getNextSlave();
+
+        if ($this->maxExecutionTime > 0) {
+            $this->maxExecutionTimer = $this->loop->addTimer($this->maxExecutionTime, [$this, 'maxExecutionTimeExceeded']);
+        }
     }
 
     /**
