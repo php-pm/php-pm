@@ -35,8 +35,9 @@ class Utils
      */
     public static function hijackProperty($object, $propertyName, $newValue)
     {
-        $closure = (new ClosureHelper())->getPropertyAccessor($propertyName, $newValue);
-        Utils::bindAndCall($closure, $object);
+        Utils::bindAndCall(function () use ($object, $propertyName, $newValue) {
+            $object->$propertyName = $newValue;
+        }, $object);
     }
 
     /**

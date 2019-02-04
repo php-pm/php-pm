@@ -32,4 +32,15 @@ class UtilsTest extends PhpPmTestCase
     {
         $this->assertEquals($expected, Utils::parseQueryPath($path));
     }
+
+    public function testHijackProperty()
+    {
+        $object = new \PHPPM\SlavePool();
+        Utils::hijackProperty($object, 'slaves', ['SOME VALUE']);
+
+        $r = new \ReflectionObject($object);
+        $p = $r->getProperty('slaves');
+        $p->setAccessible(true);
+        $this->assertEquals(['SOME VALUE'], $p->getValue($object));
+    }
 }
