@@ -170,13 +170,13 @@ class ProcessSlave
                     if (isset($context['stack'])) {
                         foreach ($context['stack'] as $idx => $stack) {
                             $message .= PHP_EOL . sprintf(
-                                    "#%d: %s%s %s%s",
-                                    $idx,
-                                    isset($stack['class']) ? $stack['class'] . '->' : '',
-                                    $stack['function'],
-                                    isset($stack['file']) ? 'in' . $stack['file'] : '',
-                                    isset($stack['line']) ? ':' . $stack['line'] : ''
-                                );
+                                "#%d: %s%s %s%s",
+                                $idx,
+                                isset($stack['class']) ? $stack['class'] . '->' : '',
+                                $stack['function'],
+                                isset($stack['file']) ? 'in' . $stack['file'] : '',
+                                isset($stack['line']) ? ':' . $stack['line'] : ''
+                            );
                         }
                     }
                     return $message;
@@ -396,11 +396,7 @@ class ProcessSlave
         try {
             $response = $this->handleRequest($request);
         } catch (\Throwable $t) {
-            // PHP >= 7.0
             $response = $catchLog($t);
-        } catch (\Exception $e) {
-            // PHP < 7.0
-            $response = $catchLog($e);
         }
 
         $promise = new Promise(function ($resolve) use ($response) {
@@ -436,20 +432,9 @@ class ProcessSlave
             try {
                 $response = $bridge->handle($request);
             } catch (\Throwable $t) {
-                // PHP >= 7.0
                 error_log(
                     'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
                     (string)$t
-                );
-                $response = new Response(500, [], 'Unexpected error');
-
-                @ob_end_clean();
-                $this->shutdown();
-            } catch (\Exception $e) {
-                // PHP < 7.0
-                error_log(
-                    'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
-                    (string)$e
                 );
                 $response = new Response(500, [], 'Unexpected error');
 

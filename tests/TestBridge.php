@@ -2,8 +2,9 @@
 
 namespace PHPPM\Tests;
 
-use Psr\Http\Message\ServerRequestInterface;
 use RingCentral\Psr7;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use PHPPM\Bridges\StaticBridge;
 
 class TestBridge extends StaticBridge
@@ -11,9 +12,8 @@ class TestBridge extends StaticBridge
     /**
      * {@inheritdoc}
      */
-    public function handle(ServerRequestInterface $request)
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
-
         $params = $request->getQueryParams();
         if(@$params['exit_prematurely'] == '1') {
             exit();
