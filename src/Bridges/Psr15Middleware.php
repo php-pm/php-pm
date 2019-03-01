@@ -2,8 +2,9 @@
 
 namespace PHPPM\Bridges;
 
-use Interop\Http\Server\RequestHandlerInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 class Psr15Middleware implements BridgeInterface
 {
@@ -24,7 +25,7 @@ class Psr15Middleware implements BridgeInterface
     /**
      * {@inheritdoc}
      */
-    public function handle(ServerRequestInterface $request)
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
         return $this->middleware->handle($request);
     }

@@ -2,8 +2,9 @@
 
 namespace PHPPM\Bridges;
 
-use Psr\Http\Message\ServerRequestInterface;
 use RingCentral\Psr7;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 class StaticBridge implements BridgeInterface
 {
@@ -18,7 +19,7 @@ class StaticBridge implements BridgeInterface
     /**
      * {@inheritdoc}
      */
-    public function handle(ServerRequestInterface $request)
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
         return new Psr7\Response(404, ['Content-type' => 'text/plain'], 'Not found');
     }
