@@ -3,7 +3,6 @@ sudo: false
 language: php
 
 php:
-  - 7.0
   - 7.1
   - 7.2
   - 7.3
@@ -66,7 +65,7 @@ matrix:
 jobs:
   include:
     - stage: lint
-      php: 7.1
+      php: 7.3
       install:
         - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
         - composer require "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8"
