@@ -15,7 +15,7 @@ The approach of this is to kill the expensive bootstrap of PHP (declaring symbol
 PHP-PM basically spawns several PHP instances as worker bootstraping your application (eg. the whole Symfony Kernel) and hold it in the memory to be prepared for every
 incoming request: This is why PHP-PM makes your application so fast.
 
-More information can be found in the article: [Bring High Performance Into Your PHP App (with ReactPHP)](http://marcjschmidt.de/blog/2014/02/08/php-high-performance.html)
+More information can be found in the article: [Bring High Performance Into Your PHP App (with ReactPHP)](https://web.archive.org/web/20190103202024/http://marcjschmidt.de/2014/02/08/php-high-performance/)
 
 ### Features
 
