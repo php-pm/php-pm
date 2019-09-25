@@ -65,7 +65,7 @@ class RequestHandler
     /**
      * Timer that handles stopping the worker if script has excceed the max execution time
      *
-     * @var TimerInterface
+     * @var TimerInterface|null
      */
     private $maxExecutionTimer;
 
@@ -292,6 +292,8 @@ class RequestHandler
         $this->incoming->end();
         if ($this->maxExecutionTime > 0) {
             $this->loop->cancelTimer($this->maxExecutionTimer);
+            //Explicitly null the property to avoid a cyclic memory reference
+            $this->maxExecutionTimer = null;
         }
 
         if ($this->slave->getStatus() === Slave::LOCKED) {
