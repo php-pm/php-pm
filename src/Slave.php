@@ -185,6 +185,9 @@ class Slave
     public function close()
     {
         $this->status = self::CLOSED;
+
+        // closing slave closes the connection to master
+        $this->connection->close();
     }
 
     /**

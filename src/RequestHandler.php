@@ -196,7 +196,7 @@ class RequestHandler
     {
         if ($slave->isExpired()) {
             $slave->close();
-            $this->output->writeln(sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
+            $this->output->writeln(sprintf('Restarting worker #%d because it reached its TTL', $slave->getPort()));
             $slave->getConnection()->close();
             return false;
         }
@@ -268,9 +268,12 @@ class RequestHandler
         $this->lastOutgoingData = 'not empty'; // Avoid triggering 502
 
         // mark slave as closed
-        $this->slave->close();
-        $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Closing worker.', $this->maxExecutionTime));
-        $this->slave->getConnection()->close();
+        if (isset($this->slave)) {
+            $this->slave->close();
+            $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Closing worker.', $this->maxExecutionTime));
+        } else {
+            $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Worker already gone.', $this->maxExecutionTime));
+        }
     }
 
     /**
@@ -300,7 +303,6 @@ class RequestHandler
             // slave was locked, so mark as closed now.
             $this->slave->close();
             $this->output->writeln(sprintf('Marking locked worker #%d as closed', $this->slave->getPort()));
-            $this->slave->getConnection()->close();
         } elseif ($this->slave->getStatus() !== Slave::CLOSED) {
             // if slave has already closed its connection to master,
             // it probably died and is already terminated
@@ -308,21 +310,16 @@ class RequestHandler
             // mark slave as available
             $this->slave->release();
 
-            /** @var ConnectionInterface $connection */
-            $connection = $this->slave->getConnection();
-
             $maxRequests = $this->slave->getMaxRequests();
             if ($this->slave->getHandledRequests() >= $maxRequests) {
                 $this->slave->close();
-                $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
-                $connection->close();
+                $this->output->writeln(sprintf('Restarting worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
             }
             // Enforce memory limit
             $memoryLimit = $this->slave->getMemoryLimit();
             if ($memoryLimit > 0 && $this->slave->getUsedMemory() >= $memoryLimit) {
                 $this->slave->close();
-                $this->output->writeln(sprintf('Restart worker #%d because it reached memory limit of %d', $this->slave->getPort(), $memoryLimit));
-                $connection->close();
+                $this->output->writeln(sprintf('Restarting worker #%d because it reached memory limit of %d', $this->slave->getPort(), $memoryLimit));
             }
         }
     }

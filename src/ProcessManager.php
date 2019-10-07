@@ -991,15 +991,13 @@ class ProcessManager
      */
     protected function closeSlave($slave)
     {
+        /** @var ConnectionInterface */
+        if ($connection = $slave->getConnection()) {
+            $connection->removeAllListeners('close');
+        }
+
         $slave->close();
         $this->slaves->remove($slave);
-
-        if (!empty($slave->getConnection())) {
-            /** @var ConnectionInterface */
-            $connection = $slave->getConnection();
-            $connection->removeAllListeners('close');
-            $connection->close();
-        }
     }
 
     /**
@@ -1191,7 +1189,7 @@ set_time_limit(0);
 require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
-    
+
 if (!pcntl_installed()) {
     error_log(
         sprintf(
