@@ -269,10 +269,24 @@ class RequestHandler
 
         // mark slave as closed
         if (isset($this->slave)) {
-            $this->slave->close();
+            $this->closeSlave();
             $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Closing worker.', $this->maxExecutionTime));
         } else {
             $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Worker already gone.', $this->maxExecutionTime));
+        }
+    }
+
+    /**
+     * Close the currently assigned slave and cancel any timers
+     * If the slave is or was handling a request this will trigger
+     * the slaveClosed event
+     */
+    public function closeSlave() {
+        $this->slave->close();
+
+        if ($this->maxExecutionTimer) {
+            $this->loop->cancelTimer($this->maxExecutionTimer);
+            $this->maxExecutionTimer = null; // avoid a cyclic memory reference
         }
     }
 
@@ -293,15 +307,10 @@ class RequestHandler
             $this->incoming->write($this->createErrorResponse('502 Bad Gateway', 'Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?'));
         }
         $this->incoming->end();
-        if ($this->maxExecutionTime > 0) {
-            $this->loop->cancelTimer($this->maxExecutionTimer);
-            //Explicitly null the property to avoid a cyclic memory reference
-            $this->maxExecutionTimer = null;
-        }
 
         if ($this->slave->getStatus() === Slave::LOCKED) {
             // slave was locked, so mark as closed now.
-            $this->slave->close();
+            $this->closeSlave();
             $this->output->writeln(sprintf('Marking locked worker #%d as closed', $this->slave->getPort()));
         } elseif ($this->slave->getStatus() !== Slave::CLOSED) {
             // if slave has already closed its connection to master,
@@ -312,13 +321,13 @@ class RequestHandler
 
             $maxRequests = $this->slave->getMaxRequests();
             if ($this->slave->getHandledRequests() >= $maxRequests) {
-                $this->slave->close();
+                $this->closeSlave();
                 $this->output->writeln(sprintf('Restarting worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
             }
             // Enforce memory limit
             $memoryLimit = $this->slave->getMemoryLimit();
             if ($memoryLimit > 0 && $this->slave->getUsedMemory() >= $memoryLimit) {
-                $this->slave->close();
+                $this->closeSlave();
                 $this->output->writeln(sprintf('Restarting worker #%d because it reached memory limit of %d', $this->slave->getPort(), $memoryLimit));
             }
         }
