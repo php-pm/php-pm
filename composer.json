@@ -4,9 +4,9 @@
     "license": "MIT",
     "require": {
         "php": "^7.1",
-        "symfony/console": "^3.4|^4",
-        "symfony/debug": "^3.4|^4",
-        "symfony/process": "^3.4|^4",
+        "symfony/console": "^3.4|^4|^5",
+        "symfony/debug": "^3.4|^4|^5",
+        "symfony/process": "^3.4|^4|^5",
         "react/event-loop": "^1.0",
         "react/http": "^0.8",
         "react/stream": "^1.0",
