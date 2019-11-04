@@ -556,7 +556,9 @@ class ProcessManager
     {
         $slave = $this->slaves->getByConnection($connection);
         $slave->releaseFromRefresh();
-        $this->output->writeln(sprintf('worker #%d refreshed', $slave->getPort()));
+        if ($this->output->isVerbose()) {
+            $this->output->writeln(sprintf('worker #%d refreshed', $slave->getPort()));
+        }
     }
 
     /**
