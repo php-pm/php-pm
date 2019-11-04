@@ -373,7 +373,7 @@ class ProcessSlave
 
     protected function doRefresh()
     {
-        if ( ! ($bridge = $this->getBridge()) || ! ($bridge instanceof RefreshableBridgeInterface)) {
+        if (! ($bridge = $this->getBridge()) || ! ($bridge instanceof RefreshableBridgeInterface)) {
             return;
         }
 

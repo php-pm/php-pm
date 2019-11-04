@@ -101,7 +101,7 @@ class SlavePool
     }
 
     /**
-     * @param $refreshInterval
+     * @param int $refreshInterval
      * @return Slave[]
      */
     public function findSlavesToBeRefreshed($refreshInterval) : array
