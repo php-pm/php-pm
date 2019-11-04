@@ -541,7 +541,6 @@ class ProcessManager
     public function refreshSlaves()
     {
         $slaves = $this->slaves->findSlavesToBeRefreshed($this->refreshInterval);
-        $this->output->writeln(sprintf('refreshing %d workers', count($slaves)));
 
         foreach ($slaves as $slave) {
             $slave->markForRefresh();
