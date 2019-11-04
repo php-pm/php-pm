@@ -49,6 +49,7 @@ class StartCommand extends Command
         $handler->setPIDFile($config['pidfile']);
         $handler->setPopulateServer($config['populate-server-var']);
         $handler->setStaticDirectory($config['static-directory']);
+        $handler->setRefreshInterval($config['refresh-interval']);
         $handler->run();
 
         return null;

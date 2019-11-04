@@ -212,8 +212,7 @@ class RequestHandler
         // mark slave as busy
         $this->slave->occupy();
 
-        $connector = new UnixConnector($this->loop);
-        $connector = new TimeoutConnector($connector, $this->timeout, $this->loop);
+        $connector = new TimeoutConnector(new UnixConnector($this->loop), $this->timeout, $this->loop);
 
         $socketPath = $this->getSlaveSocketPath($this->slave->getPort());
         $connector->connect($socketPath)->then(

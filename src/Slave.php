@@ -16,6 +16,7 @@ class Slave
      * 4. busy (handling request)
      * 5. closed (awaiting termination)
      * 6. locked (busy, but gracefully awaiting termination)
+     * 7. refreshing (running refresh procedures, cannot be occupied)
      */
 
     const ANY = 0;
@@ -25,6 +26,7 @@ class Slave
     const BUSY = 4;
     const CLOSED = 5;
     const LOCKED = 6;
+    const REFRESHING = 7;
 
     protected $socketPath;
 
@@ -90,13 +92,20 @@ class Slave
      */
     private $startedAt;
 
+    /**
+     * Last refresh timestamp
+     *
+     * @var int
+     */
+    private $refreshedAt;
+
     public function __construct($port, $maxRequests, $memoryLimit, $ttl = null)
     {
         $this->port = $port;
         $this->maxRequests = $maxRequests;
         $this->memoryLimit = $memoryLimit;
         $this->ttl = ((int) $ttl < 1) ? null : $ttl;
-        $this->startedAt = time();
+        $this->startedAt = $this->refreshedAt = time();
 
         $this->status = self::CREATED;
     }
@@ -202,6 +211,27 @@ class Slave
         }
 
         $this->status = self::LOCKED;
+    }
+
+
+    public function markForRefresh()
+    {
+        if ($this->status !== self::READY) {
+            throw new \LogicException('Cannot mark a slave for refresh that is not in ready state');
+        }
+
+        $this->status = self::REFRESHING;
+    }
+
+    public function releaseFromRefresh()
+    {
+        if ($this->status !== self::REFRESHING) {
+            throw new \LogicException('Cannot release a slave from refresh that is not in refreshing state');
+        }
+
+        $this->refreshedAt = time();
+
+        $this->status = self::READY;
     }
 
     /**
@@ -310,6 +340,21 @@ class Slave
     public function isExpired()
     {
         return null !== $this->ttl && time() >= ($this->startedAt + $this->ttl);
+    }
+
+    public function shouldRefresh($refreshInterval)
+    {
+        return null !== $this->refreshedAt && time() >= ($this->refreshedAt + $refreshInterval);
+    }
+
+    public function getStartedAt()
+    {
+        return $this->startedAt;
+    }
+
+    public function getRefreshedAt()
+    {
+        return $this->refreshedAt;
     }
 
     /**

@@ -74,7 +74,7 @@ class SlavePool
      *
      * @param ConnectionInterface $connection
      *
-     * @return mixed
+     * @return Slave
      * @throws \Exception
      */
     public function getByConnection(ConnectionInterface $connection)
@@ -95,9 +95,41 @@ class SlavePool
      */
     public function getByStatus($status)
     {
-        return array_filter($this->slaves, function ($slave) use ($status) {
+        return array_filter($this->slaves, function (Slave $slave) use ($status) {
             return $status === Slave::ANY || $status === $slave->getStatus();
         });
+    }
+
+    /**
+     * @param $refreshInterval
+     * @return Slave[]
+     */
+    public function findSlavesToBeRefreshed($refreshInterval) : array
+    {
+        /** @var Slave[] $slaves */
+        $slaves = $this->getByStatus(Slave::READY);
+
+        // Do not refresh more than a quarter of available slaves
+        $max_count = (int) ceil(count($slaves) / 4);
+
+        // Sort so oldest ones gets preferred
+        usort($slaves, function (Slave $a, Slave $b) {
+            return $a->getRefreshedAt() <=> $b->getRefreshedAt();
+        });
+
+        $refreshableSlaves = [];
+
+        foreach ($slaves as $slave) {
+            if ($slave->shouldRefresh($refreshInterval)) {
+                $refreshableSlaves[] = $slave;
+            }
+
+            if (0 === --$max_count) {
+                break;
+            }
+        }
+
+        return $refreshableSlaves;
     }
 
     /**

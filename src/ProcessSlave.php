@@ -5,6 +5,7 @@ namespace PHPPM;
 
 use Evenement\EventEmitterInterface;
 use PHPPM\Bridges\BridgeInterface;
+use PHPPM\Bridges\RefreshableBridgeInterface;
 use PHPPM\Debug\BufferingLogger;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -253,6 +254,7 @@ class ProcessSlave
     {
         if ($bridge = $this->getBridge()) {
             $bridge->bootstrap($appBootstrap, $appenv, $debug);
+            $this->doRefresh();
             $this->sendMessage($this->controller, 'ready');
         }
     }
@@ -361,6 +363,21 @@ class ProcessSlave
         $this->bootstrap($this->appBootstrap, $this->config['app-env'], $this->isDebug());
 
         $this->sendCurrentFiles();
+    }
+
+    public function commandRefresh()
+    {
+        $this->doRefresh();
+        $this->sendMessage($this->controller, 'refreshed');
+    }
+
+    protected function doRefresh()
+    {
+        if ( ! ($bridge = $this->getBridge()) || ! ($bridge instanceof RefreshableBridgeInterface)) {
+            return;
+        }
+
+        $bridge->refreshApplication();
     }
 
     /**

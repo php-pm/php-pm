@@ -21,7 +21,7 @@ class ProcessManager
     use ProcessCommunicationTrait;
 
     /*
-     * Load balander started, waiting for slaves to come up
+     * Load balancer started, waiting for slaves to come up
      */
     const STATE_STARTING = 0;
 
@@ -83,6 +83,13 @@ class ProcessManager
      * @var int|null
      */
     protected $ttl;
+
+    /**
+     * How often slaves will be sent a refresh signal
+     *
+     * @var int|null
+     */
+    private $refreshInterval;
 
     /**
      * @var SlavePool
@@ -447,6 +454,12 @@ class ProcessManager
     {
         $this->pidfile = $pidfile;
     }
+
+    public function setRefreshInterval($refreshInterval)
+    {
+        $this->refreshInterval = $refreshInterval;
+    }
+
     /**
      * @return boolean
      */
@@ -511,6 +524,10 @@ class ProcessManager
             });
         }
 
+        if (0 < $this->refreshInterval) {
+            $this->loop->addPeriodicTimer(5, [$this, 'refreshSlaves']);
+        }
+
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
 
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
@@ -519,6 +536,28 @@ class ProcessManager
         $this->createSlaves();
 
         $this->loop->run();
+    }
+
+    public function refreshSlaves()
+    {
+        $slaves = $this->slaves->findSlavesToBeRefreshed($this->refreshInterval);
+        $this->output->writeln(sprintf('refreshing %d workers', count($slaves)));
+
+        foreach ($slaves as $slave) {
+            $slave->markForRefresh();
+            $this->sendMessage($slave->getConnection(), 'refresh');
+
+            if ($this->output->isVeryVerbose()) {
+                $this->output->writeln(sprintf('refreshing worker #%d after %s seconds', $slave->getPort(), time() - $slave->getRefreshedAt()));
+            }
+        }
+    }
+
+    protected function commandRefreshed($data, ConnectionInterface $connection)
+    {
+        $slave = $this->slaves->getByConnection($connection);
+        $slave->releaseFromRefresh();
+        $this->output->writeln(sprintf('worker #%d refreshed', $slave->getPort()));
     }
 
     /**
