@@ -49,6 +49,7 @@ class StartCommand extends Command
         $handler->setPIDFile($config['pidfile']);
         $handler->setPopulateServer($config['populate-server-var']);
         $handler->setStaticDirectory($config['static-directory']);
+        $handler->setTcpContext(\json_decode($config['tcp-context'], true, 512, JSON_THROW_ON_ERROR));
         $handler->run();
 
         return null;
