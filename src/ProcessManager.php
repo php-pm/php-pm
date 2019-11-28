@@ -310,7 +310,7 @@ class ProcessManager
             $this->loop->stop();
         }
 
-        if(file_exists($this->pidfile)) {
+        if (file_exists($this->pidfile)) {
             unlink($this->pidfile);
         }
         
