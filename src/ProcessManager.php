@@ -227,7 +227,7 @@ class ProcessManager
      *
      * @var array
      */
-    protected $tcp_context = [];
+    protected $tcpContext = [];
 
     /**
      * ProcessManager constructor.
@@ -490,11 +490,11 @@ class ProcessManager
     }
 
     /**
-     * @param array $tcp_context
+     * @param array $tcpContext
      */
-    public function setTcpContext(array $tcp_context)
+    public function setTcpContext(array $tcpContext)
     {
-        $this->tcp_context = $tcp_context;
+        $this->tcpContext = $tcpContext;
     }
 
     /**
@@ -502,7 +502,7 @@ class ProcessManager
      */
     public function getTcpContext()
     {
-        return $this->tcp_context;
+        return $this->tcpContext;
     }
 
     /**
