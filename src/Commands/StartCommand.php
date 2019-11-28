@@ -51,6 +51,6 @@ class StartCommand extends Command
         $handler->setStaticDirectory($config['static-directory']);
         $handler->run();
 
-        return null;
+        return 0;
     }
 }

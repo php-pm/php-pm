@@ -39,7 +39,7 @@ class StatusCommand extends Command
             $output->writeln($this->parseStatus($status));
         });
 
-        return null;
+        return 0;
     }
 
     /**

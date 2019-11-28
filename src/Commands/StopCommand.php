@@ -41,6 +41,6 @@ class StopCommand extends Command
             $output->writeln('Requested process manager to stop.');
         });
 
-        return null;
+        return 0;
     }
 }

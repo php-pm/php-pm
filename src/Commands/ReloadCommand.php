@@ -40,6 +40,6 @@ class ReloadCommand extends Command
             $output->writeln("Requested a worker reload.");
         });
 
-        return null;
+        return 0;
     }
 }
