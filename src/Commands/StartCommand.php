@@ -52,6 +52,6 @@ class StartCommand extends Command
         $handler->setTcpContext(\json_decode($config['tcp-context'], true, 512, \defined('JSON_THROW_ON_ERROR') ? JSON_THROW_ON_ERROR : JSON_PARTIAL_OUTPUT_ON_ERROR));
         $handler->run();
 
-        return null;
+        return 0;
     }
 }
