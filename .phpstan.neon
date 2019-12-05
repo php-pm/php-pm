@@ -2,6 +2,5 @@ parameters:
     ignoreErrors:
         - '#Call to an undefined static method Symfony\\Component\\Process\\ProcessUtils::escapeArgument\(\)#'
         - '#Binary operation#'
-        - '#Call to function method_exists.. with ...Symfony..Component#'
         - '#Call to an undefined method React\\Promise\\PromiseInterface::done\(\).#'
         - '#Method PHPPM\\ProcessSlave::onRequest\(\) should return#'

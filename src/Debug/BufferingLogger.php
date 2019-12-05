@@ -33,12 +33,12 @@ use Psr\Log\AbstractLogger;
  *
  * @author Nicolas Grekas <p@tchwork.com>
  */
-class BufferingLogger extends AbstractLogger
+final class BufferingLogger extends AbstractLogger
 {
     private $logs = [];
 
     /**
-     * @return BufferingLogger|\Symfony\Component\Debug\BufferingLogger
+     * @return BufferingLogger|\Symfony\Component\Debug\BufferingLogger|\Symfony\Component\ErrorHandler\BufferingLogger
      *
      * Check if we are using symfony/debug >= 2.8.
      * In symfony/debug <= 2.7, \Symfony\Component\Debug\BufferingLogger isn't available.
@@ -47,7 +47,10 @@ class BufferingLogger extends AbstractLogger
      */
     public static function create()
     {
-        if (class_exists('\Symfony\Component\Debug\BufferingLogger')) {
+        if (class_exists('\Symfony\Component\ErrorHandler\BufferingLogger')) {
+            return new \Symfony\Component\ErrorHandler\BufferingLogger();
+        } elseif (class_exists('\Symfony\Component\Debug\BufferingLogger')) {
+            // deprecated as of Symfony 4.4
             return new \Symfony\Component\Debug\BufferingLogger();
         }
 
