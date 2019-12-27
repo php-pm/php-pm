@@ -5,7 +5,6 @@ namespace PHPPM;
 
 use Evenement\EventEmitterInterface;
 use PHPPM\Bridges\BridgeInterface;
-use PHPPM\Debug\BufferingLogger;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use React\EventLoop\Factory;
@@ -18,7 +17,8 @@ use React\Socket\ServerInterface;
 use React\Socket\UnixConnector;
 use React\Socket\UnixServer;
 use React\Stream\ReadableResourceStream;
-use Symfony\Component\Debug\ErrorHandler;
+use Symfony\Component\ErrorHandler\BufferingLogger;
+use Symfony\Component\ErrorHandler\ErrorHandler;
 
 class ProcessSlave
 {
@@ -83,7 +83,7 @@ class ProcessSlave
     protected $inShutdown = false;
 
     /**
-     * @var BufferingLogger|\Symfony\Component\Debug\BufferingLogger|null
+     * @var BufferingLogger|null
      */
     protected $errorLogger;
 
@@ -349,7 +349,7 @@ class ProcessSlave
     {
         $this->loop = Factory::create();
 
-        $this->errorLogger = BufferingLogger::create();
+        $this->errorLogger = new BufferingLogger();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
         $this->tryConnect();
