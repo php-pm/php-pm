@@ -68,8 +68,6 @@ jobs:
       install:
         - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
         - composer require "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8"
-        # required for phpstan to see Symfony\Component\ErrorHandler\BufferingLogger
-        - composer require "symfony/error-handler"
       script:
         # Static analyzer check
         - ./vendor/bin/phpstan analyze -c .phpstan.neon --level=4 --no-progress src

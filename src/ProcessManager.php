@@ -13,7 +13,7 @@ use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
 use React\ChildProcess\Process;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Debug\Debug;
+use Symfony\Component\ErrorHandler\Debug;
 use Symfony\Component\Process\ProcessUtils;
 
 class ProcessManager
