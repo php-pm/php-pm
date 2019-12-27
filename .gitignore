@@ -2,3 +2,4 @@
 /vendor/
 /.vscode/
 /.ppm/
+composer.lock

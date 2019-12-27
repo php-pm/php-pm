@@ -72,4 +72,26 @@ class ProcessManagerTest extends PhpPmTestCase
         $isHeaderEnd = $this->getRequestHandlerMethod('isHeaderEnd');
         $this->assertEquals($isHeaderEnd($header), $isEnd);
     }
+
+    public function testTcpContextOptions()
+    {
+        // Init Console Null output because we are in a test env.
+        $nullOutput = new \Symfony\Component\Console\Output\NullOutput();
+
+        // Build a ProcessManager Wrapper to access protected attributes.
+        $manager = new \PHPPM\ProcessManager($nullOutput);
+
+        // TLS Context to provide to the process manager
+        $tls_context = [
+            'local_cert' => 'local_cert.pem'
+        ];
+
+        // Assign TLS options in the TCP Context
+        $manager->setTcpContext([
+            'tls' => $tls_context
+        ]);
+
+        // Tests !
+        $this->assertEquals(['tls' => $tls_context], $manager->getTcpContext());
+    }
 }

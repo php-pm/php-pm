@@ -223,6 +223,13 @@ class ProcessManager
     const CONTROLLER_PORT = 5500;
 
     /**
+     * TCP context options.
+     *
+     * @var array
+     */
+    protected $tcpContext = [];
+
+    /**
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
@@ -303,7 +310,10 @@ class ProcessManager
             $this->loop->stop();
         }
 
-        unlink($this->pidfile);
+        if (file_exists($this->pidfile)) {
+            unlink($this->pidfile);
+        }
+        
         exit;
     }
 
@@ -480,6 +490,22 @@ class ProcessManager
     }
 
     /**
+     * @param array $tcpContext
+     */
+    public function setTcpContext(array $tcpContext)
+    {
+        $this->tcpContext = $tcpContext;
+    }
+
+    /**
+     * @return array
+     */
+    public function getTcpContext()
+    {
+        return $this->tcpContext;
+    }
+
+    /**
      * Starts the main loop. Blocks.
      */
     public function run()
@@ -496,7 +522,7 @@ class ProcessManager
         $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
         $this->controller->on('connection', [$this, 'onSlaveConnection']);
 
-        $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
+        $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop, $this->getTcpContext());
         $this->web->on('connection', [$this, 'onRequest']);
 
         $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
