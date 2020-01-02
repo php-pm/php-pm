@@ -223,6 +223,13 @@ class ProcessManager
     const CONTROLLER_PORT = 5500;
 
     /**
+     * php streams are limited by default to 32 concurrent TCP connections,
+     * setting the same 511 default as nginx/apache and others.
+     * Beware that your system somaxconn settings might be lower than this
+     */
+    const TCP_BACKLOG = 511;
+
+    /**
      * ProcessManager constructor.
      *
      * @param OutputInterface $output
@@ -496,7 +503,7 @@ class ProcessManager
         $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
         $this->controller->on('connection', [$this, 'onSlaveConnection']);
 
-        $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop);
+        $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop, ['backlog' => self::TCP_BACKLOG]);
         $this->web->on('connection', [$this, 'onRequest']);
 
         $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
