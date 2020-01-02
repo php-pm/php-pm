@@ -74,7 +74,6 @@ class RequestHandler
      */
     private $slave;
 
-    private $connectionOpen = true;
     private $redirectionTries = 0;
     private $incomingBuffer = '';
     private $lastOutgoingData = ''; // Used to track abnormal responses
@@ -99,9 +98,6 @@ class RequestHandler
         $this->incoming = $incoming;
 
         $this->incoming->on('data', [$this, 'handleData']);
-        $this->incoming->on('close', function () {
-            $this->connectionOpen = false;
-        });
 
         $this->start = microtime(true);
         $this->requestSentAt = microtime(true);
@@ -144,7 +140,7 @@ class RequestHandler
     public function getNextSlave()
     {
         // client went away while waiting for worker
-        if (!$this->connectionOpen) {
+        if (!$this->incoming->isWritable()) {
             return;
         }
 
@@ -260,7 +256,7 @@ class RequestHandler
     public function maxExecutionTimeExceeded()
     {
         // client went away while waiting for worker
-        if (!$this->connectionOpen) {
+        if (!$this->incoming->isWritable()) {
             return false;
         }
 
@@ -284,12 +280,15 @@ class RequestHandler
             return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
         });
 
-        // Return a "502 Bad Gateway" response if the response was empty
-        if ($this->lastOutgoingData == '') {
-            $this->output->writeln('Script did not return a valid HTTP response. Maybe it has called exit() prematurely?');
-            $this->incoming->write($this->createErrorResponse('502 Bad Gateway', 'Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?'));
+        //Don't send anything if the client already closed the connection
+        if ($this->incoming->isWritable()) {
+            // Return a "502 Bad Gateway" response if the response was empty
+            if ($this->lastOutgoingData == '') {
+                $this->output->writeln('Script did not return a valid HTTP response. Maybe it has called exit() prematurely?');
+                $this->incoming->write($this->createErrorResponse('502 Bad Gateway', 'Slave returned an invalid HTTP response. Maybe the script has called exit() prematurely?'));
+            }
+            $this->incoming->end();
         }
-        $this->incoming->end();
         if ($this->maxExecutionTime > 0) {
             $this->loop->cancelTimer($this->maxExecutionTimer);
             //Explicitly null the property to avoid a cyclic memory reference
