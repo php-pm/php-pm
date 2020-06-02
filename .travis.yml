@@ -6,6 +6,26 @@ php:
   - 7.1
   - 7.4
 
+jobs:
+  fast_finish: true
+  include:
+    - stage: lint
+      php: 7.3
+      install:
+        - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
+        - composer require "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8"
+      script:
+        # Static analyzer check
+        - ./vendor/bin/phpstan analyze -c .phpstan.neon --level=4 --no-progress src
+        # Check the code style
+        - IFS=$'\n'; COMMIT_SCA_FILES=($(git diff --name-only --diff-filter=ACMRTUXB "${TRAVIS_COMMIT_RANGE}")); unset IFS
+        - ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --diff --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}"
+
+# Cache package sources
+cache:
+  directories:
+    - $HOME/.composer/cache
+
 install:
   - composer validate
   - composer install
@@ -57,27 +77,3 @@ script:
   - bash -c 'grep -q "Shutdown function triggered" /tmp/ppmoutshutdownfunc && exit 0'
   - bin/ppm status
   - bin/ppm stop
-
-matrix:
-  fast_finish: true
-
-jobs:
-  include:
-    - stage: lint
-      php: 7.3
-      install:
-        - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
-        - composer require "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8"
-      script:
-        # Run static analysis
-        - ./vendor/bin/phpstan analyze --no-progress
-        # Check the code style
-        - IFS=$'\n'; COMMIT_SCA_FILES=($(git diff --name-only --diff-filter=ACMRTUXB "${TRAVIS_COMMIT_RANGE}")); unset IFS
-        - ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --diff --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}"
-  allow_failures:
-    - 7.4snapshot
-
-# Cache package sources
-cache:
-  directories:
-    - $HOME/.composer/cache
