@@ -1,0 +1,11 @@
+parameters:
+    level: 4
+    paths:
+        - src/
+    ignoreErrors:
+        # For version 2.x and 3.x of \Symfony\Component\Process\Process package
+        - '#^Call to an undefined static method Symfony\\Component\\Process\\ProcessUtils::escapeArgument\(\)\.$#'
+        # Actually called on implementations of PromiseInterface
+        - '#^Call to an undefined method React\\Promise\\PromiseInterface::done\(\)\.$#'
+        # Actually returns an implementation of PromiseInterface
+        - '#^Method PHPPM\\ProcessSlave::onRequest\(\) should return#'
