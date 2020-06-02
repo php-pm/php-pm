@@ -817,7 +817,7 @@ class ProcessManager
             $knownFiles = array_keys($this->filesLastMTime);
             $recentlyIncludedFiles = array_diff($data['files'], $knownFiles);
             foreach ($recentlyIncludedFiles as $filePath) {
-                if (file_exists($filePath)) {
+                if (file_exists($filePath) && !is_dir($filePath)) {
                     $this->filesLastMTime[$filePath] = filemtime($filePath);
                     $this->filesLastMd5[$filePath] = md5_file($filePath, true);
                     $newFilesCount++;
@@ -931,7 +931,7 @@ class ProcessManager
         clearstatcache();
 
         foreach ($this->filesLastMTime as $filePath => $knownMTime) {
-            if (!file_exists($filePath)) {
+            if (!file_exists($filePath) || is_dir($filePath)) {
                 continue;
             }
 
@@ -1198,7 +1198,7 @@ set_time_limit(0);
 require_once file_exists($dir . '/vendor/autoload.php')
     ? $dir . '/vendor/autoload.php'
     : $dir . '/../../autoload.php';
-    
+
 if (!pcntl_installed()) {
     error_log(
         sprintf(
