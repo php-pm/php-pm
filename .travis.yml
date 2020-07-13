@@ -16,7 +16,7 @@ jobs:
         - composer require "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8"
       script:
         # Static analyzer check
-        - ./vendor/bin/phpstan analyze -c .phpstan.neon --level=4 --no-progress src
+        - ./vendor/bin/phpstan analyze --no-progress
         # Check the code style
         - IFS=$'\n'; COMMIT_SCA_FILES=($(git diff --name-only --diff-filter=ACMRTUXB "${TRAVIS_COMMIT_RANGE}")); unset IFS
         - ./vendor/bin/php-cs-fixer fix --config=.php_cs.php -v --dry-run --diff --stop-on-violation --using-cache=no --path-mode=intersection -- "${COMMIT_SCA_FILES[@]}"
