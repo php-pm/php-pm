@@ -9,7 +9,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
-use React\Http\Response;
+use React\Http\Message\Response;
 use React\Http\Server as HttpServer;
 use React\Promise\Promise;
 use React\Socket\ConnectionInterface;
@@ -318,7 +318,7 @@ class ProcessSlave
                 $socketPath = $this->getSlaveSocketPath($port, true);
                 $this->server = new UnixServer($socketPath, $this->loop);
 
-                $httpServer = new HttpServer([$this, 'onRequest']);
+                $httpServer = new HttpServer($this->loop, [$this, 'onRequest']);
                 $httpServer->listen($this->server);
 
                 $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
