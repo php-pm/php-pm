@@ -326,8 +326,8 @@ class ProcessSlave
                     $httpServer = new HttpServer(
                         $this->loop,
                         new StreamingRequestMiddleware(),
-                        new LimitConcurrentRequestsMiddleware($this->config['limit-concurrent-requests']),
-                        new RequestBodyBufferMiddleware($this->config['request-body-buffer']),
+                        new LimitConcurrentRequestsMiddleware($this->config['limit-concurrent-requests'] ?? 1024),
+                        new RequestBodyBufferMiddleware($this->config['request-body-buffer'] ?? 65536),
                         new RequestBodyParserMiddleware(),
                         [$this, 'onRequest']
                     );
