@@ -11,6 +11,10 @@ use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Http\Message\Response;
 use React\Http\Server as HttpServer;
+use React\Http\Middleware\StreamingRequestMiddleware;
+use React\Http\Middleware\LimitConcurrentRequestsMiddleware;
+use React\Http\Middleware\RequestBodyBufferMiddleware;
+use React\Http\Middleware\RequestBodyParserMiddleware;
 use React\Promise\Promise;
 use React\Socket\ConnectionInterface;
 use React\Socket\ServerInterface;
@@ -318,7 +322,19 @@ class ProcessSlave
                 $socketPath = $this->getSlaveSocketPath($port, true);
                 $this->server = new UnixServer($socketPath, $this->loop);
 
-                $httpServer = new HttpServer($this->loop, [$this, 'onRequest']);
+                if ($this->config['limit-concurrent-requests'] != null || $this->config['request-body-buffer'] != null) {
+                    $httpServer = new HttpServer(
+                        $this->loop,
+                        new StreamingRequestMiddleware(),
+                        new LimitConcurrentRequestsMiddleware($this->config['limit-concurrent-requests'] ?? 1024),
+                        new RequestBodyBufferMiddleware($this->config['request-body-buffer'] ?? 65536),
+                        new RequestBodyParserMiddleware(),
+                        [$this, 'onRequest']
+                    );
+                } else {
+                    $httpServer = new HttpServer($this->loop, [$this, 'onRequest']);
+                }
+
                 $httpServer->listen($this->server);
 
                 $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);

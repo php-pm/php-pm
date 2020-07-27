@@ -78,6 +78,20 @@ class ProcessManager
     protected $memoryLimit = -1;
 
     /**
+     * Maximum number of next handlers allowed to be executed concurrently in ReactPHP server
+     *
+     * @var int|null
+     */
+    protected $limitConcurrentRequests = null;
+
+    /**
+     * Request body buffer size
+     *
+     * @var int|null
+     */
+    protected $requestBodyBuffer = null;
+
+    /**
      * Worker time to live
      *
      * @var int|null
@@ -352,6 +366,22 @@ class ProcessManager
     public function setMemoryLimit($memoryLimit)
     {
         $this->memoryLimit = $memoryLimit;
+    }
+
+    /**
+     * @param int $limitConcurrentRequests
+     */
+    public function setLimitConcurrentRequests($limitConcurrentRequests)
+    {
+        $this->limitConcurrentRequests = $limitConcurrentRequests;
+    }
+
+    /**
+     * @param int $requestBodyBuffer
+     */
+    public function setRequestBodyBuffer($requestBodyBuffer)
+    {
+        $this->requestBodyBuffer = $requestBodyBuffer;
     }
 
     /**
@@ -1182,7 +1212,10 @@ class ProcessManager
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
             'static-directory' => $this->getStaticDirectory(),
-            'populate-server-var' => $this->isPopulateServer()
+            'populate-server-var' => $this->isPopulateServer(),
+
+            'limit-concurrent-requests' => $this->limitConcurrentRequests,
+            'request-body-buffer' => $this->requestBodyBuffer
         ];
 
         $config = var_export($config, true);
