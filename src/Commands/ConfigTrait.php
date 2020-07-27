@@ -28,7 +28,7 @@ trait ConfigTrait
             ->addOption('max-execution-time', null, InputOption::VALUE_REQUIRED, 'Maximum amount of time a request is allowed to execute before shutting down', 30)
             ->addOption('memory-limit', null, InputOption::VALUE_REQUIRED, 'Maximum amount of memory a worker is allowed to consume (in MB) before shutting down', -1)
             ->addOption('limit-concurrent-requests', null, InputOption::VALUE_REQUIRED, 'Max concurrent requests for the internal ReactPHP server component. Use the default ReactPHP logic when not explicitly set', null)
-            ->addOption('request-body-buffer', null, InputOption::VALUE_REQUIRED, 'Size of the request buffer (in bytes) for the internal ReactPHP server component. Default: 64000', null)
+            ->addOption('request-body-buffer', null, InputOption::VALUE_REQUIRED, 'Size of the request buffer (in bytes) for the internal ReactPHP server component. Default: 65536', null)
             ->addOption('ttl', null, InputOption::VALUE_REQUIRED, 'Time to live for a worker until it will be restarted', null)
             ->addOption('populate-server-var', null, InputOption::VALUE_REQUIRED, 'If a worker application uses $_SERVER var it needs to be populated by request data 1|0', 1)
             ->addOption('bootstrap', null, InputOption::VALUE_REQUIRED, 'Class responsible for bootstrapping the application', 'PHPPM\Bootstraps\Symfony')
