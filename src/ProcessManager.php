@@ -521,7 +521,9 @@ class ProcessManager
      */
     public function run()
     {
-        Debug::enable();
+        if ($this->isDebug()) {
+            Debug::enable();
+        }
 
         // make whatever is necessary to disable all stuff that could buffer output
         ini_set('zlib.output_compression', 0);
