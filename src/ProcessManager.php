@@ -229,7 +229,7 @@ class ProcessManager
     /**
      * Location of the file where we're going to store the PID of the master process
      */
-    protected $pidfile;
+    protected $pidFile;
 
     /**
      * Controller port
@@ -324,7 +324,7 @@ class ProcessManager
             $this->loop->stop();
         }
 
-        unlink($this->pidfile);
+        $this->removePidFile();
         exit;
     }
 
@@ -480,9 +480,9 @@ class ProcessManager
         $this->staticDirectory = $staticDirectory;
     }
 
-    public function setPIDFile($pidfile)
+    public function setPidFile($pidFile)
     {
-        $this->pidfile = $pidfile;
+        $this->pidFile = $pidFile;
     }
     /**
      * @return boolean
@@ -530,11 +530,12 @@ class ProcessManager
         ob_implicit_flush(1);
 
         $this->loop = Factory::create();
-        $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
-        $this->controller->on('connection', [$this, 'onSlaveConnection']);
 
         $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop, ['backlog' => self::TCP_BACKLOG]);
         $this->web->on('connection', [$this, 'onRequest']);
+
+        $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
+        $this->controller->on('connection', [$this, 'onSlaveConnection']);
 
         $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
         $this->loop->addSignal(SIGINT, [$this, 'shutdown']);
@@ -551,7 +552,7 @@ class ProcessManager
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
 
         $this->output->writeln("<info>Starting PHP-PM with {$this->slaveCount} workers, using {$loopClass} ...</info>");
-        $this->writePid();
+        $this->writePidFile();
 
         $this->createSlaves();
 
@@ -566,10 +567,20 @@ class ProcessManager
         $pid = pcntl_waitpid(-1, $status, WNOHANG);
     }
 
-    public function writePid()
+    private function writePidFile()
     {
         $pid = getmypid();
-        file_put_contents($this->pidfile, $pid);
+        file_put_contents($this->pidFile, $pid);
+    }
+
+    private function removePidFile()
+    {
+        $pid = getmypid();
+        $actualPid = (int) file_get_contents($this->pidFile);
+        //Only remove the pid file if it is our own
+        if ($actualPid === $pid) {
+            unlink($this->pidFile);
+        }
     }
 
     /**
