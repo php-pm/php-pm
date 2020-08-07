@@ -49,6 +49,8 @@ class StartCommand extends Command
         $handler->setPIDFile($config['pidfile']);
         $handler->setPopulateServer($config['populate-server-var']);
         $handler->setStaticDirectory($config['static-directory']);
+        $handler->setRequestBodyBuffer($config['request-body-buffer']);
+        $handler->setLimitConcurrentRequests($config['limit-concurrent-requests']);
         $handler->run();
 
         return 0;
