@@ -70,7 +70,7 @@ class RequestHandler
     private $maxExecutionTimer;
 
     /**
-     * @var Slave instance
+     * @var Slave|null instance
      */
     private $slave;
 
@@ -263,10 +263,13 @@ class RequestHandler
         $this->incoming->write($this->createErrorResponse('504 Gateway Timeout', 'Maximum execution time exceeded'));
         $this->lastOutgoingData = 'not empty'; // Avoid triggering 502
 
-        // mark slave as closed
-        $this->slave->close();
         $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Closing worker.', $this->maxExecutionTime));
-        $this->slave->getConnection()->close();
+
+        // mark slave as closed
+        if ($this->slave) {
+            $this->slave->close();
+            $this->slave->getConnection()->close();
+        }
     }
 
     /**
@@ -354,7 +357,7 @@ class RequestHandler
         }, true);
 
         // should not get any more access to this slave instance
-        unset($this->slave);
+        $this->slave = null;
 
         // try next free slave, let loop schedule it (stack friendly)
         // after 10th retry add 10ms delay, keep increasing until timeout
