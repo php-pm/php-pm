@@ -46,7 +46,7 @@ class StartCommand extends Command
         $handler->setTtl($config['ttl']);
         $handler->setPhpCgiExecutable($config['cgi-path']);
         $handler->setSocketPath($config['socket-path']);
-        $handler->setPIDFile($config['pidfile']);
+        $handler->setPidFile($config['pidfile']);
         $handler->setPopulateServer($config['populate-server-var']);
         $handler->setStaticDirectory($config['static-directory']);
         $handler->setRequestBodyBuffer($config['request-body-buffer']);
