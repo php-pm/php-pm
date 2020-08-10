@@ -247,8 +247,6 @@ class ProcessManager
 
         $this->slaveCount = $slaveCount;
         $this->slaves = new SlavePool(); // create early, used during shutdown
-
-        register_shutdown_function([$this, 'shutdown']);
     }
 
     /**
@@ -510,6 +508,7 @@ class ProcessManager
     public function run()
     {
         Debug::enable();
+        register_shutdown_function([$this, 'shutdown']);
 
         // make whatever is necessary to disable all stuff that could buffer output
         ini_set('zlib.output_compression', 0);
