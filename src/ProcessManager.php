@@ -164,18 +164,6 @@ class ProcessManager
     protected $port = 8080;
 
     /**
-     * @var bool
-     */
-    protected $inChangesDetectionCycle = false;
-
-    /**
-     * Whether the server is in the restart phase.
-     *
-     * @var bool
-     */
-    protected $inRestart = false;
-
-    /**
      * The number of seconds to wait before force closing a worker during a reload.
      *
      * @var int
@@ -544,9 +532,7 @@ class ProcessManager
         $this->loop->addSignal(SIGUSR2, [$this, 'reloadSlaves']);
 
         if ($this->isDebug()) {
-            $this->loop->addPeriodicTimer(0.5, function () {
-                $this->checkChangedFiles();
-            });
+            $this->loop->addPeriodicTimer(1, [$this, 'checkChangedFiles']);
         }
 
         $loopClass = (new \ReflectionClass($this->loop))->getShortName();
@@ -860,7 +846,7 @@ class ProcessManager
             foreach ($recentlyIncludedFiles as $filePath) {
                 if (file_exists($filePath) && !is_dir($filePath)) {
                     $this->filesLastMTime[$filePath] = filemtime($filePath);
-                    $this->filesLastMd5[$filePath] = md5_file($filePath, true);
+                    $this->filesLastMd5[$filePath] = md5_file($filePath);
                     $newFilesCount++;
                 }
             }
@@ -954,42 +940,63 @@ class ProcessManager
      * all other file watching stuff have either big dependencies or do not work under all platforms without
      * installing a pecl extension. Also this way is interestingly fast and is only used when debug=true.
      *
-     * @param bool $restartSlaves
-     *
      * @return bool
      */
-    protected function checkChangedFiles($restartSlaves = true)
+    public function checkChangedFiles()
     {
-        if ($this->inChangesDetectionCycle) {
+        //If slaves are starting there's no need to check anything
+        if ($this->status === self::STATE_STARTING) {
             return false;
         }
 
         $start = microtime(true);
         $hasChanged = false;
 
-        $this->inChangesDetectionCycle = true;
-
         clearstatcache();
 
         foreach ($this->filesLastMTime as $filePath => $knownMTime) {
-            if (!file_exists($filePath) || is_dir($filePath)) {
+            //If the file is a directory, just remove it from the list of tracked files
+            if (is_dir($filePath)) {
+                unset($this->filesLastMd5[$filePath]);
+                unset($this->filesLastMTime[$filePath]);
+
                 continue;
             }
 
-            $actualFileTime = filemtime($filePath);
-            $actualFileHash = md5_file($filePath);
-
-            if ($knownMTime !== $actualFileTime && $this->filesLastMd5[$filePath] !== $actualFileHash) {
-
-                // update tracked entry metadata
-                $this->filesLastMd5[$filePath] = $actualFileHash;
-                $this->filesLastMTime[$filePath] = $actualFileTime;
+            //If the file doesn't exist anymore, remove it from the list of tracked files and restart the workers
+            if (!file_exists($filePath)) {
+                unset($this->filesLastMd5[$filePath]);
+                unset($this->filesLastMTime[$filePath]);
 
                 $this->output->writeln(
-                    sprintf("<info>[%s] File %s has changed.</info>", date('d/M/Y:H:i:s O'), $filePath)
+                    sprintf("<info>[%s] File %s has been removed.</info>", date('d/M/Y:H:i:s O'), $filePath)
                 );
                 $hasChanged = true;
+
                 break;
+            }
+
+            //If the file modification time has changed, update the metadata and check its contents.
+            if ($knownMTime !== $actualFileTime = filemtime($filePath)) {
+                //update time metadata
+                $this->filesLastMTime[$filePath] = $actualFileTime;
+                if ($this->output->isVeryVerbose()) {
+                    $this->output->writeln(
+                        sprintf("File %s mtime has changed, now checking its contents", $filePath)
+                    );
+                }                //Only if the time AND contents have changed restart, touch() seems to change the file mtime
+                if ($this->filesLastMd5[$filePath] !== $actualFileHash = md5_file($filePath)) {
+                    var_dump($this->filesLastMd5[$filePath], $actualFileHash);
+                    //update file hash metadata
+                    $this->filesLastMd5[$filePath] = $actualFileHash;
+
+                    $this->output->writeln(
+                        sprintf("<info>[%s] File %s has changed.</info>", date('d/M/Y:H:i:s O'), $filePath)
+                    );
+                    $hasChanged = true;
+
+                    break;
+                }
             }
         }
 
@@ -1002,18 +1009,16 @@ class ProcessManager
                 )
             );
 
-            if ($this->output->isVeryVerbose()) {
-                $this->output->writeln(
-                    sprintf("Changes detection cycle length = %.3f ms", (microtime(true) - $start) * 1000)
-                );
-            }
-
-            if ($restartSlaves) {
-                $this->restartSlaves();
-            }
+            $this->restartSlaves();
         }
 
-        $this->inChangesDetectionCycle = false;
+        if ($this->output->isVeryVerbose()) {
+            $this->output->writeln(sprintf(
+                "Changes detection cycle length = %.3f ms, %u files",
+                (microtime(true) - $start) * 1000,
+                count($this->filesLastMTime)
+            ));
+        }
 
         return $hasChanged;
     }
@@ -1168,16 +1173,14 @@ class ProcessManager
      */
     public function restartSlaves()
     {
-        if ($this->inRestart) {
+        //Do not restart if we're still starting the slaves
+        if ($this->status === self::STATE_STARTING) {
             return;
         }
 
-        $this->inRestart = true;
-
+        $this->status = self::STATE_STARTING;
         $this->closeSlaves();
         $this->createSlaves();
-
-        $this->inRestart = false;
     }
 
     /**
