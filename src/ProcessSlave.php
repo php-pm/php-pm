@@ -336,6 +336,11 @@ class ProcessSlave
                 }
 
                 $httpServer->listen($this->server);
+                if ($this->isLogging()) {
+                    $httpServer->on('error', function (\Exception $e) {
+                        error_log(sprintf('Worker error while processing the request. %s: %s', get_class($e), $e->getMessage()));
+                    });
+                }
 
                 $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
             }
