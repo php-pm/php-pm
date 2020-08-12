@@ -11,6 +11,7 @@ return PhpCsFixer\Config::create()
         'RemoveDebugStatements/dump' => true,
     ])
     ->registerCustomFixers([new Drew\DebugStatementsFixers\Dump()])
+    ->setRiskyAllowed(true)
     ->setFinder($finder)
     ->setUsingCache(false)
 ;
