@@ -1295,10 +1295,10 @@ EOF;
             'data',
             function ($data) use ($port) {
                 if ($this->lastWorkerErrorPrintBy !== $port) {
-                    $this->output->writeln("<info>--- Worker $port stderr ---</info>");
+                    $this->output->writeln(sprintf('<info>--- Worker %u stderr ---</info>', $port));
                     $this->lastWorkerErrorPrintBy = $port;
                 }
-                $this->output->write("<error>$data</error>");
+                $this->output->writeln(sprintf('<error>%s</error>', trim($data)));
             }
         );
     }
