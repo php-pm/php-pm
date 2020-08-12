@@ -13,7 +13,7 @@ jobs:
       php: 7.3
       install:
         - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
-        - composer require "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8"
+        - composer require --dev "phpstan/phpstan" "friendsofphp/php-cs-fixer:^2.8" "drew/debug-statements-fixers"
       script:
         # Static analyzer check
         - ./vendor/bin/phpstan analyze --no-progress
