@@ -8,7 +8,9 @@ return PhpCsFixer\Config::create()
     ->setRules([
         '@PSR2' => true,
         'array_syntax' => ['syntax' => 'short'],
+        'RemoveDebugStatements/dump' => true,
     ])
+    ->registerCustomFixers([new Drew\DebugStatementsFixers\Dump()])
     ->setFinder($finder)
     ->setUsingCache(false)
 ;
