@@ -985,7 +985,6 @@ class ProcessManager
                     );
                 }                //Only if the time AND contents have changed restart, touch() seems to change the file mtime
                 if ($this->filesLastMd5[$filePath] !== $actualFileHash = md5_file($filePath)) {
-                    var_dump($this->filesLastMd5[$filePath], $actualFileHash);
                     //update file hash metadata
                     $this->filesLastMd5[$filePath] = $actualFileHash;
 
