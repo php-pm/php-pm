@@ -598,7 +598,9 @@ class ProcessManager
      * Handle slave closed
      *
      * @param ConnectionInterface $connection
+     *
      * @return void
+     * @throws \Exception
      */
     public function onSlaveClosed(ConnectionInterface $connection)
     {
@@ -895,6 +897,7 @@ class ProcessManager
      * Handles failed application bootstraps.
      *
      * @param int $port
+     * @throws \Exception
      */
     protected function bootstrapFailed($port)
     {
@@ -1025,6 +1028,7 @@ class ProcessManager
      * Populate slave pool
      *
      * @return void
+     * @throws \Exception
      */
     public function createSlaves()
     {
@@ -1039,6 +1043,7 @@ class ProcessManager
      * @param Slave $slave
      *
      * @return void
+     * @throws \Exception
      */
     protected function closeSlave($slave)
     {
@@ -1106,7 +1111,6 @@ class ProcessManager
         $this->slavesToReload = [];
 
         foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
-            /** @var Slave $slave */
 
             /*
              * Attach the callable to the connection close event, because locked workers are closed via RequestHandler.

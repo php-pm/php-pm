@@ -18,6 +18,9 @@ class StaticBridge implements BridgeInterface
 
     /**
      * {}
+     * @param \Psr\Http\Message\ServerRequestInterface $request
+     *
+     * @return \Psr\Http\Message\ResponseInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
