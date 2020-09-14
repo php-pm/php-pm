@@ -338,7 +338,7 @@ class ProcessSlave
                 $httpServer->listen($this->server);
                 if ($this->isLogging()) {
                     $httpServer->on('error', function (\Exception $e) {
-                        error_log(\sprintf('Worker error while processing the request. %s: %s', get_class($e), $e->getMessage()));
+                        \error_log(\sprintf('Worker error while processing the request. %s: %s', get_class($e), $e->getMessage()));
                     });
                 }
 
@@ -410,7 +410,7 @@ class ProcessSlave
         $logTime = date('d/M/Y:H:i:s O');
 
         $catchLog = function ($e) {
-            \console_log((string) $e);
+            console_log((string) $e);
             return new Response(500);
         };
 
