@@ -96,10 +96,6 @@ class SlavePool
 
     /**
      * Get multiple slaves by status
-     *
-     * @param $status
-     *
-     * @return \PHPPM\Slave[]
      */
     public function getByStatus($status)
     {
