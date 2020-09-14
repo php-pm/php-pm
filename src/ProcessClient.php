@@ -43,7 +43,7 @@ class ProcessClient
                     $callback($result);
                 });
 
-                $connection->write(json_encode($data) . PHP_EOL);
+                $connection->write(\json_encode($data) . PHP_EOL);
             }
         );
     }
@@ -51,7 +51,7 @@ class ProcessClient
     public function getStatus(callable $callback)
     {
         $this->request('status', [], function ($result) use ($callback) {
-            $callback(json_decode($result, true));
+            $callback(\json_decode($result, true));
         });
         $this->loop->run();
     }
@@ -59,7 +59,7 @@ class ProcessClient
     public function stopProcessManager(callable $callback)
     {
         $this->request('stop', [], function ($result) use ($callback) {
-            $callback(json_decode($result, true));
+            $callback(\json_decode($result, true));
         });
         $this->loop->run();
     }
@@ -67,7 +67,7 @@ class ProcessClient
     public function reloadProcessManager(callable $callback)
     {
         $this->request('reload', [], function ($result) use ($callback) {
-            $callback(json_decode($result, true));
+            $callback(\json_decode($result, true));
         });
         $this->loop->run();
     }

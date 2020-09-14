@@ -79,7 +79,7 @@ class SlavePool
      */
     public function getByConnection(ConnectionInterface $connection)
     {
-        $hash = spl_object_hash($connection);
+        $hash = \spl_object_hash($connection);
 
         foreach ($this->slaves as $slave) {
             if ($slave->getConnection() && $hash === spl_object_hash($slave->getConnection())) {
@@ -95,7 +95,7 @@ class SlavePool
      */
     public function getByStatus($status)
     {
-        return array_filter($this->slaves, function ($slave) use ($status) {
+        return \array_filter($this->slaves, function ($slave) use ($status) {
             return $status === Slave::ANY || $status === $slave->getStatus();
         });
     }
@@ -116,8 +116,8 @@ class SlavePool
             'closed' => Slave::CLOSED
         ];
 
-        return array_map(function ($state) {
-            return count($this->getByStatus($state));
+        return \array_map(function ($state) {
+            return \count($this->getByStatus($state));
         }, $map);
     }
 }

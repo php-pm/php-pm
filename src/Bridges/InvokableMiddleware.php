@@ -16,7 +16,7 @@ class InvokableMiddleware implements BridgeInterface
     {
         $this->bootstrapApplicationEnvironment($appBootstrap, $appenv, $debug);
 
-        if (!is_callable($this->middleware)) {
+        if (! \is_callable($this->middleware)) {
             throw new \Exception('Middleware must implement callable');
         }
     }

@@ -99,8 +99,8 @@ class RequestHandler
 
         $this->incoming->on('data', [$this, 'handleData']);
 
-        $this->start = microtime(true);
-        $this->requestSentAt = microtime(true);
+        $this->start = \microtime(true);
+        $this->requestSentAt = \microtime(true);
         $this->getNextSlave();
 
         if ($this->maxExecutionTime > 0) {
@@ -121,8 +121,8 @@ class RequestHandler
         if ($this->connection && $this->isHeaderEnd($this->incomingBuffer)) {
             $remoteAddress = (string) $this->incoming->getRemoteAddress();
             $headersToReplace = [
-                'X-PHP-PM-Remote-IP' => trim(parse_url($remoteAddress, PHP_URL_HOST), '[]'),
-                'X-PHP-PM-Remote-Port' => trim(parse_url($remoteAddress, PHP_URL_PORT), '[]')
+                'X-PHP-PM-Remote-IP' => \trim(\parse_url($remoteAddress, PHP_URL_HOST), '[]'),
+                'X-PHP-PM-Remote-Port' => \trim(\parse_url($remoteAddress, PHP_URL_PORT), '[]')
             ];
 
             $buffer = $this->replaceHeader($this->incomingBuffer, $headersToReplace);
@@ -145,9 +145,9 @@ class RequestHandler
         }
 
         $available = $this->slaves->getByStatus(Slave::READY);
-        if (count($available)) {
+        if (\count($available)) {
             // pick first slave
-            $slave = array_shift($available);
+            $slave = \array_shift($available);
 
             // slave available -> connect
             if ($this->tryOccupySlave($slave)) {
@@ -156,11 +156,11 @@ class RequestHandler
         }
 
         // keep retrying until slave becomes available, unless timeout has been exceeded
-        if (time() < ($this->requestSentAt + $this->timeout)) {
+        if (\time() < ($this->requestSentAt + $this->timeout)) {
             $this->loop->futureTick([$this, 'getNextSlave']);
         } else {
             // Return a "503 Service Unavailable" response
-            $this->output->writeln(sprintf('No slaves available to handle the request and timeout %d seconds exceeded', $this->timeout));
+            $this->output->writeln(\sprintf('No slaves available to handle the request and timeout %d seconds exceeded', $this->timeout));
             $this->incoming->write($this->createErrorResponse('503 Service Temporarily Unavailable', 'Service Temporarily Unavailable'));
             $this->incoming->end();
         }
@@ -168,7 +168,7 @@ class RequestHandler
 
     private function createErrorResponse($code, $text)
     {
-        return sprintf(
+        return \sprintf(
             'HTTP/1.1 %s'."\n".
             'Date: %s'."\n".
             'Content-Type: text/plain'."\n".
@@ -176,8 +176,8 @@ class RequestHandler
             "\n".
             '%s',
             $code,
-            gmdate('D, d M Y H:i:s T'),
-            strlen($text),
+            \gmdate('D, d M Y H:i:s T'),
+            \strlen($text),
             $text
         );
     }
@@ -192,7 +192,7 @@ class RequestHandler
     {
         if ($slave->isExpired()) {
             $slave->close();
-            $this->output->writeln(sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
+            $this->output->writeln(\sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
             $slave->getConnection()->close();
             return false;
         }
@@ -202,7 +202,7 @@ class RequestHandler
         $this->slave = $slave;
 
         $this->verboseTimer(function ($took) {
-            return sprintf('<info>took abnormal %.3f seconds for choosing next free worker</info>', $took);
+            return \sprintf('<info>took abnormal %.3f seconds for choosing next free worker</info>', $took);
         });
 
         // mark slave as busy
@@ -229,7 +229,7 @@ class RequestHandler
         $this->connection = $connection;
 
         $this->verboseTimer(function ($took) {
-            return sprintf('<info>Took abnormal %.3f seconds for connecting to worker %d</info>', $took, $this->slave->getPort());
+            return \sprintf('<info>Took abnormal %.3f seconds for connecting to worker %d</info>', $took, $this->slave->getPort());
         });
 
         // call handler once in case entire request as already been buffered
@@ -263,7 +263,7 @@ class RequestHandler
         $this->incoming->write($this->createErrorResponse('504 Gateway Timeout', 'Maximum execution time exceeded'));
         $this->lastOutgoingData = 'not empty'; // Avoid triggering 502
 
-        $this->output->writeln(sprintf('Maximum execution time of %d seconds exceeded. Closing worker.', $this->maxExecutionTime));
+        $this->output->writeln(\sprintf('Maximum execution time of %d seconds exceeded. Closing worker.', $this->maxExecutionTime));
 
         // mark slave as closed
         if ($this->slave) {
@@ -280,7 +280,7 @@ class RequestHandler
     public function slaveClosed()
     {
         $this->verboseTimer(function ($took) {
-            return sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
+            return \sprintf('<info>Worker %d took abnormal %.3f seconds for handling a connection</info>', $this->slave->getPort(), $took);
         });
 
         //Don't send anything if the client already closed the connection
@@ -301,7 +301,7 @@ class RequestHandler
         if ($this->slave->getStatus() === Slave::LOCKED) {
             // slave was locked, so mark as closed now.
             $this->slave->close();
-            $this->output->writeln(sprintf('Marking locked worker #%d as closed', $this->slave->getPort()));
+            $this->output->writeln(\sprintf('Marking locked worker #%d as closed', $this->slave->getPort()));
             $this->slave->getConnection()->close();
         } elseif ($this->slave->getStatus() !== Slave::CLOSED) {
             // if slave has already closed its connection to master,
@@ -316,14 +316,14 @@ class RequestHandler
             $maxRequests = $this->slave->getMaxRequests();
             if ($this->slave->getHandledRequests() >= $maxRequests) {
                 $this->slave->close();
-                $this->output->writeln(sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
+                $this->output->writeln(\sprintf('Restart worker #%d because it reached max requests of %d', $this->slave->getPort(), $maxRequests));
                 $connection->close();
             }
             // Enforce memory limit
             $memoryLimit = $this->slave->getMemoryLimit();
             if ($memoryLimit > 0 && $this->slave->getUsedMemory() >= $memoryLimit) {
                 $this->slave->close();
-                $this->output->writeln(sprintf('Restart worker #%d because it reached memory limit of %d', $this->slave->getPort(), $memoryLimit));
+                $this->output->writeln(\sprintf('Restart worker #%d because it reached memory limit of %d', $this->slave->getPort(), $memoryLimit));
                 $connection->close();
             }
         }
@@ -344,7 +344,7 @@ class RequestHandler
         $this->slave->release();
 
         $this->verboseTimer(function ($took) use ($e) {
-            return sprintf(
+            return \sprintf(
                 '<error>Connection to worker %d failed. Try #%d, took %.3fs ' .
                 '(timeout %ds). Error message: [%d] %s</error>',
                 $this->slave->getPort(),
@@ -361,7 +361,7 @@ class RequestHandler
 
         // try next free slave, let loop schedule it (stack friendly)
         // after 10th retry add 10ms delay, keep increasing until timeout
-        $delay = min($this->timeout, floor($this->redirectionTries / 10) / 100);
+        $delay = \min($this->timeout, \floor($this->redirectionTries / 10) / 100);
         $this->loop->addTimer($delay, [$this, 'getNextSlave']);
     }
 
@@ -373,12 +373,12 @@ class RequestHandler
      */
     protected function verboseTimer($callback, $always = false)
     {
-        $took = microtime(true) - $this->start;
+        $took = \microtime(true) - $this->start;
         if (($always || $took > 1) && $this->output->isVeryVerbose()) {
             $message = $callback($took);
             $this->output->writeln($message);
         }
-        $this->start = microtime(true);
+        $this->start = \microtime(true);
     }
 
     /**
@@ -390,7 +390,7 @@ class RequestHandler
      */
     protected function isHeaderEnd($buffer)
     {
-        return false !== strpos($buffer, "\r\n\r\n");
+        return false !== \strpos($buffer, "\r\n\r\n");
     }
 
     /**
@@ -406,14 +406,14 @@ class RequestHandler
         $result = $header;
 
         foreach ($headersToReplace as $key => $value) {
-            if (false !== $headerPosition = stripos($result, $key . ':')) {
+            if (false !== $headerPosition = \stripos($result, $key . ':')) {
                 // check how long the header is
-                $length = strpos(substr($header, $headerPosition), "\r\n");
-                $result = substr_replace($result, "$key: $value", $headerPosition, $length);
+                $length = \strpos(\substr($header, $headerPosition), "\r\n");
+                $result = \substr_replace($result, "$key: $value", $headerPosition, $length);
             } else {
                 // $key is not in header yet, add it at the end
-                $end = strpos($result, "\r\n\r\n");
-                $result = substr_replace($result, "\r\n$key: $value", $end, 0);
+                $end = \strpos($result, "\r\n\r\n");
+                $result = \substr_replace($result, "\r\n$key: $value", $end, 0);
             }
         }
 
