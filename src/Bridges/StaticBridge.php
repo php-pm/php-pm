@@ -17,7 +17,7 @@ class StaticBridge implements BridgeInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {}
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
