@@ -108,7 +108,9 @@ trait ProcessCommunicationTrait
     }
 
     /**
-     * @param int $port
+     * @param int  $port
+     *
+     * @param bool $overwrite
      *
      * @return string
      */

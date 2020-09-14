@@ -427,7 +427,7 @@ class ProcessManager
     }
 
     /**
-     * @return ?string
+     * @return string|null ?string
      */
     public function getAppEnv()
     {
@@ -571,7 +571,7 @@ class ProcessManager
     /**
      * Handles incoming connections from $this->port. Basically redirects to a slave.
      *
-     * @param Connection $incoming incoming connection from react
+     * @param \React\Socket\ConnectionInterface $incoming incoming connection from react
      */
     public function onRequest(ConnectionInterface $incoming)
     {
@@ -1055,6 +1055,8 @@ class ProcessManager
 
     /**
      * Reload slaves in-place, allowing busy workers to finish what they are doing.
+     *
+     * @param bool $graceful
      */
     public function reloadSlaves($graceful = true)
     {
@@ -1199,6 +1201,8 @@ class ProcessManager
      * Creates a new ProcessSlave instance.
      *
      * @param int $port
+     *
+     * @throws \Exception
      */
     protected function newSlaveInstance($port)
     {

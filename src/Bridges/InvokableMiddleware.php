@@ -22,7 +22,7 @@ class InvokableMiddleware implements BridgeInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {}
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
