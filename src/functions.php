@@ -24,9 +24,9 @@ function register_file($path)
  */
 function console_log($expression, $_ = null)
 {
-    ob_start();
-    var_dump(...func_get_args());
-    file_put_contents('php://stderr', ob_get_clean() . PHP_EOL, FILE_APPEND);
+    \ob_start();
+    \var_dump(...\func_get_args());
+    \file_put_contents('php://stderr', \ob_get_clean() . PHP_EOL, FILE_APPEND);
 }
 
 /**
