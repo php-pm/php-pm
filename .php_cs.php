@@ -9,6 +9,7 @@ return PhpCsFixer\Config::create()
         '@PSR2' => true,
         'array_syntax' => ['syntax' => 'short'],
         'RemoveDebugStatements/dump' => true,
+        'native_function_invocation' => ['strict' => true],
     ])
     ->registerCustomFixers([new Drew\DebugStatementsFixers\Dump()])
     ->setRiskyAllowed(true)

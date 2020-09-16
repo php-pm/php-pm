@@ -122,7 +122,7 @@ class ProcessSlave
         $this->config = $config;
 
         if ($this->config['session_path']) {
-            session_save_path($this->config['session_path']);
+            \session_save_path($this->config['session_path']);
         }
     }
 
@@ -235,7 +235,7 @@ class ProcessSlave
             if (true === \class_exists($this->bridgeName)) {
                 $bridgeClass = $this->bridgeName;
             } else {
-                $bridgeClass = \sprintf('PHPPM\Bridges\\%s', ucfirst($this->bridgeName));
+                $bridgeClass = \sprintf('PHPPM\Bridges\\%s', \ucfirst($this->bridgeName));
             }
 
             $this->bridge = new $bridgeClass;
@@ -338,11 +338,11 @@ class ProcessSlave
                 $httpServer->listen($this->server);
                 if ($this->isLogging()) {
                     $httpServer->on('error', function (\Exception $e) {
-                        \error_log(\sprintf('Worker error while processing the request. %s: %s', get_class($e), $e->getMessage()));
+                        \error_log(\sprintf('Worker error while processing the request. %s: %s', \get_class($e), $e->getMessage()));
                     });
                 }
 
-                $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
+                $this->sendMessage($this->controller, 'register', ['pid' => \getmypid(), 'port' => $port]);
             }
         );
     }
@@ -407,7 +407,7 @@ class ProcessSlave
         $request = $request->withAttribute('remote_address', $remoteIp);
         $request = $request->withAttribute('remote_port', $remotePort);
 
-        $logTime = date('d/M/Y:H:i:s O');
+        $logTime = \date('d/M/Y:H:i:s O');
 
         $catchLog = function ($e) {
             console_log((string) $e);
@@ -477,7 +477,7 @@ class ProcessSlave
             );
             $this->shutdown();
         }
-        $this->sendMessage($this->controller, 'stats', ['memory_usage' => round(memory_get_peak_usage(true)/1048576, 2)]); // Convert memory usage to MB
+        $this->sendMessage($this->controller, 'stats', ['memory_usage' => \round(\memory_get_peak_usage(true)/1048576, 2)]); // Convert memory usage to MB
         return $response;
     }
 
@@ -623,7 +623,7 @@ class ProcessSlave
                 $logFunction($size);
             });
         } else {
-            $logFunction(strlen(\RingCentral\Psr7\str($response)));
+            $logFunction(\strlen(\RingCentral\Psr7\str($response)));
         }
     }
 

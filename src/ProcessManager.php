@@ -554,13 +554,13 @@ class ProcessManager
 
     private function writePidFile()
     {
-        $pid = getmypid();
+        $pid = \getmypid();
         \file_put_contents($this->pidFile, $pid);
     }
 
     private function removePidFile()
     {
-        $pid = getmypid();
+        $pid = \getmypid();
         $actualPid = (int) \file_get_contents($this->pidFile);
         //Only remove the pid file if it is our own
         if ($actualPid === $pid) {
@@ -1189,7 +1189,7 @@ class ProcessManager
         if ($this->status === self::STATE_STARTING || $this->status === self::STATE_EMERGENCY) {
             $readySlaves = $this->slaves->getByStatus(Slave::READY);
             $busySlaves = $this->slaves->getByStatus(Slave::BUSY);
-            return \count($readySlaves) + count($busySlaves) === $this->slaveCount;
+            return \count($readySlaves) + \count($busySlaves) === $this->slaveCount;
         }
 
         return false;
@@ -1297,7 +1297,7 @@ EOF;
                     $this->output->writeln(\sprintf('<info>--- Worker %u stderr ---</info>', $port));
                     $this->lastWorkerErrorPrintBy = $port;
                 }
-                $this->output->writeln(\sprintf('<error>%s</error>', trim($data)));
+                $this->output->writeln(\sprintf('<error>%s</error>', \trim($data)));
             }
         );
     }
