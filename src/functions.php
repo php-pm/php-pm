@@ -24,9 +24,9 @@ function register_file($path)
  */
 function console_log($expression, $_ = null)
 {
-    ob_start();
-    var_dump(...func_get_args());
-    file_put_contents('php://stderr', ob_get_clean() . PHP_EOL, FILE_APPEND);
+    \ob_start();
+    \var_dump(...\func_get_args());
+    \file_put_contents('php://stderr', \ob_get_clean() . PHP_EOL, FILE_APPEND);
 }
 
 /**
@@ -36,7 +36,7 @@ function console_log($expression, $_ = null)
  */
 function pcntl_installed()
 {
-    return function_exists('pcntl_signal');
+    return \function_exists('pcntl_signal');
 }
 
 /**
@@ -47,13 +47,13 @@ function pcntl_installed()
 function pcntl_enabled()
 {
     $requiredFunctions = ['pcntl_signal', 'pcntl_signal_dispatch', 'pcntl_waitpid'];
-    $disabledFunctions = explode(',', (string) ini_get('disable_functions'));
-    $disabledFunctions = array_map(function ($item) {
-        return trim($item);
+    $disabledFunctions = \explode(',', (string) \ini_get('disable_functions'));
+    $disabledFunctions = \array_map(function ($item) {
+        return \trim($item);
     }, $disabledFunctions);
 
     foreach ($requiredFunctions as $function) {
-        if (in_array($function, $disabledFunctions)) {
+        if (\in_array($function, $disabledFunctions)) {
             return false;
         }
     }

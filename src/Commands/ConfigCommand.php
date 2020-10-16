@@ -41,14 +41,14 @@ class ConfigCommand extends Command
 
         $this->renderConfig($output, $config);
 
-        $newContent = json_encode($config, JSON_PRETTY_PRINT);
-        if (file_exists($configPath) && $newContent === file_get_contents($configPath)) {
-            $output->writeln(sprintf('No changes to %s file.', realpath($configPath)));
+        $newContent = \json_encode($config, JSON_PRETTY_PRINT);
+        if (\file_exists($configPath) && $newContent === \file_get_contents($configPath)) {
+            $output->writeln(\sprintf('No changes to %s file.', \realpath($configPath)));
             return 0;
         }
 
-        file_put_contents($configPath, $newContent);
-        $output->writeln(sprintf('<info>%s file written.</info>', realpath($configPath)));
+        \file_put_contents($configPath, $newContent);
+        $output->writeln(\sprintf('<info>%s file written.</info>', \realpath($configPath)));
 
         return 0;
     }

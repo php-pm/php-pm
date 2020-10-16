@@ -43,9 +43,9 @@ trait ConfigTrait
     {
         $table = new Table($output);
 
-        $rows = array_map(function ($a, $b) {
+        $rows = \array_map(function ($a, $b) {
             return [$a, $b];
-        }, array_keys($config), $config);
+        }, \array_keys($config), $config);
         $table->addRows($rows);
 
         $table->render();
@@ -60,22 +60,22 @@ trait ConfigTrait
     protected function getConfigPath(InputInterface $input, $create = false)
     {
         $configOption = $input->getOption('config');
-        if ($configOption && !file_exists($configOption)) {
+        if ($configOption && !\file_exists($configOption)) {
             if ($create) {
-                file_put_contents($configOption, json_encode([]));
+                \file_put_contents($configOption, \json_encode([]));
             } else {
-                throw new \Exception(sprintf('Config file not found: "%s"', $configOption));
+                throw new \Exception(\sprintf('Config file not found: "%s"', $configOption));
             }
         }
         $possiblePaths = [
             $configOption,
             $this->file,
-            sprintf('%s/%s', dirname($GLOBALS['argv'][0]), $this->file)
+            \sprintf('%s/%s', \dirname($GLOBALS['argv'][0]), $this->file)
         ];
 
         foreach ($possiblePaths as $path) {
-            if (file_exists($path)) {
-                return realpath($path);
+            if (\file_exists($path)) {
+                return \realpath($path);
             }
         }
         return '';
@@ -86,8 +86,8 @@ trait ConfigTrait
         $config = [];
 
         if ($path = $this->getConfigPath($input)) {
-            $content = file_get_contents($path);
-            $config = json_decode($content, true);
+            $content = \file_get_contents($path);
+            $config = \json_decode($content, true);
         }
 
         $config['bridge'] = $this->optionOrConfigValue($input, 'bridge', $config);
@@ -119,11 +119,11 @@ trait ConfigTrait
 
             $cgiPaths = [
                 $binary . '-cgi', //php7.0 -> php7.0-cgi
-                str_replace('php', 'php-cgi', $binary), //php7.0 => php-cgi7.0
+                \str_replace('php', 'php-cgi', $binary), //php7.0 => php-cgi7.0
             ];
 
             foreach ($cgiPaths as $cgiPath) {
-                $path = trim(`which $cgiPath`);
+                $path = \trim(`which $cgiPath`);
                 if ($path) {
                     $config['cgi-path'] = $path;
                     break;
@@ -157,19 +157,19 @@ trait ConfigTrait
     protected function initializeConfig(InputInterface $input, OutputInterface $output, $render = true)
     {
         if ($workingDir = $input->getArgument('working-directory')) {
-            chdir($workingDir);
+            \chdir($workingDir);
         }
         $config = $this->loadConfig($input, $output);
 
         if ($path = $this->getConfigPath($input)) {
             $modified = '';
-            $fileConfig = json_decode(file_get_contents($path), true);
-            if (json_encode($fileConfig) !== json_encode($config)) {
+            $fileConfig = \json_decode(\file_get_contents($path), true);
+            if (\json_encode($fileConfig) !== \json_encode($config)) {
                 $modified = ', modified by command arguments';
             }
-            $output->writeln(sprintf('<info>Read configuration %s%s.</info>', $path, $modified));
+            $output->writeln(\sprintf('<info>Read configuration %s%s.</info>', $path, $modified));
         }
-        $output->writeln(sprintf('<info>%s</info>', getcwd()));
+        $output->writeln(\sprintf('<info>%s</info>', \getcwd()));
 
         if ($render) {
             $this->renderConfig($output, $config);

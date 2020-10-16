@@ -49,10 +49,10 @@ class StatusCommand extends Command
      */
     private function parseStatus($status, $indentLevel = 0)
     {
-        if (is_array($status)) {
+        if (\is_array($status)) {
             $p = PHP_EOL;
             foreach ($status as $key => $value) {
-                $p .= sprintf('%s%s: %s', str_repeat("\t", $indentLevel), $key, $this->parseStatus($value, $indentLevel + 1));
+                $p .= \sprintf('%s%s: %s', \str_repeat("\t", $indentLevel), $key, $this->parseStatus($value, $indentLevel + 1));
             }
         } else {
             $p = $status . PHP_EOL;

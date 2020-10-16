@@ -122,7 +122,7 @@ class ProcessSlave
         $this->config = $config;
 
         if ($this->config['session_path']) {
-            session_save_path($this->config['session_path']);
+            \session_save_path($this->config['session_path']);
         }
     }
 
@@ -161,7 +161,7 @@ class ProcessSlave
         }
 
         if ($this->errorLogger && $logs = $this->errorLogger->cleanLogs()) {
-            $messages = array_map(
+            $messages = \array_map(
                 function ($item) {
                     //array($level, $message, $context);
                     $message = $item[1];
@@ -173,7 +173,7 @@ class ProcessSlave
 
                     if (isset($context['stack'])) {
                         foreach ($context['stack'] as $idx => $stack) {
-                            $message .= PHP_EOL . sprintf(
+                            $message .= PHP_EOL . \sprintf(
                                 "#%d: %s%s %s%s",
                                 $idx,
                                 isset($stack['class']) ? $stack['class'] . '->' : '',
@@ -187,7 +187,7 @@ class ProcessSlave
                 },
                 $logs
             );
-            error_log(implode(PHP_EOL, $messages));
+            \error_log(\implode(PHP_EOL, $messages));
         }
 
         $this->inShutdown = true;
@@ -232,10 +232,10 @@ class ProcessSlave
     protected function getBridge()
     {
         if (null === $this->bridge && $this->bridgeName) {
-            if (true === class_exists($this->bridgeName)) {
+            if (true === \class_exists($this->bridgeName)) {
                 $bridgeClass = $this->bridgeName;
             } else {
-                $bridgeClass = sprintf('PHPPM\Bridges\\%s', ucfirst($this->bridgeName));
+                $bridgeClass = \sprintf('PHPPM\Bridges\\%s', \ucfirst($this->bridgeName));
             }
 
             $this->bridge = new $bridgeClass;
@@ -284,11 +284,11 @@ class ProcessSlave
             return;
         }
 
-        $files = array_merge($this->watchedFiles, get_included_files());
-        $flipped = array_flip($files);
+        $files = \array_merge($this->watchedFiles, \get_included_files());
+        $flipped = \array_flip($files);
 
         //speedy way checking if two arrays are different.
-        if (!$this->lastSentFiles || array_diff_key($flipped, $this->lastSentFiles)) {
+        if (!$this->lastSentFiles || \array_diff_key($flipped, $this->lastSentFiles)) {
             $this->lastSentFiles = $flipped;
             $this->sendMessage($this->controller, 'files', ['files' => $files]);
         }
@@ -312,7 +312,7 @@ class ProcessSlave
 
                 $this->loop->addSignal(SIGTERM, [$this, 'shutdown']);
                 $this->loop->addSignal(SIGINT, [$this, 'shutdown']);
-                register_shutdown_function([$this, 'prepareShutdown']);
+                \register_shutdown_function([$this, 'prepareShutdown']);
 
                 $this->bindProcessMessage($this->controller);
                 $this->controller->on('close', [$this, 'shutdown']);
@@ -338,11 +338,11 @@ class ProcessSlave
                 $httpServer->listen($this->server);
                 if ($this->isLogging()) {
                     $httpServer->on('error', function (\Exception $e) {
-                        error_log(sprintf('Worker error while processing the request. %s: %s', get_class($e), $e->getMessage()));
+                        \error_log(\sprintf('Worker error while processing the request. %s: %s', \get_class($e), $e->getMessage()));
                     });
                 }
 
-                $this->sendMessage($this->controller, 'register', ['pid' => getmypid(), 'port' => $port]);
+                $this->sendMessage($this->controller, 'register', ['pid' => \getmypid(), 'port' => $port]);
             }
         );
     }
@@ -407,7 +407,7 @@ class ProcessSlave
         $request = $request->withAttribute('remote_address', $remoteIp);
         $request = $request->withAttribute('remote_port', $remotePort);
 
-        $logTime = date('d/M/Y:H:i:s O');
+        $logTime = \date('d/M/Y:H:i:s O');
 
         $catchLog = function ($e) {
             console_log((string) $e);
@@ -453,13 +453,13 @@ class ProcessSlave
             try {
                 $response = $bridge->handle($request);
             } catch (\Throwable $t) {
-                error_log(
+                \error_log(
                     'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
                     (string)$t
                 );
                 $response = new Response(500, [], 'Unexpected error');
 
-                @ob_end_clean();
+                @\ob_end_clean();
                 $this->shutdown();
             }
             $this->sendCurrentFiles();
@@ -467,17 +467,17 @@ class ProcessSlave
             $response = new Response(404, [], 'No Bridge defined');
         }
 
-        if (headers_sent()) {
+        if (\headers_sent()) {
             //when a script sent headers the cgi process needs to die because the second request
             //trying to send headers again will fail (headers already sent fatal). Its best to not even
             //try to send headers because this break the whole approach of php-pm using php-cgi.
-            error_log(
+            \error_log(
                 'Headers have been sent, but not redirected to client. Forcing restart of the worker. ' .
                 'Make sure your application does not send headers on its own.'
             );
             $this->shutdown();
         }
-        $this->sendMessage($this->controller, 'stats', ['memory_usage' => round(memory_get_peak_usage(true)/1048576, 2)]); // Convert memory usage to MB
+        $this->sendMessage($this->controller, 'stats', ['memory_usage' => \round(\memory_get_peak_usage(true)/1048576, 2)]); // Convert memory usage to MB
         return $response;
     }
 
@@ -485,13 +485,13 @@ class ProcessSlave
     {
         $_SERVER = $this->baseServer;
         $_SERVER['REQUEST_METHOD'] = $request->getMethod();
-        $_SERVER['REQUEST_TIME'] = (int)microtime(true);
-        $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
+        $_SERVER['REQUEST_TIME'] = (int)\microtime(true);
+        $_SERVER['REQUEST_TIME_FLOAT'] = \microtime(true);
 
         $_SERVER['QUERY_STRING'] = $request->getUri()->getQuery();
 
         foreach ($request->getHeaders() as $name => $valueArr) {
-            $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $request->getHeaderLine($name);
+            $_SERVER['HTTP_' . \strtoupper(\str_replace('-', '_', $name))] = $request->getHeaderLine($name);
         }
 
         //We receive X-PHP-PM-Remote-IP and X-PHP-PM-Remote-Port from ProcessManager.
@@ -505,9 +505,9 @@ class ProcessSlave
 
         $_SERVER['SERVER_NAME'] = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $_SERVER['REQUEST_URI'] = $request->getUri()->getPath() . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '');
-        $_SERVER['DOCUMENT_ROOT'] = isset($_ENV['DOCUMENT_ROOT']) ? $_ENV['DOCUMENT_ROOT'] : getcwd();
+        $_SERVER['DOCUMENT_ROOT'] = isset($_ENV['DOCUMENT_ROOT']) ? $_ENV['DOCUMENT_ROOT'] : \getcwd();
         $_SERVER['SCRIPT_NAME'] = isset($_ENV['SCRIPT_NAME']) ? $_ENV['SCRIPT_NAME'] : 'index.php';
-        $_SERVER['SCRIPT_FILENAME'] = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/' . $_SERVER['SCRIPT_NAME'];
+        $_SERVER['SCRIPT_FILENAME'] = \rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/' . $_SERVER['SCRIPT_NAME'];
     }
 
     /**
@@ -521,7 +521,7 @@ class ProcessSlave
         if ($path === '/') {
             $path = '/index.html';
         } else {
-            $path = str_replace("\\", '/', $path);
+            $path = \str_replace("\\", '/', $path);
         }
 
         $path = Utils::parseQueryPath($path);
@@ -533,18 +533,18 @@ class ProcessSlave
 
         $filePath = $this->getStaticDirectory() . $path;
 
-        if (substr($filePath, -4) === '.php' || !is_file($filePath)) {
+        if (\substr($filePath, -4) === '.php' || ! \is_file($filePath)) {
             return false;
         }
 
-        $mTime = filemtime($filePath);
+        $mTime = \filemtime($filePath);
 
         if ($request->hasHeader('If-Modified-Since')) {
             $ifModifiedSince = $request->getHeaderLine('If-Modified-Since');
-            if ($ifModifiedSince && strtotime($ifModifiedSince) === $mTime) {
+            if ($ifModifiedSince && \strtotime($ifModifiedSince) === $mTime) {
                 // Client's cache IS current, so we just respond '304 Not Modified'.
                 $response = new Response(304, [
-                    'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
+                    'Last-Modified' => \gmdate('D, d M Y H:i:s', $mTime) . ' GMT'
                 ]);
                 return $response;
             }
@@ -553,12 +553,12 @@ class ProcessSlave
         $expires = 3600; //1 h
         $response = new Response(200, [
             'Content-Type' => $this->mimeContentType($filePath),
-            'Content-Length' => filesize($filePath),
+            'Content-Length' => \filesize($filePath),
             'Pragma' => 'public',
             'Cache-Control' => 'max-age=' . $expires,
-            'Last-Modified' => gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
-            'Expires' => gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT'
-        ], new ReadableResourceStream(fopen($filePath, 'rb'), $this->loop));
+            'Last-Modified' => \gmdate('D, d M Y H:i:s', $mTime) . ' GMT',
+            'Expires' => \gmdate('D, d M Y H:i:s', \time() + $expires) . ' GMT'
+        ], new ReadableResourceStream(\fopen($filePath, 'rb'), $this->loop));
 
         return $response;
     }
@@ -580,7 +580,7 @@ class ProcessSlave
                 $statusCode = "<info>$statusCode</info>";
             }
 
-            $message = str_replace(
+            $message = \str_replace(
                 [
                     '$remote_addr',
                     '$remote_user',
@@ -614,16 +614,16 @@ class ProcessSlave
         if ($response->getBody() instanceof EventEmitterInterface) {
             /** @var EventEmitterInterface $body */
             $body = $response->getBody();
-            $size = strlen(\RingCentral\Psr7\str($response));
+            $size = \strlen(\RingCentral\Psr7\str($response));
             $body->on('data', function ($data) use (&$size) {
-                $size += strlen($data);
+                $size += \strlen($data);
             });
             //using `close` event since `end` is not fired for files
             $body->on('close', function () use (&$size, $logFunction) {
                 $logFunction($size);
             });
         } else {
-            $logFunction(strlen(\RingCentral\Psr7\str($response)));
+            $logFunction(\strlen(\RingCentral\Psr7\str($response)));
         }
     }
 
@@ -690,17 +690,17 @@ class ProcessSlave
             'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
         ];
 
-        $ext = strtolower(substr($filename, strrpos($filename, '.') + 1));
+        $ext = \strtolower(\substr($filename, \strrpos($filename, '.') + 1));
         if (isset($mimeTypes[$ext])) {
             return $mimeTypes[$ext];
         }
 
-        if (function_exists('finfo_open')) {
-            $finfo = finfo_open(FILEINFO_MIME);
+        if (\function_exists('finfo_open')) {
+            $finfo = \finfo_open(FILEINFO_MIME);
 
             //we need to suppress all stuff of this call due to https://bugs.php.net/bug.php?id=71615
-            $mimetype = @finfo_file($finfo, $filename);
-            finfo_close($finfo);
+            $mimetype = @\finfo_file($finfo, $filename);
+            \finfo_close($finfo);
             if ($mimetype) {
                 return $mimetype;
             }

@@ -18,9 +18,9 @@ class Utils
      */
     public static function bindAndCall(callable $fn, $newThis, $args = [], $bindClass = null)
     {
-        $func = \Closure::bind($fn, $newThis, $bindClass ?: get_class($newThis));
+        $func = \Closure::bind($fn, $newThis, $bindClass ?: \get_class($newThis));
         if ($args) {
-            call_user_func_array($func, $args);
+            \call_user_func_array($func, $args);
         } else {
             $func(); //faster
         }
@@ -55,7 +55,7 @@ class Utils
      */
     public static function getMaxMemory()
     {
-        $memoryLimit = ini_get('memory_limit');
+        $memoryLimit = \ini_get('memory_limit');
 
         // if no limit
         if (-1 == $memoryLimit) {
@@ -63,16 +63,16 @@ class Utils
         }
 
         // if set to exact byte
-        if (is_numeric($memoryLimit)) {
+        if (\is_numeric($memoryLimit)) {
             return (int) $memoryLimit;
         }
 
         // if short hand version http://php.net/manual/en/faq.using.php#faq.using.shorthandbytes
-        return (int) substr($memoryLimit, 0, -1) * [
+        return (int) \substr($memoryLimit, 0, -1) * [
             'g' => 1073741824, // 1024 * 1024 * 1024
             'm' => 1048576, // 1024 * 1024
             'k' => 1024
-        ][strtolower(substr($memoryLimit, -1))];
+        ][\strtolower(\substr($memoryLimit, -1))];
     }
 
     /**
@@ -82,8 +82,8 @@ class Utils
      */
     public static function parseQueryPath($path)
     {
-        $path = '/' . ltrim($path, '/');
-        $path = preg_replace('/[\x00-\x1F\x7F]/', '', $path);
+        $path = '/' . \ltrim($path, '/');
+        $path = \preg_replace('/[\x00-\x1F\x7F]/', '', $path);
 
         //examples:
         //1.> /images/../foo.png
@@ -92,15 +92,15 @@ class Utils
         //1.> /images/../../foo.png
         //2.> /foo.png
         //3.> false
-        while (false !== $pos = strpos($path, '/../')) {
-            $leftSlashNext = strrpos(substr($path, 0, $pos), '/');
+        while (false !== $pos = \strpos($path, '/../')) {
+            $leftSlashNext = \strrpos(\substr($path, 0, $pos), '/');
 
             if (false === $leftSlashNext) {
                 // one /../ too much, without space to the left/up
                 return false;
             }
 
-            $path = substr($path, 0, $leftSlashNext + 1) . substr($path, $pos + 4);
+            $path = \substr($path, 0, $leftSlashNext + 1) . \substr($path, $pos + 4);
         }
 
         return $path;
