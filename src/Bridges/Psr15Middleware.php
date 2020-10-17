@@ -23,10 +23,7 @@ class Psr15Middleware implements BridgeInterface
     }
 
     /**
-     * {}
-     * @param \Psr\Http\Message\ServerRequestInterface $request
-     *
-     * @return \Psr\Http\Message\ResponseInterface
+     * {@inheritdoc}
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {

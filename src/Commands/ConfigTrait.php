@@ -149,12 +149,10 @@ trait ConfigTrait
     }
 
     /**
-     * @param InputInterface  $input
+     * @param InputInterface $input
      * @param OutputInterface $output
-     * @param bool            $render
-     *
+     * @param bool $render
      * @return array|mixed
-     * @throws \Exception
      */
     protected function initializeConfig(InputInterface $input, OutputInterface $output, $render = true)
     {

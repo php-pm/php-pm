@@ -13,7 +13,7 @@ class StatusCommand extends Command
     use ConfigTrait;
 
     /**
-     * {}
+     * {@inheritdoc}
      */
     protected function configure()
     {

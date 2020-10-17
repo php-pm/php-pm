@@ -14,7 +14,7 @@ class StopCommand extends Command
     use ConfigTrait;
 
     /**
-     * {}
+     * {@inheritdoc}
      */
     protected function configure()
     {

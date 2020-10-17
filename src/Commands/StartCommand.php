@@ -13,7 +13,7 @@ class StartCommand extends Command
     use ConfigTrait;
 
     /**
-     * {}
+     * {@inheritdoc}
      */
     protected function configure()
     {

@@ -427,7 +427,7 @@ class ProcessManager
     }
 
     /**
-     * @return string|null ?string
+     * @return ?string
      */
     public function getAppEnv()
     {
@@ -571,7 +571,7 @@ class ProcessManager
     /**
      * Handles incoming connections from $this->port. Basically redirects to a slave.
      *
-     * @param \React\Socket\ConnectionInterface $incoming incoming connection from react
+     * @param Connection $incoming incoming connection from react
      */
     public function onRequest(ConnectionInterface $incoming)
     {
@@ -598,9 +598,7 @@ class ProcessManager
      * Handle slave closed
      *
      * @param ConnectionInterface $connection
-     *
      * @return void
-     * @throws \Exception
      */
     public function onSlaveClosed(ConnectionInterface $connection)
     {
@@ -897,7 +895,6 @@ class ProcessManager
      * Handles failed application bootstraps.
      *
      * @param int $port
-     * @throws \Exception
      */
     protected function bootstrapFailed($port)
     {
@@ -1026,7 +1023,6 @@ class ProcessManager
      * Populate slave pool
      *
      * @return void
-     * @throws \Exception
      */
     public function createSlaves()
     {
@@ -1041,7 +1037,6 @@ class ProcessManager
      * @param Slave $slave
      *
      * @return void
-     * @throws \Exception
      */
     protected function closeSlave($slave)
     {
@@ -1058,8 +1053,6 @@ class ProcessManager
 
     /**
      * Reload slaves in-place, allowing busy workers to finish what they are doing.
-     *
-     * @param bool $graceful
      */
     public function reloadSlaves($graceful = true)
     {
@@ -1109,6 +1102,7 @@ class ProcessManager
         $this->slavesToReload = [];
 
         foreach ($this->slaves->getByStatus(Slave::ANY) as $slave) {
+            /** @var Slave $slave */
 
             /*
              * Attach the callable to the connection close event, because locked workers are closed via RequestHandler.
@@ -1203,8 +1197,6 @@ class ProcessManager
      * Creates a new ProcessSlave instance.
      *
      * @param int $port
-     *
-     * @throws \Exception
      */
     protected function newSlaveInstance($port)
     {
