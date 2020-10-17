@@ -83,11 +83,7 @@ trait ProcessCommunicationTrait
     {
         //since all commands set setcwd() we can make sure we are in the current application folder
 
-        if ('/' === substr($this->socketPath, 0, 1)) {
-            $run = $this->socketPath;
-        } else {
-            $run = getcwd() . '/' . $this->socketPath;
-        }
+        $run = strpos($this->socketPath, '/') === 0 ? $this->socketPath : getcwd() . '/' . $this->socketPath;
 
         if ('/' !== substr($run, -1)) {
             $run .= '/';
