@@ -44,6 +44,7 @@ class Utils
      * Generates stronger session ids for session handling.
      *
      * @return string
+     * @throws \Exception
      */
     public static function generateSessionId()
     {

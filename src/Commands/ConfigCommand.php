@@ -12,7 +12,7 @@ class ConfigCommand extends Command
     use ConfigTrait;
 
     /**
-     * {@inheritdoc}
+     * {}
      */
     protected function configure()
     {
