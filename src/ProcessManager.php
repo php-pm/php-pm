@@ -956,16 +956,14 @@ class ProcessManager
         foreach ($this->filesLastMTime as $filePath => $knownMTime) {
             //If the file is a directory, just remove it from the list of tracked files
             if (is_dir($filePath)) {
-                unset($this->filesLastMd5[$filePath]);
-                unset($this->filesLastMTime[$filePath]);
+                unset($this->filesLastMd5[$filePath], $this->filesLastMTime[$filePath]);
 
                 continue;
             }
 
             //If the file doesn't exist anymore, remove it from the list of tracked files and restart the workers
             if (!file_exists($filePath)) {
-                unset($this->filesLastMd5[$filePath]);
-                unset($this->filesLastMTime[$filePath]);
+                unset($this->filesLastMd5[$filePath], $this->filesLastMTime[$filePath]);
 
                 $this->output->writeln(
                     sprintf("<info>[%s] File %s has been removed.</info>", date('d/M/Y:H:i:s O'), $filePath)
