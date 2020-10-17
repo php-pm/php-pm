@@ -32,16 +32,16 @@ trait BootstrapTrait
      */
     private function normalizeBootstrapClass($appBootstrap)
     {
-        $appBootstrap = str_replace('\\\\', '\\', $appBootstrap);
+        $appBootstrap = \str_replace('\\\\', '\\', $appBootstrap);
 
         $bootstraps = [
             $appBootstrap,
             '\\' . $appBootstrap,
-            '\\PHPPM\Bootstraps\\' . ucfirst($appBootstrap)
+            '\\PHPPM\Bootstraps\\' . \ucfirst($appBootstrap)
         ];
 
         foreach ($bootstraps as $class) {
-            if (class_exists($class)) {
+            if (\class_exists($class)) {
                 return $class;
             }
         }

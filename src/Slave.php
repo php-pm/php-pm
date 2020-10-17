@@ -96,7 +96,7 @@ class Slave
         $this->maxRequests = $maxRequests;
         $this->memoryLimit = $memoryLimit;
         $this->ttl = ((int) $ttl < 1) ? null : $ttl;
-        $this->startedAt = time();
+        $this->startedAt = \time();
 
         $this->status = self::CREATED;
     }
@@ -309,7 +309,7 @@ class Slave
      */
     public function isExpired()
     {
-        return null !== $this->ttl && time() >= ($this->startedAt + $this->ttl);
+        return null !== $this->ttl && \time() >= ($this->startedAt + $this->ttl);
     }
 
     /**
@@ -339,7 +339,7 @@ class Slave
                 $status = 'INVALID';
         }
 
-        return (string)print_r([
+        return (string)\print_r([
             'status' => $status,
             'port' => $this->port,
             'pid' => $this->pid
