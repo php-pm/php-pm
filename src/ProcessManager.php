@@ -1043,7 +1043,7 @@ class ProcessManager
         $slave->close();
         $this->slaves->remove($slave);
 
-        if (!empty($slave->getConnection())) {
+        if ($slave->getConnection() !== null) {
             /** @var ConnectionInterface */
             $connection = $slave->getConnection();
             $connection->removeAllListeners('close');
