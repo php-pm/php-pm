@@ -455,7 +455,7 @@ class ProcessSlave
             } catch (\Throwable $t) {
                 error_log(
                     'An exception was thrown by the bridge. Forcing restart of the worker. The exception was: ' .
-                    (string)$t
+                    $t
                 );
                 $response = new Response(500, [], 'Unexpected error');
 
