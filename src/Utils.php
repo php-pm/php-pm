@@ -35,7 +35,7 @@ class Utils
      */
     public static function hijackProperty($object, $propertyName, $newValue)
     {
-        Utils::bindAndCall(function () use ($object, $propertyName, $newValue) {
+        self::bindAndCall(function () use ($object, $propertyName, $newValue) {
             $object->$propertyName = $newValue;
         }, $object);
     }
