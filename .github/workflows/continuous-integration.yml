@@ -1,0 +1,72 @@
+name: "CS & PHPStan & Phpunit & Integration Tests"
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  cs-phpstan-phpunit-integration:
+    name: "CS & PHPStan & Phpunit & Integration Tests"
+    runs-on: "ubuntu-18.04"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - "7.4"
+        deps:
+          - "normal"
+        include:
+          - deps: "low"
+            php-version: "7.1"
+
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v2"
+        with:
+          fetch-depth: 0
+
+      - name: "Install PHP"
+        uses: "shivammathur/setup-php@v2"
+        with:
+          php-version: "${{ matrix.php-version }}"
+          extensions: "pcntl"
+          tools: "cs2pr"
+          # this is needed in order to remove the pcntl_ restrictions on the php-cgi SAPI
+          ini-values: "disable_functions="
+
+      - name: "Cache dependencies installed with composer"
+        uses: "actions/cache@v2"
+        with:
+          path: "~/.composer/cache"
+          key: "php-${{ matrix.php-version }}-composer-locked-${{ hashFiles('composer.lock') }}"
+          restore-keys: "php-${{ matrix.php-version }}-composer-locked-"
+
+      - name: "Install dependencies with composer"
+        run: "composer update --no-interaction --no-progress --no-suggest --prefer-dist"
+        if: "${{ matrix.deps == 'normal' }}"
+
+      - name: "Install lowest possible dependencies with composer"
+        run: "composer update --no-interaction --no-progress --no-suggest --prefer-dist --prefer-lowest"
+        if: "${{ matrix.deps == 'low' }}"
+
+      - name: "Run git-phpcs (for pull request)"
+        if: "${{ github.event_name == 'pull_request' }}"
+        run: |
+          CHANGED_PHP_FILES=$(git diff origin/$GITHUB_BASE_REF --name-only --diff-filter=ACMRTUXB | grep -E "\.php$")
+          php vendor/bin/php-cs-fixer fix --config=.php_cs.php --dry-run --diff -v -- $CHANGED_PHP_FILES
+
+      - name: "Run git-phpcs (for push)"
+        if: "${{ github.event_name != 'pull_request' }}"
+        run: |
+          CHANGED_PHP_FILES=$(git diff --name-only --diff-filter=ACMRTUXB HEAD~..HEAD | grep -E "\.php$")
+          php vendor/bin/php-cs-fixer fix --config=.php_cs.php --dry-run --diff -v -- $CHANGED_PHP_FILES
+
+      - name: "Run a static analysis with phpstan/phpstan"
+        run: "php vendor/bin/phpstan analyse --error-format=checkstyle | cs2pr"
+
+      - name: "Run PHPUnit"
+        run: "vendor/bin/phpunit"
+
+      - name: "Run Integration test"
+        run: "./integration_test.sh"
