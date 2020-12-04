@@ -30,13 +30,13 @@ function console_log($expression, $_ = null)
 }
 
 /**
- * Checks that PCNTL is actually enabled in this installation.
+ * Checks that PCNTL extension is installed and loaded in this installation.
  *
  * @return bool
  */
 function pcntl_installed()
 {
-    return \function_exists('pcntl_signal');
+    return \extension_loaded('pcntl');
 }
 
 /**
