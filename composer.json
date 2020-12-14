@@ -3,7 +3,7 @@
     "description": "PHP-PM is a process manager, supercharger and load balancer for PHP applications.",
     "license": "MIT",
     "require": {
-        "php": "^7.1",
+        "php": "^7.3 || ^8.0 ",
         "ext-pcntl": "*",
         "symfony/console": "^3.4|^4|^5",
         "symfony/error-handler": "^4.4|^5",
@@ -21,7 +21,7 @@
     },
     "require-dev": {
         "mockery/mockery": "^1.0",
-        "phpunit/phpunit": "^7.0",
+        "phpunit/phpunit": "^9.4",
         "friendsofphp/php-cs-fixer": "^2.16.7",
         "phpstan/phpstan": "^0.12.58",
         "drew/debug-statements-fixers": "^0.5.0"

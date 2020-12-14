@@ -14,11 +14,12 @@ jobs:
       matrix:
         php-version:
           - "7.4"
+          - "8.0"
         deps:
           - "normal"
         include:
           - deps: "low"
-            php-version: "7.1"
+            php-version: "7.3"
 
     steps:
       - name: "Checkout"
@@ -50,16 +51,17 @@ jobs:
         run: "composer update --no-interaction --no-progress --no-suggest --prefer-dist --prefer-lowest"
         if: "${{ matrix.deps == 'low' }}"
 
+      # Ignore CS for PHP8 until https://github.com/FriendsOfPHP/PHP-CS-Fixer/issues/4702 is merged
       - name: "Run git-phpcs (for pull request)"
-        if: "${{ github.event_name == 'pull_request' }}"
+        if: "${{ github.event_name == 'pull_request' && matrix.php-version != '8.0' }}"
         run: |
-          CHANGED_PHP_FILES=$(git diff origin/$GITHUB_BASE_REF --name-only --diff-filter=ACMRTUXB | grep -E "\.php$")
+          CHANGED_PHP_FILES=$(git diff origin/$GITHUB_BASE_REF --name-only --diff-filter=ACMRTUXB | grep -E "\.php$" || [[ $? == 1 ]])
           php vendor/bin/php-cs-fixer fix --config=.php_cs.php --dry-run --diff -v -- $CHANGED_PHP_FILES
 
       - name: "Run git-phpcs (for push)"
-        if: "${{ github.event_name != 'pull_request' }}"
+        if: "${{ github.event_name != 'pull_request' && matrix.php-version != '8.0' }}"
         run: |
-          CHANGED_PHP_FILES=$(git diff --name-only --diff-filter=ACMRTUXB HEAD~..HEAD | grep -E "\.php$")
+          CHANGED_PHP_FILES=$(git diff --name-only --diff-filter=ACMRTUXB HEAD~..HEAD | grep -E "\.php$" || [[ $? == 1 ]])
           php vendor/bin/php-cs-fixer fix --config=.php_cs.php --dry-run --diff -v -- $CHANGED_PHP_FILES
 
       - name: "Run a static analysis with phpstan/phpstan"
