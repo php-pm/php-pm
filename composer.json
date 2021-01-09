@@ -16,7 +16,6 @@
         "psr/http-server-handler": "^1.0",
         "ringcentral/psr7": "^1.2",
         "psr/http-message": "^1.0.1",
-        "react/cache": "^0.4",
         "react/promise": "^2.0"
     },
     "require-dev": {
