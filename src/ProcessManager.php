@@ -8,13 +8,11 @@ use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 use React\Socket\Server;
 use React\Socket\UnixServer;
-use React\Socket\Connection;
 use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
 use React\ChildProcess\Process;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\ErrorHandler\Debug;
-use Symfony\Component\Process\ProcessUtils;
 
 class ProcessManager
 {
@@ -571,7 +569,7 @@ class ProcessManager
     /**
      * Handles incoming connections from $this->port. Basically redirects to a slave.
      *
-     * @param Connection $incoming incoming connection from react
+     * @param ConnectionInterface $incoming incoming connection from react
      */
     public function onRequest(ConnectionInterface $incoming)
     {
