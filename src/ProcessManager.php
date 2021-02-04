@@ -947,7 +947,7 @@ class ProcessManager
         }
 
         $start = \microtime(true);
-        $hasChanged = false;
+        $numChanged = 0;
 
         \clearstatcache();
 
@@ -961,20 +961,16 @@ class ProcessManager
             }
 
             //If the file doesn't exist anymore, remove it from the list of tracked files and restart the workers
-            if (! \file_exists($filePath)) {
+            if (!\file_exists($filePath)) {
                 unset($this->filesLastMd5[$filePath]);
                 unset($this->filesLastMTime[$filePath]);
 
                 $this->output->writeln(
                     \sprintf("<info>[%s] File %s has been removed.</info>", \date('d/M/Y:H:i:s O'), $filePath)
                 );
-                $hasChanged = true;
-
-                break;
-            }
-
+                $numChanged++;
             //If the file modification time has changed, update the metadata and check its contents.
-            if ($knownMTime !== $actualFileTime = \filemtime($filePath)) {
+            } elseif ($knownMTime !== ($actualFileTime = \filemtime($filePath))) {
                 //update time metadata
                 $this->filesLastMTime[$filePath] = $actualFileTime;
                 if ($this->output->isVeryVerbose()) {
@@ -989,18 +985,17 @@ class ProcessManager
                     $this->output->writeln(
                         \sprintf("<info>[%s] File %s has changed.</info>", \date('d/M/Y:H:i:s O'), $filePath)
                     );
-                    $hasChanged = true;
-
-                    break;
+                    $numChanged++;
                 }
             }
         }
 
-        if ($hasChanged) {
+        if ($numChanged > 0) {
             $this->output->writeln(
                 \sprintf(
-                    "<info>[%s] At least one of %u known files was changed. Reloading workers.</info>",
+                    "<info>[%s] %u of %u known files was changed or removed. Reloading workers.</info>",
                     \date('d/M/Y:H:i:s O'),
+                    $numChanged,
                     \count($this->filesLastMTime)
                 )
             );
@@ -1016,7 +1011,7 @@ class ProcessManager
             ));
         }
 
-        return $hasChanged;
+        return $numChanged > 0;
     }
 
     /**
