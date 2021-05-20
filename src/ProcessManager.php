@@ -639,7 +639,7 @@ class ProcessManager
          */
         if ($status === Slave::REGISTERED) {
             $this->bootstrapFailed($port);
-        } else {
+        } elseif ($status !== Slave::CLOSED) {
             // recreate
             $this->newSlaveInstance($port);
         }
