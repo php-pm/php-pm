@@ -160,7 +160,7 @@ class RequestHandler
             $this->loop->futureTick([$this, 'getNextSlave']);
         } else {
             // Return a "503 Service Unavailable" response
-            $this->output->writeln(\sprintf('No slaves available to handle the request and timeout %d seconds exceeded', $this->timeout));
+            $this->output->writeln(\sprintf('No worker processes available to handle the request and timeout %d seconds exceeded', $this->timeout));
             $this->incoming->write($this->createErrorResponse('503 Service Temporarily Unavailable', 'Service Temporarily Unavailable'));
             $this->incoming->end();
         }
