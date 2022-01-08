@@ -122,7 +122,8 @@ class RequestHandler
             $remoteAddress = (string) $this->incoming->getRemoteAddress();
             $headersToReplace = [
                 'X-PHP-PM-Remote-IP' => \trim(\parse_url($remoteAddress, PHP_URL_HOST), '[]'),
-                'X-PHP-PM-Remote-Port' => \trim(\parse_url($remoteAddress, PHP_URL_PORT), '[]')
+                'X-PHP-PM-Remote-Port' => \trim(\parse_url($remoteAddress, PHP_URL_PORT), '[]'),
+                'Connection' => 'close'
             ];
 
             $buffer = $this->replaceHeader($this->incomingBuffer, $headersToReplace);
