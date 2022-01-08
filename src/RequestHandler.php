@@ -157,7 +157,8 @@ class RequestHandler
 
         // keep retrying until slave becomes available, unless timeout has been exceeded
         if (\time() < ($this->requestSentAt + $this->timeout)) {
-            $this->loop->futureTick([$this, 'getNextSlave']);
+            // add a small delay to avoid busy waiting
+            $this->loop->addTimer(.01, [$this, 'getNextSlave']);
         } else {
             // Return a "503 Service Unavailable" response
             $this->output->writeln(\sprintf('No slaves available to handle the request and timeout %d seconds exceeded', $this->timeout));
