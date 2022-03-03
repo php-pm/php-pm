@@ -120,4 +120,15 @@ class SlavePool
             return \count($this->getByStatus($state));
         }, $map);
     }
+
+    /**
+     * Returns all slaves in pool
+     *
+     * @return Slave[]
+     */
+
+    public function getSlaves()
+    {
+        return $this->slaves;
+    }
 }

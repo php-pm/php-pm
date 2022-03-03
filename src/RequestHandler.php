@@ -74,6 +74,13 @@ class RequestHandler
      */
     private $slave;
 
+    /**
+     * Contains the content from 'X-PPM-Restart'
+     *
+     * @var string
+     */
+    private $restartMode;
+
     private $redirectionTries = 0;
     private $incomingBuffer = '';
     private $lastOutgoingData = ''; // Used to track abnormal responses
@@ -171,12 +178,12 @@ class RequestHandler
     private function createErrorResponse($code, $text)
     {
         return \sprintf(
-            'HTTP/1.1 %s'."\n".
-            'Date: %s'."\n".
-            'Content-Type: text/plain'."\n".
-            'Content-Length: %s'."\n".
-            "\n".
-            '%s',
+            'HTTP/1.1 %s' . "\n" .
+                'Date: %s' . "\n" .
+                'Content-Type: text/plain' . "\n" .
+                'Content-Length: %s' . "\n" .
+                "\n" .
+                '%s',
             $code,
             \gmdate('D, d M Y H:i:s T'),
             \strlen($text),
@@ -246,10 +253,22 @@ class RequestHandler
         // keep track of the last sent data to detect if slave exited abnormally
         $this->connection->on('data', function ($data) {
             $this->lastOutgoingData = $data;
-        });
 
-        // relay data to client
-        $this->connection->pipe($this->incoming, ['end' => false]);
+            // relay data to client
+            if (stripos($data, 'X-PPM-Restart: worker') !== false) {
+                $this->restartMode = 'worker';
+            }
+
+            if (stripos($data, 'X-PPM-Restart: all') !== false) {
+                $this->restartMode = 'all';
+            }
+
+            if ($this->restartMode) {
+                $data = $this->removeHeader($data, 'X-PPM-Restart');
+            }
+
+            $this->incoming->write($data);
+        });
     }
 
     /**
@@ -328,6 +347,24 @@ class RequestHandler
                 $this->output->writeln(\sprintf('Restart worker #%d because it reached memory limit of %d', $this->slave->getPort(), $memoryLimit));
                 $connection->close();
             }
+            if ($this->restartMode === 'worker') {
+                $this->slave->close();
+                $this->output->writeln(sprintf('Restart worker #%d because "X-PPM-Worker" Header with content "worker" was send', $this->slave->getPort()));
+                $connection->close();
+
+                $this->restartMode = '';
+            }
+
+            if ($this->restartMode === 'all') {
+                foreach ($this->slaves->getSlaves() as $slave) {
+                    $slave->getConnection()->close();
+                    $slave->close();
+
+                    $this->output->writeln(sprintf('Restart worker #%d because "X-PPM-Worker" Header with content "all" was send', $slave->getPort()));
+                }
+
+                $this->restartMode = '';
+            }
         }
     }
 
@@ -348,7 +385,7 @@ class RequestHandler
         $this->verboseTimer(function ($took) use ($e) {
             return \sprintf(
                 '<error>Connection to worker %d failed. Try #%d, took %.3fs ' .
-                '(timeout %ds). Error message: [%d] %s</error>',
+                    '(timeout %ds). Error message: [%d] %s</error>',
                 $this->slave->getPort(),
                 $this->redirectionTries,
                 $took,
@@ -393,6 +430,18 @@ class RequestHandler
     protected function isHeaderEnd($buffer)
     {
         return false !== \strpos($buffer, "\r\n\r\n");
+    }
+
+    protected function removeHeader($header, $headerToRemove)
+    {
+        $result = $header;
+
+        if (false !== $headerPosition = stripos($result, $headerToRemove . ':')) {
+            $length = strpos(substr($header, $headerPosition), "\r\n");
+            $result = substr_replace($result, '', $headerPosition, $length);
+        }
+
+        return $result;
     }
 
     /**
