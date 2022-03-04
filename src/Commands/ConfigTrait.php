@@ -123,7 +123,7 @@ trait ConfigTrait
             ];
 
             foreach ($cgiPaths as $cgiPath) {
-                $path = \trim(`which $cgiPath`);
+                $path = \trim(`which $cgiPath` ?: '');
                 if ($path) {
                     $config['cgi-path'] = $path;
                     break;
