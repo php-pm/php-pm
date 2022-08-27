@@ -145,11 +145,8 @@ class RequestHandler
             return;
         }
 
-        $available = $this->slaves->getByStatus(Slave::READY);
-        if (\count($available)) {
-            // pick first slave
-            $slave = \array_shift($available);
-
+        $slave = $this->slaves->findReadySlave();
+        if ($slave !== null) {
             // slave available -> connect
             if ($this->tryOccupySlave($slave)) {
                 return;
@@ -192,13 +189,6 @@ class RequestHandler
      */
     public function tryOccupySlave(Slave $slave)
     {
-        if ($slave->isExpired()) {
-            $slave->close();
-            $this->output->writeln(\sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
-            $slave->getConnection()->close();
-            return false;
-        }
-
         $this->redirectionTries++;
 
         $this->slave = $slave;

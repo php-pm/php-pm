@@ -312,6 +312,11 @@ class Slave
         return null !== $this->ttl && \time() >= ($this->startedAt + $this->ttl);
     }
 
+    public function getTtl()
+    {
+        return $this->ttl;
+    }
+
     /**
      * String conversion for debugging
      *

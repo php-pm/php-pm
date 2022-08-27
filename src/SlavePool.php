@@ -2,13 +2,43 @@
 
 namespace PHPPM;
 
+use React\EventLoop\LoopInterface;
+use React\EventLoop\TimerInterface;
 use React\Socket\ConnectionInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * SlavePool singleton is responsible for maintaining a pool of slave instances
  */
 class SlavePool
 {
+    public const TTL_RESTART_STRATEGY_REQUEST = 'request';
+    public const TTL_RESTART_STRATEGY_EXPIRE = 'expire';
+
+    /**
+     * @var LoopInterface
+     */
+    private $loop;
+
+    /**
+     * @var TimerInterface[]
+     */
+    private $restartTimers = [];
+    /**
+     * @var OutputInterface
+     */
+    private $output;
+    /**
+     * @var string
+     */
+    private $ttlRestartStrategy = self::TTL_RESTART_STRATEGY_REQUEST;
+
+    public function __construct(LoopInterface $loop, OutputInterface $output)
+    {
+        $this->loop = $loop;
+        $this->output = $output;
+    }
+
     /** @var Slave[] */
     private $slaves = [];
 
@@ -34,6 +64,53 @@ class SlavePool
         }
 
         $this->slaves[$port] = $slave;
+
+        $this->setTtlTimer($slave);
+    }
+
+    /**
+     * @param string $ttlRestartStrategy
+     */
+    public function setTtlRestartStrategy($ttlRestartStrategy)
+    {
+        if (!in_array($ttlRestartStrategy, [self::TTL_RESTART_STRATEGY_REQUEST, self::TTL_RESTART_STRATEGY_EXPIRE], true)) {
+            throw new \InvalidArgumentException('Invalid ttl restart strategy. Expected request or expire but '. $ttlRestartStrategy . ' given');
+        }
+
+        $this->ttlRestartStrategy = $ttlRestartStrategy;
+    }
+
+    private function setTtlTimer(Slave $slave)
+    {
+        if (null === $slave->getTtl() || $this->ttlRestartStrategy !== self::TTL_RESTART_STRATEGY_EXPIRE) {
+            return;
+        }
+
+        // naive way of handling restarts not at the same time due to ttl expiration
+        $interval = $slave->getTtl() > 10 ? $slave->getTtl() + random_int(-5, 5) : $slave->getTtl() + random_int(0, 5);
+        $this->restartTimers[$slave->getPort()] = $this->loop->addTimer($interval, function() use ($slave) {
+            unset($this->restartTimers[$slave->getPort()]);
+            $this->restartSlave($slave);
+        });
+    }
+
+    private function restartSlave(Slave $slave)
+    {
+        if (in_array($slave->getStatus(), [Slave::LOCKED, Slave::CLOSED], true)) {
+            return;
+        }
+
+        if ($slave->getStatus() !== Slave::READY) {
+            $this->loop->futureTick(function() use ($slave) {
+                $this->restartSlave($slave);
+            });
+
+            return;
+        }
+
+        $slave->close();
+        $this->output->writeln(\sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
+        $slave->getConnection()->close();
     }
 
     /**
@@ -52,6 +129,10 @@ class SlavePool
 
         // remove
         unset($this->slaves[$port]);
+        if (array_key_exists($port, $this->restartTimers)) {
+            $this->loop->cancelTimer($this->restartTimers[$port]);
+            unset($this->restartTimers[$port]);
+        }
     }
 
     /**
@@ -95,9 +176,30 @@ class SlavePool
      */
     public function getByStatus($status)
     {
-        return \array_filter($this->slaves, function ($slave) use ($status) {
+        return \array_filter($this->slaves, static function ($slave) use ($status) {
             return $status === Slave::ANY || $status === $slave->getStatus();
         });
+    }
+
+    /**
+     * Find one slave with READY state
+     *
+     * @return Slave|null
+     */
+    public function findReadySlave()
+    {
+        $slaves = $this->getByStatus(Slave::READY);
+
+        foreach($slaves as $slave) {
+            if ($this->ttlRestartStrategy === self::TTL_RESTART_STRATEGY_REQUEST && $slave->isExpired()) {
+                $this->restartSlave($slave);
+                continue;
+            }
+
+            return $slave;
+        }
+
+        return null;
     }
 
     /**

@@ -97,6 +97,13 @@ class ProcessManager
     protected $ttl;
 
     /**
+     * Restart strategy when ttl is reached
+     *
+     * @var string
+     */
+    protected $ttlRestartStrategy;
+
+    /**
      * @var SlavePool
      */
     protected $slaves;
@@ -243,8 +250,10 @@ class ProcessManager
         $this->host = $host;
         $this->port = $port;
 
+        $this->loop = Factory::create();
+
         $this->slaveCount = $slaveCount;
-        $this->slaves = new SlavePool(); // create early, used during shutdown
+        $this->slaves = new SlavePool($this->loop, $this->output, 'expire'); // create early, used during shutdown
     }
 
     /**
@@ -374,6 +383,14 @@ class ProcessManager
     public function setTtl($ttl)
     {
         $this->ttl = $ttl;
+    }
+
+    /**
+     * @param string $ttlRestartStrategy
+     */
+    public function setTtlRestartStrategy($ttlRestartStrategy)
+    {
+        $this->slaves->setTtlRestartStrategy($ttlRestartStrategy);
     }
 
     /**
@@ -513,8 +530,6 @@ class ProcessManager
         \ini_set('output_buffering', 0);
         \ini_set('implicit_flush', 1);
         \ob_implicit_flush(1);
-
-        $this->loop = Factory::create();
 
         $this->web = new Server(\sprintf('%s:%d', $this->host, $this->port), $this->loop, ['backlog' => self::TCP_BACKLOG]);
         $this->web->on('connection', [$this, 'onRequest']);

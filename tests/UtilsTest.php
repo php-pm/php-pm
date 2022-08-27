@@ -3,6 +3,8 @@
 namespace PHPPM\Tests;
 
 use PHPPM\Utils;
+use React\EventLoop\LoopInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class UtilsTest extends PhpPmTestCase
 {
@@ -35,7 +37,7 @@ class UtilsTest extends PhpPmTestCase
 
     public function testHijackProperty()
     {
-        $object = new \PHPPM\SlavePool();
+        $object = new \PHPPM\SlavePool($this->createMock(LoopInterface::class), $this->createMock(OutputInterface::class));
         Utils::hijackProperty($object, 'slaves', ['SOME VALUE']);
 
         $r = new \ReflectionObject($object);
