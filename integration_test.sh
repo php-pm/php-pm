@@ -46,16 +46,8 @@ bash -c 'grep -q "This is a very bad exception" /tmp/ppmout && exit 0'
 bash -c 'grep -q "Shutdown function triggered" /tmp/ppmoutshutdownfunc && exit 0'
 bin/ppm status
 bin/ppm stop
-# TTL expiration with ttl-restart-strategy set to request
-bin/ppm start --workers=1 --bridge=PHPPM\\Tests\\TestBridge --static-directory=web --max-requests=10 --max-execution-time=15 --ttl=5 -v > /tmp/ppmout &
-sleep 5
-bash -c 'if grep -q "Restart worker #5501 because it reached its TTL" /tmp/ppmout; then exit 1; else exit 0; fi'
-curl -f --silent "http://127.0.0.1:8080"
-bash -c 'grep -qv "Restart worker #5501 because it reached its TTL" /tmp/ppmout || exit 1'
-bin/ppm status
-bin/ppm stop
 #TTL expiration with ttl-restart-strategy set to expire
-bin/ppm start --workers=1 --bridge=PHPPM\\Tests\\TestBridge --static-directory=web --max-requests=10 --max-execution-time=15 --ttl=1 --ttl-restart-strategy=expire -v > /tmp/ppmout &
+bin/ppm start --workers=1 --bridge=PHPPM\\Tests\\TestBridge --static-directory=web --max-requests=10 --max-execution-time=15 --ttl=1 -v > /tmp/ppmout &
 sleep 6
 bash -c 'grep -qv "Restart worker #5501 because it reached its TTL" /tmp/ppmout || exit 1'
 bin/ppm status

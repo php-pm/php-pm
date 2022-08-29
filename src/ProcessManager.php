@@ -386,14 +386,6 @@ class ProcessManager
     }
 
     /**
-     * @param string $ttlRestartStrategy
-     */
-    public function setTtlRestartStrategy($ttlRestartStrategy)
-    {
-        $this->slaves->setTtlRestartStrategy($ttlRestartStrategy);
-    }
-
-    /**
      * @param string $phpCgiExecutable
      */
     public function setPhpCgiExecutable($phpCgiExecutable)

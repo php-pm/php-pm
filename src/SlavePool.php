@@ -12,9 +12,6 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class SlavePool
 {
-    public const TTL_RESTART_STRATEGY_REQUEST = 'request';
-    public const TTL_RESTART_STRATEGY_EXPIRE = 'expire';
-
     /**
      * @var LoopInterface
      */
@@ -28,10 +25,6 @@ class SlavePool
      * @var OutputInterface
      */
     private $output;
-    /**
-     * @var string
-     */
-    private $ttlRestartStrategy = self::TTL_RESTART_STRATEGY_REQUEST;
 
     public function __construct(LoopInterface $loop, OutputInterface $output)
     {
@@ -68,21 +61,9 @@ class SlavePool
         $this->setTtlTimer($slave);
     }
 
-    /**
-     * @param string $ttlRestartStrategy
-     */
-    public function setTtlRestartStrategy($ttlRestartStrategy)
-    {
-        if (!in_array($ttlRestartStrategy, [self::TTL_RESTART_STRATEGY_REQUEST, self::TTL_RESTART_STRATEGY_EXPIRE], true)) {
-            throw new \InvalidArgumentException('Invalid ttl restart strategy. Expected request or expire but '. $ttlRestartStrategy . ' given');
-        }
-
-        $this->ttlRestartStrategy = $ttlRestartStrategy;
-    }
-
     private function setTtlTimer(Slave $slave)
     {
-        if (null === $slave->getTtl() || $this->ttlRestartStrategy !== self::TTL_RESTART_STRATEGY_EXPIRE) {
+        if (null === $slave->getTtl()) {
             return;
         }
 
@@ -190,16 +171,7 @@ class SlavePool
     {
         $slaves = $this->getByStatus(Slave::READY);
 
-        foreach($slaves as $slave) {
-            if ($this->ttlRestartStrategy === self::TTL_RESTART_STRATEGY_REQUEST && $slave->isExpired()) {
-                $this->restartSlave($slave);
-                continue;
-            }
-
-            return $slave;
-        }
-
-        return null;
+        return count($slaves) > 0 ? array_shift($slaves) : null;
     }
 
     /**

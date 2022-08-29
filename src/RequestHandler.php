@@ -148,9 +148,8 @@ class RequestHandler
         $slave = $this->slaves->findReadySlave();
         if ($slave !== null) {
             // slave available -> connect
-            if ($this->tryOccupySlave($slave)) {
-                return;
-            }
+            $this->tryOccupySlave($slave);
+            return;
         }
 
         // keep retrying until slave becomes available, unless timeout has been exceeded
@@ -185,7 +184,7 @@ class RequestHandler
      * Slave available handler
      *
      * @param Slave $slave available slave instance
-     * @return bool Slave is available
+     * @return void
      */
     public function tryOccupySlave(Slave $slave)
     {
@@ -208,7 +207,6 @@ class RequestHandler
             [$this, 'slaveConnected'],
             [$this, 'slaveConnectFailed']
         );
-        return true;
     }
 
     /**

@@ -30,7 +30,6 @@ trait ConfigTrait
             ->addOption('limit-concurrent-requests', null, InputOption::VALUE_REQUIRED, 'Max concurrent requests for the internal ReactPHP server component. Use the default ReactPHP logic when not explicitly set', null)
             ->addOption('request-body-buffer', null, InputOption::VALUE_REQUIRED, 'Size of the request buffer (in bytes) for the internal ReactPHP server component. Default: 65536', null)
             ->addOption('ttl', null, InputOption::VALUE_REQUIRED, 'Time to live for a worker until it will be restarted', null)
-            ->addOption('ttl-restart-strategy', null, InputOption::VALUE_REQUIRED, 'Strategy used for restart workers when ttl is exceeded. request|expire Default: request', 'request')
             ->addOption('populate-server-var', null, InputOption::VALUE_REQUIRED, 'If a worker application uses $_SERVER var it needs to be populated by request data 1|0', 1)
             ->addOption('bootstrap', null, InputOption::VALUE_REQUIRED, 'Class responsible for bootstrapping the application', 'PHPPM\Bootstraps\Symfony')
             ->addOption('cgi-path', null, InputOption::VALUE_REQUIRED, 'Full path to the php-cgi executable', false)
@@ -106,7 +105,6 @@ trait ConfigTrait
         $config['limit-concurrent-requests'] = $this->optionOrConfigValue($input, 'limit-concurrent-requests', $config);
         $config['request-body-buffer'] = $this->optionOrConfigValue($input, 'request-body-buffer', $config);
         $config['ttl'] = (int)$this->optionOrConfigValue($input, 'ttl', $config);
-        $config['ttl-restart-strategy'] = $this->optionOrConfigValue($input, 'ttl-restart-strategy', $config);
         $config['populate-server-var'] = (boolean)$this->optionOrConfigValue($input, 'populate-server-var', $config);
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
         $config['pidfile'] = $this->optionOrConfigValue($input, 'pidfile', $config);

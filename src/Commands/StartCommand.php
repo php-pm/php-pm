@@ -44,7 +44,6 @@ class StartCommand extends Command
         $handler->setMaxExecutionTime($config['max-execution-time']);
         $handler->setMemoryLimit($config['memory-limit']);
         $handler->setTtl($config['ttl']);
-        $handler->setTtlRestartStrategy($config['ttl-restart-strategy']);
         $handler->setPhpCgiExecutable($config['cgi-path']);
         $handler->setSocketPath($config['socket-path']);
         $handler->setPidFile($config['pidfile']);

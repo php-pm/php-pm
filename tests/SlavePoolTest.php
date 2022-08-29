@@ -10,43 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class SlavePoolTest extends PhpPmTestCase
 {
-    /**
-     * @dataProvider validTtlRestartStrategyDataProvider
-     */
-    public function testShouldSetTtlRestartStrategy($strategy)
-    {
-        $this->expectNotToPerformAssertions();
-
-        $slavePool = new SlavePool(
-            $this->createMock(LoopInterface::class),
-            $this->createMock(OutputInterface::class)
-        );
-
-        $slavePool->setTtlRestartStrategy($strategy);
-    }
-
-    public function validTtlRestartStrategyDataProvider()
-    {
-        return [
-            'request' => ['request'],
-            'expire' => ['expire'],
-        ];
-    }
-
-    public function testShouldNotSetInvalidTtlRestartStrategy()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid ttl restart strategy. Expected request or expire but invalid_strategy given');
-
-        $slavePool = new SlavePool(
-            $this->createMock(LoopInterface::class),
-            $this->createMock(OutputInterface::class),
-        );
-
-        $slavePool->setTtlRestartStrategy('invalid_strategy');
-    }
-
-    public function testShouldNotSetRestartTimerOnDefaultStrategy()
+    public function testShouldNotSetTimerWithoutTtl()
     {
         $loop = $this->createMock(LoopInterface::class);
 
@@ -63,7 +27,7 @@ class SlavePoolTest extends PhpPmTestCase
     /**
      * @dataProvider ttlDataProvider
      */
-    public function testShouldSetRestartTimerForExpireStrategyWithSmallTtl($ttl, $min, $max)
+    public function testShouldSetRestartTimerWhenTtlWasSet($ttl, $min, $max)
     {
         $loop = $this->createMock(LoopInterface::class);
 
@@ -79,8 +43,6 @@ class SlavePoolTest extends PhpPmTestCase
             $loop,
             $this->createMock(OutputInterface::class),
         );
-
-        $slavePool->setTtlRestartStrategy('expire');
 
         $slavePool->add($this->createConfiguredMock(Slave::class, [
             'getTtl' => $ttl
@@ -113,7 +75,6 @@ class SlavePoolTest extends PhpPmTestCase
             $loop,
             $this->createMock(OutputInterface::class)
         );
-        $slavePool->setTtlRestartStrategy('expire');
 
         $slave = $this->createConfiguredMock(Slave::class, [
             'getTtl' => 20,
