@@ -97,13 +97,6 @@ class ProcessManager
     protected $ttl;
 
     /**
-     * Restart strategy when ttl is reached
-     *
-     * @var string
-     */
-    protected $ttlRestartStrategy;
-
-    /**
      * @var SlavePool
      */
     protected $slaves;
