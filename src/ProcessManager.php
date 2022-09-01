@@ -246,7 +246,7 @@ class ProcessManager
         $this->loop = Factory::create();
 
         $this->slaveCount = $slaveCount;
-        $this->slaves = new SlavePool($this->loop, $this->output, 'expire'); // create early, used during shutdown
+        $this->slaves = new SlavePool($this->loop, $this->output); // create early, used during shutdown
     }
 
     /**
@@ -275,7 +275,7 @@ class ProcessManager
 
                 if ($this->output->isVeryVerbose()) {
                     $this->output->writeln(
-                        \sprintf(
+                        sprintf(
                             'Worker #%d terminated, %d more worker(s) to close.',
                             $slave->getPort(),
                             $remainingSlaves
@@ -508,15 +508,15 @@ class ProcessManager
     public function run()
     {
         Debug::enable();
-        \register_shutdown_function([$this, 'shutdown']);
+        register_shutdown_function([$this, 'shutdown']);
 
         // make whatever is necessary to disable all stuff that could buffer output
-        \ini_set('zlib.output_compression', 0);
-        \ini_set('output_buffering', 0);
-        \ini_set('implicit_flush', 1);
-        \ob_implicit_flush(1);
+        ini_set('zlib.output_compression', 0);
+        ini_set('output_buffering', 0);
+        ini_set('implicit_flush', 1);
+        ob_implicit_flush(1);
 
-        $this->web = new Server(\sprintf('%s:%d', $this->host, $this->port), $this->loop, ['backlog' => self::TCP_BACKLOG]);
+        $this->web = new Server(sprintf('%s:%d', $this->host, $this->port), $this->loop, ['backlog' => self::TCP_BACKLOG]);
         $this->web->on('connection', [$this, 'onRequest']);
 
         $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
@@ -547,22 +547,22 @@ class ProcessManager
      */
     public function handleSigchld()
     {
-        $pid = \pcntl_waitpid(-1, $status, WNOHANG);
+        $pid = pcntl_waitpid(-1, $status, WNOHANG);
     }
 
     private function writePidFile()
     {
-        $pid = \getmypid();
-        \file_put_contents($this->pidFile, $pid);
+        $pid = getmypid();
+        file_put_contents($this->pidFile, $pid);
     }
 
     private function removePidFile()
     {
-        $pid = \getmypid();
-        $actualPid = (int) \file_get_contents($this->pidFile);
+        $pid = getmypid();
+        $actualPid = (int) file_get_contents($this->pidFile);
         //Only remove the pid file if it is our own
         if ($actualPid === $pid) {
-            \unlink($this->pidFile);
+            unlink($this->pidFile);
         }
     }
 
@@ -625,7 +625,7 @@ class ProcessManager
         $port = $slave->getPort();
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(\sprintf('Worker #%d closed after %d handled requests', $port, $slave->getHandledRequests()));
+            $this->output->writeln(sprintf('Worker #%d closed after %d handled requests', $port, $slave->getHandledRequests()));
         }
 
         // kill slave and remove from pool
@@ -662,7 +662,7 @@ class ProcessManager
         }
 
         // create port -> requests map
-        $requests = \array_reduce(
+        $requests = array_reduce(
             $this->slaves->getByStatus(Slave::ANY),
             function ($carry, Slave $slave) {
                 $carry[$slave->getPort()] = 0 + $slave->getHandledRequests();
@@ -685,7 +685,7 @@ class ProcessManager
                 $status = 'unknown';
         }
 
-        $conn->end(\json_encode([
+        $conn->end(json_encode([
             'status' => $status,
             'workers' => $this->slaves->getStatusSummary(),
             'handled_requests' => $this->handledRequests,
@@ -707,7 +707,7 @@ class ProcessManager
             });
         }
 
-        $conn->end(\json_encode([]));
+        $conn->end(json_encode([]));
 
         $this->shutdown();
     }
@@ -729,7 +729,7 @@ class ProcessManager
             });
         }
 
-        $conn->end(\json_encode([]));
+        $conn->end(json_encode([]));
 
         $this->reloadSlaves();
     }
@@ -749,7 +749,7 @@ class ProcessManager
             $slave = $this->slaves->getByPort($port);
             $slave->register($pid, $conn);
         } catch (\Exception $e) {
-            $this->output->writeln(\sprintf(
+            $this->output->writeln(sprintf(
                 '<error>Worker #%d wanted to register on master which was not expected.</error>',
                 $port
             ));
@@ -758,7 +758,7 @@ class ProcessManager
         }
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(\sprintf('Worker #%d registered. Waiting for application bootstrap ... ', $port));
+            $this->output->writeln(sprintf('Worker #%d registered. Waiting for application bootstrap ... ', $port));
         }
 
         $this->sendMessage($conn, 'bootstrap');
@@ -787,7 +787,7 @@ class ProcessManager
         $slave->ready();
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(\sprintf('Worker #%d ready.', $slave->getPort()));
+            $this->output->writeln(sprintf('Worker #%d ready.', $slave->getPort()));
         }
 
         if ($this->allSlavesReady()) {
@@ -795,7 +795,7 @@ class ProcessManager
                 $this->output->writeln("<info>Emergency survived. Workers up and running again.</info>");
             } else {
                 $this->output->writeln(
-                    \sprintf(
+                    sprintf(
                         "<info>%d workers (starting at %d) up and ready. Application is ready at http://%s:%s/</info>",
                         $this->slaveCount,
                         self::CONTROLLER_PORT+1,
@@ -833,29 +833,29 @@ class ProcessManager
         try {
             $slave = $this->slaves->getByConnection($conn);
 
-            $start = \microtime(true);
+            $start = microtime(true);
 
-            \clearstatcache();
+            clearstatcache();
 
             $newFilesCount = 0;
-            $knownFiles = \array_keys($this->filesLastMTime);
-            $recentlyIncludedFiles = \array_diff($data['files'], $knownFiles);
+            $knownFiles = array_keys($this->filesLastMTime);
+            $recentlyIncludedFiles = array_diff($data['files'], $knownFiles);
             foreach ($recentlyIncludedFiles as $filePath) {
-                if (\file_exists($filePath) && !\is_dir($filePath)) {
-                    $this->filesLastMTime[$filePath] = \filemtime($filePath);
-                    $this->filesLastMd5[$filePath] = \md5_file($filePath);
+                if (file_exists($filePath) && !is_dir($filePath)) {
+                    $this->filesLastMTime[$filePath] = filemtime($filePath);
+                    $this->filesLastMd5[$filePath] = md5_file($filePath);
                     $newFilesCount++;
                 }
             }
 
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln(
-                    \sprintf(
+                    sprintf(
                         'Received %d new files from %d. Stats collection cycle: %u files, %.3f ms',
                         $newFilesCount,
                         $slave->getPort(),
                         \count($this->filesLastMTime),
-                        (\microtime(true) - $start) * 1000
+                        (microtime(true) - $start) * 1000
                     )
                 );
             }
@@ -877,7 +877,7 @@ class ProcessManager
             $slave->setUsedMemory($data['memory_usage']);
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln(
-                    \sprintf(
+                    sprintf(
                         'Current memory usage for worker %d: %.2f MB',
                         $slave->getPort(),
                         $data['memory_usage']
@@ -903,14 +903,14 @@ class ProcessManager
                 $this->status = self::STATE_EMERGENCY;
 
                 $this->output->writeln(
-                    \sprintf(
+                    sprintf(
                         '<error>Application bootstrap failed. We are entering emergency mode now. All offline. ' .
                         'Waiting for file changes ...</error>'
                     )
                 );
             } else {
                 $this->output->writeln(
-                    \sprintf(
+                    sprintf(
                         '<error>Application bootstrap failed. We are still in emergency mode. All offline. ' .
                         'Waiting for file changes ...</error>'
                     )
@@ -920,7 +920,7 @@ class ProcessManager
             $this->reloadSlaves(false);
         } else {
             $this->output->writeln(
-                \sprintf(
+                sprintf(
                     '<error>Application bootstrap failed. Restarting worker #%d ...</error>',
                     $port
                 )
@@ -946,14 +946,14 @@ class ProcessManager
             return false;
         }
 
-        $start = \microtime(true);
+        $start = microtime(true);
         $numChanged = 0;
 
-        \clearstatcache();
+        clearstatcache();
 
         foreach ($this->filesLastMTime as $filePath => $knownMTime) {
             //If the file is a directory, just remove it from the list of tracked files
-            if (\is_dir($filePath)) {
+            if (is_dir($filePath)) {
                 unset($this->filesLastMd5[$filePath]);
                 unset($this->filesLastMTime[$filePath]);
 
@@ -961,29 +961,29 @@ class ProcessManager
             }
 
             //If the file doesn't exist anymore, remove it from the list of tracked files and restart the workers
-            if (!\file_exists($filePath)) {
+            if (!file_exists($filePath)) {
                 unset($this->filesLastMd5[$filePath]);
                 unset($this->filesLastMTime[$filePath]);
 
                 $this->output->writeln(
-                    \sprintf("<info>[%s] File %s has been removed.</info>", \date('d/M/Y:H:i:s O'), $filePath)
+                    sprintf("<info>[%s] File %s has been removed.</info>", date('d/M/Y:H:i:s O'), $filePath)
                 );
                 $numChanged++;
             //If the file modification time has changed, update the metadata and check its contents.
-            } elseif ($knownMTime !== ($actualFileTime = \filemtime($filePath))) {
+            } elseif ($knownMTime !== ($actualFileTime = filemtime($filePath))) {
                 //update time metadata
                 $this->filesLastMTime[$filePath] = $actualFileTime;
                 if ($this->output->isVeryVerbose()) {
                     $this->output->writeln(
-                        \sprintf("File %s mtime has changed, now checking its contents", $filePath)
+                        sprintf("File %s mtime has changed, now checking its contents", $filePath)
                     );
                 }                //Only if the time AND contents have changed restart, touch() seems to change the file mtime
-                if ($this->filesLastMd5[$filePath] !== $actualFileHash = \md5_file($filePath)) {
+                if ($this->filesLastMd5[$filePath] !== $actualFileHash = md5_file($filePath)) {
                     //update file hash metadata
                     $this->filesLastMd5[$filePath] = $actualFileHash;
 
                     $this->output->writeln(
-                        \sprintf("<info>[%s] File %s has changed.</info>", \date('d/M/Y:H:i:s O'), $filePath)
+                        sprintf("<info>[%s] File %s has changed.</info>", date('d/M/Y:H:i:s O'), $filePath)
                     );
                     $numChanged++;
                 }
@@ -992,9 +992,9 @@ class ProcessManager
 
         if ($numChanged > 0) {
             $this->output->writeln(
-                \sprintf(
+                sprintf(
                     "<info>[%s] %u of %u known files was changed or removed. Reloading workers.</info>",
-                    \date('d/M/Y:H:i:s O'),
+                    date('d/M/Y:H:i:s O'),
                     $numChanged,
                     \count($this->filesLastMTime)
                 )
@@ -1004,9 +1004,9 @@ class ProcessManager
         }
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(\sprintf(
+            $this->output->writeln(sprintf(
                 "Changes detection cycle length = %.3f ms, %u files",
-                (\microtime(true) - $start) * 1000,
+                (microtime(true) - $start) * 1000,
                 \count($this->filesLastMTime)
             ));
         }
@@ -1058,7 +1058,7 @@ class ProcessManager
 
             if ($this->output->isVeryVerbose()) {
                 $this->output->writeln(
-                    \sprintf(
+                    sprintf(
                         'Worker #%d has been closed, reloading.',
                         $slave->getPort()
                     )
@@ -1115,7 +1115,7 @@ class ProcessManager
 
             if ($graceful && $slave->getStatus() === Slave::BUSY) {
                 if ($this->output->isVeryVerbose()) {
-                    $this->output->writeln(\sprintf('Waiting for worker #%d to finish', $slave->getPort()));
+                    $this->output->writeln(sprintf('Waiting for worker #%d to finish', $slave->getPort()));
                 }
 
                 $slave->lock();
@@ -1123,7 +1123,7 @@ class ProcessManager
             } elseif ($graceful && $slave->getStatus() === Slave::LOCKED) {
                 if ($this->output->isVeryVerbose()) {
                     $this->output->writeln(
-                        \sprintf(
+                        sprintf(
                             'Still waiting for worker #%d to finish from an earlier reload',
                             $slave->getPort()
                         )
@@ -1147,7 +1147,7 @@ class ProcessManager
 
             foreach ($this->slavesToReload as $slave) {
                 $this->output->writeln(
-                    \sprintf(
+                    sprintf(
                         '<error>Worker #%d exceeded the graceful reload timeout and was killed.</error>',
                         $slave->getPort()
                     )
@@ -1202,16 +1202,16 @@ class ProcessManager
         }
 
         if ($this->output->isVeryVerbose()) {
-            $this->output->writeln(\sprintf("Start new worker #%d", $port));
+            $this->output->writeln(sprintf("Start new worker #%d", $port));
         }
 
-        $socketpath = \var_export($this->getSocketPath(), true);
-        $bridge = \var_export($this->getBridge(), true);
-        $bootstrap = \var_export($this->getAppBootstrap(), true);
+        $socketpath = var_export($this->getSocketPath(), true);
+        $bridge = var_export($this->getBridge(), true);
+        $bootstrap = var_export($this->getAppBootstrap(), true);
 
         $config = [
             'port' => $port,
-            'session_path' => \session_save_path(),
+            'session_path' => session_save_path(),
 
             'app-env' => $this->getAppEnv(),
             'debug' => $this->isDebug(),
@@ -1223,9 +1223,9 @@ class ProcessManager
             'request-body-buffer' => $this->requestBodyBuffer
         ];
 
-        $config = \var_export($config, true);
+        $config = var_export($config, true);
 
-        $dir = \var_export(__DIR__ . '/..', true);
+        $dir = var_export(__DIR__ . '/..', true);
         $script = <<<EOF
 <?php
 
@@ -1257,9 +1257,9 @@ ProcessSlave::\$slave->run();
 EOF;
 
         // slave php file
-        $file = \tempnam(\sys_get_temp_dir(), 'dbg');
-        \file_put_contents($file, $script);
-        \register_shutdown_function('unlink', $file);
+        $file = tempnam(sys_get_temp_dir(), 'dbg');
+        file_put_contents($file, $script);
+        register_shutdown_function('unlink', $file);
 
         // we can not use -q since this disables basically all header support
         // but since this is necessary at least in Symfony we can not use it.
@@ -1280,10 +1280,10 @@ EOF;
             'data',
             function ($data) use ($port) {
                 if ($this->lastWorkerErrorPrintBy !== $port) {
-                    $this->output->writeln(\sprintf('<info>--- Worker %u stderr ---</info>', $port));
+                    $this->output->writeln(sprintf('<info>--- Worker %u stderr ---</info>', $port));
                     $this->lastWorkerErrorPrintBy = $port;
                 }
-                $this->output->writeln(\sprintf('<error>%s</error>', \trim($data)));
+                $this->output->writeln(sprintf('<error>%s</error>', trim($data)));
             }
         );
     }
@@ -1309,7 +1309,7 @@ EOF;
 
         $pid = $slave->getPid();
         if (\is_int($pid)) {
-            \posix_kill($pid, SIGKILL); // make sure it's really dead
+            posix_kill($pid, SIGKILL); // make sure it's really dead
         }
     }
 }
