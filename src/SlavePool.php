@@ -2,13 +2,36 @@
 
 namespace PHPPM;
 
+use React\EventLoop\LoopInterface;
+use React\EventLoop\TimerInterface;
 use React\Socket\ConnectionInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * SlavePool singleton is responsible for maintaining a pool of slave instances
  */
 class SlavePool
 {
+    /**
+     * @var LoopInterface
+     */
+    private $loop;
+
+    /**
+     * @var TimerInterface[]
+     */
+    private $restartTimers = [];
+    /**
+     * @var OutputInterface
+     */
+    private $output;
+
+    public function __construct(LoopInterface $loop, OutputInterface $output)
+    {
+        $this->loop = $loop;
+        $this->output = $output;
+    }
+
     /** @var Slave[] */
     private $slaves = [];
 
@@ -34,6 +57,41 @@ class SlavePool
         }
 
         $this->slaves[$port] = $slave;
+
+        $this->setTtlTimer($slave);
+    }
+
+    private function setTtlTimer(Slave $slave)
+    {
+        if (null === $slave->getTtl()) {
+            return;
+        }
+
+        // naive way of handling restarts not at the same time due to ttl expiration
+        $interval = $slave->getTtl() > 10 ? $slave->getTtl() + random_int(-5, 5) : $slave->getTtl() + random_int(0, 5);
+        $this->restartTimers[$slave->getPort()] = $this->loop->addTimer($interval, function () use ($slave) {
+            unset($this->restartTimers[$slave->getPort()]);
+            $this->restartSlave($slave);
+        });
+    }
+
+    private function restartSlave(Slave $slave)
+    {
+        if (\in_array($slave->getStatus(), [Slave::LOCKED, Slave::CLOSED], true)) {
+            return;
+        }
+
+        if ($slave->getStatus() !== Slave::READY) {
+            $this->loop->futureTick(function () use ($slave) {
+                $this->restartSlave($slave);
+            });
+
+            return;
+        }
+
+        $slave->close();
+        $this->output->writeln(sprintf('Restart worker #%d because it reached its TTL', $slave->getPort()));
+        $slave->getConnection()->close();
     }
 
     /**
@@ -52,6 +110,10 @@ class SlavePool
 
         // remove
         unset($this->slaves[$port]);
+        if (\array_key_exists($port, $this->restartTimers)) {
+            $this->loop->cancelTimer($this->restartTimers[$port]);
+            unset($this->restartTimers[$port]);
+        }
     }
 
     /**
@@ -79,10 +141,10 @@ class SlavePool
      */
     public function getByConnection(ConnectionInterface $connection)
     {
-        $hash = \spl_object_hash($connection);
+        $hash = spl_object_hash($connection);
 
         foreach ($this->slaves as $slave) {
-            if ($slave->getConnection() && $hash === \spl_object_hash($slave->getConnection())) {
+            if ($slave->getConnection() && $hash === spl_object_hash($slave->getConnection())) {
                 return $slave;
             }
         }
@@ -95,9 +157,21 @@ class SlavePool
      */
     public function getByStatus($status)
     {
-        return \array_filter($this->slaves, function ($slave) use ($status) {
+        return array_filter($this->slaves, static function ($slave) use ($status) {
             return $status === Slave::ANY || $status === $slave->getStatus();
         });
+    }
+
+    /**
+     * Find one slave with READY state
+     *
+     * @return Slave|null
+     */
+    public function findReadySlave()
+    {
+        $slaves = $this->getByStatus(Slave::READY);
+
+        return \count($slaves) > 0 ? array_shift($slaves) : null;
     }
 
     /**
@@ -116,7 +190,7 @@ class SlavePool
             'closed' => Slave::CLOSED
         ];
 
-        return \array_map(function ($state) {
+        return array_map(function ($state) {
             return \count($this->getByStatus($state));
         }, $map);
     }
