@@ -51,6 +51,7 @@ class StartCommand extends Command
         $handler->setStaticDirectory($config['static-directory']);
         $handler->setRequestBodyBuffer($config['request-body-buffer']);
         $handler->setLimitConcurrentRequests($config['limit-concurrent-requests']);
+        $handler->setDecorateWorkersOutput($config['decorate-workers-output']);
         $handler->run();
 
         return 0;

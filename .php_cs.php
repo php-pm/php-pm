@@ -10,7 +10,7 @@ return (new PhpCsFixer\Config())
     ->setRules([
         '@PSR2' => true,
         'array_syntax' => ['syntax' => 'short'],
-        'native_function_invocation' => ['strict' => true],
+        'native_function_invocation' => ['strict' => true, 'include' => ['@internal']],
     ])
     // ->registerCustomFixers([new Drew\DebugStatementsFixers\Dump()])
     ->setRiskyAllowed(true)
