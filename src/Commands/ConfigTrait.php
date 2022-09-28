@@ -36,6 +36,7 @@ trait ConfigTrait
             ->addOption('socket-path', null, InputOption::VALUE_REQUIRED, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
             ->addOption('pidfile', null, InputOption::VALUE_REQUIRED, 'Path to a file where the pid of the master process is going to be stored', '.ppm/ppm.pid')
             ->addOption('reload-timeout', null, InputOption::VALUE_REQUIRED, 'The number of seconds to wait before force closing a worker during a reload, or -1 to disable. Default: 30', 30)
+            ->addOption('decorate-workers-output', null, InputOption::VALUE_REQUIRED, 'Enable/Disable displaying additional worker info in server output. 1|0', 1)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Path to config file', '');
     }
 
@@ -109,6 +110,7 @@ trait ConfigTrait
         $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
         $config['pidfile'] = $this->optionOrConfigValue($input, 'pidfile', $config);
         $config['reload-timeout'] = $this->optionOrConfigValue($input, 'reload-timeout', $config);
+        $config['decorate-workers-output'] = $this->optionOrConfigValue($input, 'decorate-workers-output', $config);
 
         $config['cgi-path'] = $this->optionOrConfigValue($input, 'cgi-path', $config);
 
