@@ -1300,7 +1300,7 @@ EOF;
                     $this->lastWorkerErrorPrintBy = $port;
                 }
                 if ($this->decorateWorkersOutput) {
-                    $output = sprintf('<error>%s</error>', \trim($data));
+                    $output = \sprintf('<error>%s</error>', \trim($data));
                 } else {
                     $output = \trim($data);
                 }
