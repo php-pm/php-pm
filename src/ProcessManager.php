@@ -218,6 +218,11 @@ class ProcessManager
     protected $pidFile;
 
     /**
+     * Whether to add additional information to logs about worker source
+     */
+    protected $decorateWorkersOutput = true;
+
+    /**
      * Controller port
      */
     const CONTROLLER_PORT = 5500;
