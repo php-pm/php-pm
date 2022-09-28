@@ -1285,10 +1285,17 @@ EOF;
             'data',
             function ($data) use ($port) {
                 if ($this->lastWorkerErrorPrintBy !== $port) {
-                    $this->output->writeln(\sprintf('<info>--- Worker %u stderr ---</info>', $port));
+                    if ($this->decorateWorkersOutput) {
+                        $this->output->writeln(\sprintf('<info>--- Worker %u stderr ---</info>', $port));
+                    }
                     $this->lastWorkerErrorPrintBy = $port;
                 }
-                $this->output->writeln(\sprintf('<error>%s</error>', \trim($data)));
+                if ($this->decorateWorkersOutput) {
+                    $output = sprintf('<error>%s</error>', \trim($data));
+                } else {
+                    $output = \trim($data);
+                }
+                $this->output->writeln($output);
             }
         );
     }
