@@ -473,6 +473,15 @@ class ProcessManager
     {
         $this->pidFile = $pidFile;
     }
+
+    /**
+     * @param bool $decorate
+     */
+    public function setDecorateWorkersOutput($decorate)
+    {
+        $this->decorateWorkersOutput = $decorate;
+    }
+
     /**
      * @return boolean
      */
